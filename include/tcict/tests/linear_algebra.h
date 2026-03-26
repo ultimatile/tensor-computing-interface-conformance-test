@@ -92,7 +92,7 @@ void test_linear_combine_weighted(tci_test_fixture<TenT>& fix) {
 
   tci::List<TenT> tensors = {tensor_a, tensor_b};
   tci::List<tci::elem_t<TenT>> coefficients = {make_elem<TenT>(0.5), make_elem<TenT>(2.0)};
-  result = tci::linear_combine(ctx, tensors, coefficients);
+  TCICT_ASSERT_NOTHROW(result = tci::linear_combine(ctx, tensors, coefficients));
 
   // Expected: 0.5*a + 2*b = [[3,8],[13,18]]
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 3.0, eps);
