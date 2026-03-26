@@ -118,7 +118,8 @@ void test_copy_inplace(tci_test_fixture<TenT>& fix) {
   tci::set_elem(ctx, a, {0, 0}, make_elem<TenT>(42.0, 13.0));
   tci::set_elem(ctx, a, {1, 2}, make_elem<TenT>(-5.5, 7.7));
 
-  auto b = tci::copy(ctx, a);
+  TenT b;
+  TCICT_ASSERT_NOTHROW(b = tci::copy(ctx, a));
 
   auto val1 = tci::get_elem(ctx, b, {0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(val1), 42.0, eps);
