@@ -35,7 +35,8 @@ void test_eye(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  auto identity = tci::eye<TenT>(ctx, 3);
+  TenT identity;
+  TCICT_ASSERT_NOTHROW(identity = tci::eye<TenT>(ctx, 3));
   TCICT_ASSERT(tci::order(ctx, identity) == 2);
   auto result_shape = tci::shape(ctx, identity);
   TCICT_ASSERT(result_shape.size() == 2);
