@@ -374,6 +374,7 @@ template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
   return;
 #endif
   auto &ctx = fix.context();
+  auto eps = fix.epsilon();
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 3; ++j)
@@ -386,6 +387,22 @@ template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
   tci::lq(ctx, matrix, 1, l, q);
   TCICT_ASSERT(tci::shape(ctx, l).size() == 2);
   TCICT_ASSERT(tci::shape(ctx, q).size() == 2);
+
+  // Verify L * Q ≈ A (reconstruction)
+  TenT reconstructed;
+  tci::contract(ctx, l, "ij", q, "jk", reconstructed, "ik");
+  TCICT_ASSERT(tci::close(ctx, reconstructed, matrix, eps * 100));
+
+  // Verify QQ† ≈ I (orthogonality)
+  TenT q_dag;
+  tci::cplx_conj(ctx, q, q_dag);
+  TenT q_dag_t;
+  tci::transpose(ctx, q_dag, {1, 0}, q_dag_t);
+  TenT qqt;
+  tci::contract(ctx, q, "ij", q_dag_t, "jk", qqt, "ik");
+  auto bond_dim = tci::shape(ctx, q)[0];
+  auto identity = tci::eye<TenT>(ctx, bond_dim);
+  TCICT_ASSERT(tci::close(ctx, qqt, identity, eps * 100));
 }
 
 // --- truncated SVD ---
