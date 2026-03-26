@@ -5,7 +5,9 @@
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
 
+#include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace tcict { namespace tests {
 
@@ -654,7 +656,7 @@ void test_scale_by_zero(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 0.0, eps);
 }
 
-// --- trace: 3-order tensor partial trace ---
+// --- trace: 2x2 matrix ---
 
 template <typename TenT>
 void test_trace_partial(tci_test_fixture<TenT>& fix) {
@@ -664,8 +666,7 @@ void test_trace_partial(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  // Shape {3, 3}: trace over {0, 1} should give scalar value
-  // Use a known matrix: [[1,0],[0,4]] → trace = 5
+  // 2x2 diagonal matrix [[1,0],[0,4]] → trace over {0,1} = 1+4 = 5
   TenT matrix;
   tci::zeros(ctx, {2, 2}, matrix);
   tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(1.0));
@@ -787,13 +788,18 @@ void test_eigvals_diagonal(tci_test_fixture<TenT>& fix) {
 
   TCICT_ASSERT(tci::size(ctx, eigenvalues) == 3);
 
-  // Sum of eigenvalues should equal trace = 6
+  // Collect eigenvalues and sort by real part for order-independent comparison
   using CplxTenT = tci::cplx_ten_t<TenT>;
-  double sum_real = 0.0;
+  std::vector<double> ev_real(3);
   for (tci::elem_coor_t<CplxTenT> i = 0; i < 3; ++i) {
-    sum_real += real_part<CplxTenT>(tci::get_elem(ctx, eigenvalues, {i}));
+    ev_real[i] = real_part<CplxTenT>(tci::get_elem(ctx, eigenvalues, {i}));
+    // Imaginary parts should be ~0 for real diagonal matrix
+    TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(tci::get_elem(ctx, eigenvalues, {i})), 0.0, eps);
   }
-  TCICT_ASSERT_CLOSE(sum_real, 6.0, eps);
+  std::sort(ev_real.begin(), ev_real.end());
+  TCICT_ASSERT_CLOSE(ev_real[0], 1.0, eps);
+  TCICT_ASSERT_CLOSE(ev_real[1], 2.0, eps);
+  TCICT_ASSERT_CLOSE(ev_real[2], 3.0, eps);
 }
 
 // --- eigvals: error on non-square ---
