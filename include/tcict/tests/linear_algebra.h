@@ -57,7 +57,7 @@ void test_linear_combine_uniform(tci_test_fixture<TenT>& fix) {
   tci::set_elem(ctx, tensor_c, {1, 1}, make_elem<TenT>(1.0));
 
   tci::List<TenT> tensors = {tensor_a, tensor_b, tensor_c};
-  result = tci::linear_combine(ctx, tensors);
+  TCICT_ASSERT_NOTHROW(result = tci::linear_combine(ctx, tensors));
 
   // Expected: [[7,9],[11,13]]
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 7.0, eps);
