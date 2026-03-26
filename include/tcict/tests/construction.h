@@ -431,7 +431,7 @@ void test_move_empty(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   TenT empty_source;
-  auto destination = tci::move(ctx, empty_source);
+  tci::move(ctx, empty_source);
 }
 
 // --- move preserves values ---
