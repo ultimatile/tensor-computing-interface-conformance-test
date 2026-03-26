@@ -18,6 +18,7 @@ void test_zeros(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
+  auto eps = fix.epsilon();
   tci::shape_t<TenT> shape = {2, 3};
   TenT tensor;
   TCICT_ASSERT_NOTHROW(tensor = tci::zeros<TenT>(ctx, shape));
@@ -26,6 +27,15 @@ void test_zeros(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(result_shape.size() == 2);
   TCICT_ASSERT(result_shape[0] == 2);
   TCICT_ASSERT(result_shape[1] == 3);
+
+  // Verify all elements are zero
+  for (std::size_t i = 0; i < 2; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      auto elem = tci::get_elem(ctx, tensor, {i, j});
+      TCICT_ASSERT_CLOSE(real_part<TenT>(elem), 0.0, eps);
+      TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, eps);
+    }
+  }
 }
 
 // --- eye ---
