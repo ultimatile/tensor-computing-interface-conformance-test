@@ -9,16 +9,17 @@
 #include <string>
 #include <vector>
 
-namespace tcict { namespace tests {
+namespace tcict {
+namespace tests {
 
 // --- close (eq) : identical tensors ---
 
 template <typename TenT>
-void test_close_identical(tci_test_fixture<TenT>& fix) {
+void test_close_identical(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_CLOSE
   return;
 #endif
-  auto& ctx = fix.context();
+  auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto tensor1 = tci::eye<TenT>(ctx, 2);
   auto tensor2 = tci::eye<TenT>(ctx, 2);
@@ -30,11 +31,11 @@ void test_close_identical(tci_test_fixture<TenT>& fix) {
 // --- close (eq) : different tensors ---
 
 template <typename TenT>
-void test_close_different(tci_test_fixture<TenT>& fix) {
+void test_close_different(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_CLOSE
   return;
 #endif
-  auto& ctx = fix.context();
+  auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto tensor1 = tci::eye<TenT>(ctx, 2);
   auto tensor2 = tci::zeros<TenT>(ctx, {2, 2});
@@ -45,43 +46,42 @@ void test_close_different(tci_test_fixture<TenT>& fix) {
 
 // --- to_range (to_container) ---
 
-template <typename TenT>
-void test_to_range(tci_test_fixture<TenT>& fix) {
+template <typename TenT> void test_to_range(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_TO_RANGE
   return;
 #endif
-  auto& ctx = fix.context();
+  auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
   TenT a = tci::template zeros<TenT>(ctx, {2, 3});
   tci::for_each_with_coors(
       ctx, a,
-      [](tci::elem_t<TenT>& elem, const tci::elem_coors_t<TenT>& coors) {
+      [](tci::elem_t<TenT> &elem, const tci::elem_coors_t<TenT> &coors) {
         elem = static_cast<tci::elem_t<TenT>>(coors[0] * 3 + coors[1]);
       });
 
   std::vector<tci::elem_t<TenT>> container(6);
 
-  std::function<std::ptrdiff_t(const tci::elem_coors_t<TenT>&)> row_major_map
-      = [](const tci::elem_coors_t<TenT>& coors) -> std::ptrdiff_t {
+  std::function<std::ptrdiff_t(const tci::elem_coors_t<TenT> &)> row_major_map =
+      [](const tci::elem_coors_t<TenT> &coors) -> std::ptrdiff_t {
     return coors[0] * 3 + coors[1];
   };
 
   tci::to_container(ctx, a, container.begin(), row_major_map);
 
   for (int i = 0; i < 6; ++i) {
-    TCICT_ASSERT_CLOSE(real_part<TenT>(container[i]), static_cast<double>(i), eps);
+    TCICT_ASSERT_CLOSE(real_part<TenT>(container[i]), static_cast<double>(i),
+                       eps);
   }
 }
 
 // --- show (does not throw) ---
 
-template <typename TenT>
-void test_show(tci_test_fixture<TenT>& fix) {
+template <typename TenT> void test_show(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_SHOW
   return;
 #endif
-  auto& ctx = fix.context();
+  auto &ctx = fix.context();
   auto a = tci::eye<TenT>(ctx, 2);
   TCICT_ASSERT_NOTHROW(tci::show(ctx, a));
 }
@@ -89,15 +89,15 @@ void test_show(tci_test_fixture<TenT>& fix) {
 // --- convert (same context) ---
 
 template <typename TenT>
-void test_convert_same_context(tci_test_fixture<TenT>& fix) {
+void test_convert_same_context(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_CONVERT
   return;
 #endif
-  auto& ctx = fix.context();
+  auto &ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT b;
   auto a = tci::eye<TenT>(ctx, 3);
 
+  TenT b;
   TCICT_ASSERT_NOTHROW(tci::convert(ctx, a, ctx, b));
   TCICT_ASSERT(tci::close(ctx, a, b, eps));
   TCICT_ASSERT(tci::shape(ctx, a) == tci::shape(ctx, b));
@@ -111,18 +111,18 @@ void test_convert_same_context(tci_test_fixture<TenT>& fix) {
 // --- convert (different contexts) ---
 
 template <typename TenT>
-void test_convert_different_context(tci_test_fixture<TenT>& fix) {
+void test_convert_different_context(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_CONVERT
   return;
 #endif
-  auto& ctx = fix.context();
+  auto &ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT b;
   auto a = tci::eye<TenT>(ctx, 3);
 
   tci::context_handle_t<TenT> ctx2;
   tci::create_context(ctx2);
 
+  TenT b;
   TCICT_ASSERT_NOTHROW(tci::convert(ctx, a, ctx2, b));
   TCICT_ASSERT(tci::close(ctx, a, b, eps));
   TCICT_ASSERT(tci::shape(ctx, a) == tci::shape(ctx, b));
@@ -133,11 +133,11 @@ void test_convert_different_context(tci_test_fixture<TenT>& fix) {
 // --- convert (data integrity) ---
 
 template <typename TenT>
-void test_convert_data_integrity(tci_test_fixture<TenT>& fix) {
+void test_convert_data_integrity(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_CONVERT
   return;
 #endif
-  auto& ctx = fix.context();
+  auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {2, 3});
   tci::set_elem(ctx, a, {0, 0}, make_elem<TenT>(1.23, 4.56));
@@ -161,17 +161,18 @@ void test_convert_data_integrity(tci_test_fixture<TenT>& fix) {
 
 // --- version ---
 
-template <typename TenT>
-void test_version(tci_test_fixture<TenT>& fix) {
+template <typename TenT> void test_version(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_VERSION
   return;
 #endif
   std::string ver = tci::template version<TenT>();
   TCICT_ASSERT(!ver.empty());
   // Version string should contain digits and a dot
-  bool has_version_pattern = (ver.find_first_of("0123456789") != std::string::npos)
-                             && (ver.find('.') != std::string::npos);
+  bool has_version_pattern =
+      (ver.find_first_of("0123456789") != std::string::npos) &&
+      (ver.find('.') != std::string::npos);
   TCICT_ASSERT(has_version_pattern);
 }
 
-}}  // namespace tcict::tests
+} // namespace tests
+} // namespace tcict
