@@ -336,6 +336,7 @@ template <typename TenT> void test_qr(tci_test_fixture<TenT> &fix) {
   return;
 #endif
   auto &ctx = fix.context();
+  auto eps = fix.epsilon();
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 3; ++j)
@@ -348,6 +349,22 @@ template <typename TenT> void test_qr(tci_test_fixture<TenT> &fix) {
   tci::qr(ctx, matrix, 1, q, r);
   TCICT_ASSERT(tci::shape(ctx, q).size() == 2);
   TCICT_ASSERT(tci::shape(ctx, r).size() == 2);
+
+  // Verify Q * R ≈ A (reconstruction)
+  TenT reconstructed;
+  tci::contract(ctx, q, "ij", r, "jk", reconstructed, "ik");
+  TCICT_ASSERT(tci::close(ctx, reconstructed, matrix, eps * 100));
+
+  // Verify Q†Q ≈ I (orthogonality)
+  TenT q_dag;
+  tci::cplx_conj(ctx, q, q_dag);
+  TenT q_dag_t;
+  tci::transpose(ctx, q_dag, {1, 0}, q_dag_t);
+  TenT qtq;
+  tci::contract(ctx, q_dag_t, "ij", q, "jk", qtq, "ik");
+  auto bond_dim = tci::shape(ctx, q)[1];
+  auto identity = tci::eye<TenT>(ctx, bond_dim);
+  TCICT_ASSERT(tci::close(ctx, qtq, identity, eps * 100));
 }
 
 // --- LQ decomposition ---
