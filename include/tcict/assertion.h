@@ -69,15 +69,32 @@ namespace detail {
 template <typename ExType, typename F>
 void assert_throws_impl(const char* file, int line, const char* ex_name, F&& f) {
   bool caught = false;
+  bool wrong_type = false;
+  std::string unexpected_info;
   try {
     f();
   } catch (const ExType&) {
     caught = true;
+  } catch (const std::exception& e) {
+    wrong_type = true;
+    std::ostringstream oss;
+    oss << "unexpected std::exception: " << e.what();
+    unexpected_info = oss.str();
   } catch (...) {
+    wrong_type = true;
+    unexpected_info = "unexpected non-std exception";
   }
   if (!caught) {
     std::ostringstream oss;
-    oss << file << ":" << line << ": expected exception " << ex_name << " not thrown";
+    oss << file << ":" << line << ": ";
+    if (wrong_type) {
+      oss << "expected exception " << ex_name << " but a different exception was thrown";
+      if (!unexpected_info.empty()) {
+        oss << " (" << unexpected_info << ")";
+      }
+    } else {
+      oss << "expected exception " << ex_name << " not thrown";
+    }
     throw ::tcict::assertion_error(oss.str());
   }
 }
