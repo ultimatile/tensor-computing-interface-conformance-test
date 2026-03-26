@@ -674,8 +674,9 @@ void test_trace_partial(tci_test_fixture<TenT>& fix) {
   TenT result;
   tci::trace(ctx, matrix, {{0, 1}}, result);
 
-  // Result should be a scalar (rank 0 or 1 with size 1)
+  // Result should be a scalar (rank 0 or 1 with size 1) and equal to 5 within eps
   TCICT_ASSERT(tci::size(ctx, result) == 1);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0})), 5.0, eps);
 }
 
 // --- svd: basic with reconstruction ---
