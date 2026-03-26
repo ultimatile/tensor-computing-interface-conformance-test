@@ -36,6 +36,7 @@ void test_eye(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
+  auto eps = fix.epsilon();
   TenT identity;
   TCICT_ASSERT_NOTHROW(identity = tci::eye<TenT>(ctx, 3));
   TCICT_ASSERT(tci::order(ctx, identity) == 2);
@@ -43,6 +44,19 @@ void test_eye(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(result_shape.size() == 2);
   TCICT_ASSERT(result_shape[0] == 3);
   TCICT_ASSERT(result_shape[1] == 3);
+
+  // Verify diagonal elements are 1 and off-diagonal elements are 0
+  for (std::size_t i = 0; i < 3; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      auto elem = tci::get_elem(ctx, identity, {i, j});
+      if (i == j) {
+        TCICT_ASSERT_CLOSE(real_part<TenT>(elem), 1.0, eps);
+      } else {
+        TCICT_ASSERT_CLOSE(real_part<TenT>(elem), 0.0, eps);
+      }
+      TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, eps);
+    }
+  }
 }
 
 // --- random (in-place) ---
