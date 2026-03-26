@@ -60,19 +60,31 @@ struct assertion_error : std::runtime_error {
     }                                                                                              \
   } while (false)
 
+namespace tcict {
+namespace detail {
+
+// Function template implementation for TCICT_ASSERT_THROWS.
+// Using a lambda avoids ASAN false positives caused by brace-init temporaries
+// constructed inside a try-catch block within a macro expansion.
+template <typename ExType, typename F>
+void assert_throws_impl(const char* file, int line, const char* ex_name, F&& f) {
+  bool caught = false;
+  try {
+    f();
+  } catch (const ExType&) {
+    caught = true;
+  } catch (...) {
+  }
+  if (!caught) {
+    std::ostringstream oss;
+    oss << file << ":" << line << ": expected exception " << ex_name << " not thrown";
+    throw ::tcict::assertion_error(oss.str());
+  }
+}
+
+}  // namespace detail
+}  // namespace tcict
+
 /// Assert that an expression throws a specific exception type.
 #define TCICT_ASSERT_THROWS(ExType, expr)                                                          \
-  do {                                                                                             \
-    bool tcict_caught_ = false;                                                                    \
-    try {                                                                                          \
-      expr;                                                                                        \
-    } catch (const ExType&) {                                                                      \
-      tcict_caught_ = true;                                                                        \
-    } catch (...) {                                                                                \
-    }                                                                                              \
-    if (!tcict_caught_) {                                                                          \
-      std::ostringstream oss_;                                                                     \
-      oss_ << __FILE__ << ":" << __LINE__ << ": expected exception " << #ExType << " not thrown";  \
-      throw ::tcict::assertion_error(oss_.str());                                                  \
-    }                                                                                              \
-  } while (false)
+  ::tcict::detail::assert_throws_impl<ExType>(__FILE__, __LINE__, #ExType, [&]() { expr; })
