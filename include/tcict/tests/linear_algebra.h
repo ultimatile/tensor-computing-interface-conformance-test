@@ -116,11 +116,11 @@ void test_linear_combine_single(tci_test_fixture<TenT>& fix) {
   tci::set_elem(ctx, single_tensor, {0, 0}, make_elem<TenT>(5.0));
 
   tci::List<TenT> single_list = {single_tensor};
-  result = tci::linear_combine(ctx, single_list);
+  TCICT_ASSERT_NOTHROW(result = tci::linear_combine(ctx, single_list));
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 5.0, eps);
 
   tci::List<tci::elem_t<TenT>> single_coef = {make_elem<TenT>(3.0)};
-  result = tci::linear_combine(ctx, single_list, single_coef);
+  TCICT_ASSERT_NOTHROW(result = tci::linear_combine(ctx, single_list, single_coef));
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 15.0, eps);
 }
 

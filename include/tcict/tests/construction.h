@@ -19,7 +19,8 @@ void test_zeros(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   tci::shape_t<TenT> shape = {2, 3};
-  auto tensor = tci::zeros<TenT>(ctx, shape);
+  TenT tensor;
+  TCICT_ASSERT_NOTHROW(tensor = tci::zeros<TenT>(ctx, shape));
   TCICT_ASSERT(tci::order(ctx, tensor) == 2);
   auto result_shape = tci::shape(ctx, tensor);
   TCICT_ASSERT(result_shape.size() == 2);
