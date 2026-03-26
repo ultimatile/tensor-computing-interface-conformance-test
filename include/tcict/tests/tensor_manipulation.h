@@ -825,4 +825,80 @@ void test_diag_mat_to_vec(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, identity, {2})), 1.0, eps);
 }
 
+// --- stack: basic ---
+
+template <typename TenT>
+void test_stack_basic(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_STACK
+  return;
+#endif
+  auto& ctx = fix.context();
+  auto eps = fix.epsilon();
+
+  TenT t1, t2;
+  tci::fill(ctx, {2, 3}, make_elem<TenT>(1.0), t1);
+  tci::fill(ctx, {2, 3}, make_elem<TenT>(2.0), t2);
+
+  TenT result;
+  tci::List<TenT> tensors = {t1, t2};
+  tci::stack(ctx, tensors, 0, result);
+
+  auto s = tci::shape(ctx, result);
+  TCICT_ASSERT(s.size() == 3);
+  TCICT_ASSERT(s[0] == 2);  // stacked dimension
+  TCICT_ASSERT(s[1] == 2);
+  TCICT_ASSERT(s[2] == 3);
+
+  // First slice filled with 1, second with 2
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 0})), 1.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1, 2})), 1.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0, 0})), 2.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1, 2})), 2.0, eps);
+}
+
+// --- stack: last axis ---
+
+template <typename TenT>
+void test_stack_last_axis(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_STACK
+  return;
+#endif
+  auto& ctx = fix.context();
+  auto eps = fix.epsilon();
+
+  TenT t1, t2, t3;
+  tci::fill(ctx, {2, 3}, make_elem<TenT>(1.0), t1);
+  tci::fill(ctx, {2, 3}, make_elem<TenT>(2.0), t2);
+  tci::fill(ctx, {2, 3}, make_elem<TenT>(3.0), t3);
+
+  TenT result;
+  tci::List<TenT> tensors = {t1, t2, t3};
+  tci::stack(ctx, tensors, 2, result);
+
+  auto s = tci::shape(ctx, result);
+  TCICT_ASSERT(s.size() == 3);
+  TCICT_ASSERT(s[0] == 2);
+  TCICT_ASSERT(s[1] == 3);
+  TCICT_ASSERT(s[2] == 3);  // stacked dimension
+
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 0})), 1.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 1})), 2.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 2})), 3.0, eps);
+}
+
+// --- stack: errors ---
+
+template <typename TenT>
+void test_stack_errors(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_STACK
+  return;
+#endif
+  auto& ctx = fix.context();
+
+  // Empty list
+  TenT result;
+  tci::List<TenT> empty;
+  TCICT_ASSERT_THROWS(std::invalid_argument, tci::stack(ctx, empty, 0, result));
+}
+
 }}  // namespace tcict::tests

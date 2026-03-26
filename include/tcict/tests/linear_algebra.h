@@ -588,4 +588,267 @@ void test_inverse_errors(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_THROWS(std::invalid_argument, tci::inverse(ctx, non_square, 1, result));
 }
 
+// --- scale: in-place ---
+
+template <typename TenT>
+void test_scale_inplace(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_SCALE
+  return;
+#endif
+  auto& ctx = fix.context();
+  auto eps = fix.epsilon();
+
+  TenT tensor;
+  tci::zeros(ctx, {2, 2}, tensor);
+  tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(2.0));
+  tci::set_elem(ctx, tensor, {0, 1}, make_elem<TenT>(4.0));
+  tci::set_elem(ctx, tensor, {1, 0}, make_elem<TenT>(6.0));
+  tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(8.0));
+
+  tci::scale(ctx, tensor, make_elem<TenT>(0.5));
+
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 1.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 1})), 2.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 0})), 3.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 4.0, eps);
+}
+
+// --- scale: out-of-place ---
+
+template <typename TenT>
+void test_scale_outofplace(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_SCALE
+  return;
+#endif
+  auto& ctx = fix.context();
+  auto eps = fix.epsilon();
+
+  TenT tensor, result;
+  tci::zeros(ctx, {2, 2}, tensor);
+  tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.0));
+  tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(6.0));
+
+  tci::scale(ctx, tensor, make_elem<TenT>(-2.0), result);
+
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), -6.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), -12.0, eps);
+  // Original unchanged
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 3.0, eps);
+}
+
+// --- scale: by zero ---
+
+template <typename TenT>
+void test_scale_by_zero(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_SCALE
+  return;
+#endif
+  auto& ctx = fix.context();
+  auto eps = fix.epsilon();
+
+  TenT tensor;
+  tci::eye(ctx, 2, tensor);
+  tci::scale(ctx, tensor, make_elem<TenT>(0.0));
+
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 0.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 0.0, eps);
+}
+
+// --- trace: 3-order tensor partial trace ---
+
+template <typename TenT>
+void test_trace_partial(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_TRACE
+  return;
+#endif
+  auto& ctx = fix.context();
+  auto eps = fix.epsilon();
+
+  // Shape {3, 3}: trace over {0, 1} should give scalar value
+  // Use a known matrix: [[1,0],[0,4]] → trace = 5
+  TenT matrix;
+  tci::zeros(ctx, {2, 2}, matrix);
+  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(1.0));
+  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(4.0));
+
+  TenT result;
+  tci::trace(ctx, matrix, {{0, 1}}, result);
+
+  // Result should be a scalar (rank 0 or 1 with size 1)
+  TCICT_ASSERT(tci::size(ctx, result) == 1);
+}
+
+// --- svd: basic with reconstruction ---
+
+template <typename TenT>
+void test_svd_basic(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_SVD
+  return;
+#endif
+  auto& ctx = fix.context();
+  auto eps = fix.epsilon();
+
+  // Diagonal matrix with known singular values [3, 1]
+  TenT matrix;
+  tci::zeros(ctx, {2, 2}, matrix);
+  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(3.0));
+  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(1.0));
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::svd(ctx, matrix, 1, u, s_diag, v_dag);
+
+  // S should have 2 singular values
+  TCICT_ASSERT(tci::size(ctx, s_diag) == 2);
+
+  // Singular values should be non-negative and sorted descending
+  using RealTenT = tci::real_ten_t<TenT>;
+  auto s0 = real_part<RealTenT>(tci::get_elem(ctx, s_diag, {0}));
+  auto s1 = real_part<RealTenT>(tci::get_elem(ctx, s_diag, {1}));
+  TCICT_ASSERT(s0 >= s1);
+  TCICT_ASSERT(s1 >= 0.0);
+  TCICT_ASSERT_CLOSE(s0, 3.0, eps);
+  TCICT_ASSERT_CLOSE(s1, 1.0, eps);
+
+  // U shape: (2, 2), V† shape: (2, 2)
+  auto u_shape = tci::shape(ctx, u);
+  auto v_shape = tci::shape(ctx, v_dag);
+  TCICT_ASSERT(u_shape.size() == 2);
+  TCICT_ASSERT(u_shape[0] == 2);
+  TCICT_ASSERT(v_shape.size() == 2);
+  TCICT_ASSERT(v_shape[1] == 2);
+}
+
+// --- svd: reconstruction U * diag(S) * V† ≈ A ---
+
+template <typename TenT>
+void test_svd_reconstruction(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_SVD
+  return;
+#endif
+  auto& ctx = fix.context();
+  auto eps = fix.epsilon();
+
+  // [[1,2],[3,4]]
+  TenT matrix;
+  tci::zeros(ctx, {2, 2}, matrix);
+  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(1.0));
+  tci::set_elem(ctx, matrix, {0, 1}, make_elem<TenT>(2.0));
+  tci::set_elem(ctx, matrix, {1, 0}, make_elem<TenT>(3.0));
+  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(4.0));
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::svd(ctx, matrix, 1, u, s_diag, v_dag);
+
+  // Reconstruct: scale columns of U by S, then contract with V†
+  // u_scaled[i,j] = u[i,j] * s[j]
+  auto bond = tci::size(ctx, s_diag);
+  using RealTenT = tci::real_ten_t<TenT>;
+  TenT u_scaled;
+  tci::copy(ctx, u, u_scaled);
+  for (tci::elem_coor_t<TenT> j = 0; j < bond; ++j) {
+    auto sj = real_part<RealTenT>(tci::get_elem(ctx, s_diag, {j}));
+    for (tci::elem_coor_t<TenT> i = 0; i < 2; ++i) {
+      auto elem = tci::get_elem(ctx, u, {i, j});
+      tci::set_elem(ctx, u_scaled, {i, j},
+                     make_elem<TenT>(real_part<TenT>(elem) * sj,
+                                     imag_part<TenT>(elem) * sj));
+    }
+  }
+
+  // Reconstruct via contract: u_scaled[i,k] * v_dag[k,j] → reconstructed[i,j]
+  TenT reconstructed;
+  tci::contract(ctx, u_scaled, "ik", v_dag, "kj", reconstructed, "ij");
+
+  TCICT_ASSERT(tci::close(ctx, reconstructed, matrix, eps * 100));
+}
+
+// --- eigvals: diagonal matrix ---
+
+template <typename TenT>
+void test_eigvals_diagonal(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_EIGVALS
+  return;
+#endif
+  auto& ctx = fix.context();
+  auto eps = fix.epsilon();
+
+  // diag(1, 2, 3) → eigenvalues {1, 2, 3}
+  TenT matrix;
+  tci::zeros(ctx, {3, 3}, matrix);
+  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(1.0));
+  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(2.0));
+  tci::set_elem(ctx, matrix, {2, 2}, make_elem<TenT>(3.0));
+
+  tci::cplx_ten_t<TenT> eigenvalues;
+  tci::eigvals(ctx, matrix, 1, eigenvalues);
+
+  TCICT_ASSERT(tci::size(ctx, eigenvalues) == 3);
+
+  // Sum of eigenvalues should equal trace = 6
+  using CplxTenT = tci::cplx_ten_t<TenT>;
+  double sum_real = 0.0;
+  for (tci::elem_coor_t<CplxTenT> i = 0; i < 3; ++i) {
+    sum_real += real_part<CplxTenT>(tci::get_elem(ctx, eigenvalues, {i}));
+  }
+  TCICT_ASSERT_CLOSE(sum_real, 6.0, eps);
+}
+
+// --- eigvals: error on non-square ---
+
+template <typename TenT>
+void test_eigvals_errors(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_EIGVALS
+  return;
+#endif
+  auto& ctx = fix.context();
+  TenT non_square;
+  tci::zeros(ctx, {2, 3}, non_square);
+  tci::cplx_ten_t<TenT> w;
+  TCICT_ASSERT_THROWS(std::invalid_argument, tci::eigvals(ctx, non_square, 1, w));
+}
+
+// --- eigvalsh: symmetric matrix ---
+
+template <typename TenT>
+void test_eigvalsh_diagonal(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_EIGVALSH
+  return;
+#endif
+  auto& ctx = fix.context();
+  auto eps = fix.epsilon();
+
+  // diag(1, 2, 3) → eigenvalues {1, 2, 3} (real, ascending)
+  TenT matrix;
+  tci::zeros(ctx, {3, 3}, matrix);
+  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(1.0));
+  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(2.0));
+  tci::set_elem(ctx, matrix, {2, 2}, make_elem<TenT>(3.0));
+
+  tci::real_ten_t<TenT> eigenvalues;
+  tci::eigvalsh(ctx, matrix, 1, eigenvalues);
+
+  TCICT_ASSERT(tci::size(ctx, eigenvalues) == 3);
+
+  using RealTenT = tci::real_ten_t<TenT>;
+  TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, eigenvalues, {0})), 1.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, eigenvalues, {1})), 2.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, eigenvalues, {2})), 3.0, eps);
+}
+
+// --- eigvalsh: error on non-square ---
+
+template <typename TenT>
+void test_eigvalsh_errors(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_EIGVALSH
+  return;
+#endif
+  auto& ctx = fix.context();
+  TenT non_square;
+  tci::zeros(ctx, {2, 3}, non_square);
+  tci::real_ten_t<TenT> w;
+  TCICT_ASSERT_THROWS(std::invalid_argument, tci::eigvalsh(ctx, non_square, 1, w));
+}
+
 }}  // namespace tcict::tests
