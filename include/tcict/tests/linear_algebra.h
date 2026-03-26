@@ -680,7 +680,7 @@ void test_trace_partial(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {})), 5.0, eps);
 }
 
-// --- svd: basic with reconstruction ---
+// --- svd: basic singular values and shapes ---
 
 template <typename TenT>
 void test_svd_basic(tci_test_fixture<TenT>& fix) {
