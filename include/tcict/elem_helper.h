@@ -10,13 +10,14 @@ namespace tcict {
 /// For real tensor types, the imaginary part is ignored.
 /// Backends with non-standard element types (e.g. cuDoubleComplex) should specialize this.
 template <typename TenT>
-tci::elem_t<TenT> make_elem(double re, double im = 0.0) {
+tci::elem_t<TenT> make_elem(double real, double imag = 0.0) {
   using elem_type = tci::elem_t<TenT>;
   using cplx_type = tci::cplx_t<TenT>;
   if constexpr (std::is_same_v<elem_type, cplx_type>) {
-    return elem_type(re, im);
+    return elem_type(real, imag);
   } else {
-    return static_cast<elem_type>(re);
+    // NOLINTNEXTLINE(bugprone-narrowing-conversions) -- elem_t is always floating-point in TCI
+    return static_cast<elem_type>(real);
   }
 }
 

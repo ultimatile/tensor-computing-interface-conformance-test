@@ -18,6 +18,7 @@ struct tci_test_fixture {
 
   auto& context() { return ctx; }
 
+  // NOLINTNEXTLINE(bugprone-narrowing-conversions) -- real_t is always floating-point in TCI
   auto epsilon() -> tci::real_t<TenT> { return static_cast<tci::real_t<TenT>>(1e-10); }
 };
 

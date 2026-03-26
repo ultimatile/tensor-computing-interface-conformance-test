@@ -29,7 +29,7 @@ struct assertion_error : std::runtime_error {
   do {                                                                                             \
     if (!(cond)) {                                                                                 \
       std::ostringstream oss_;                                                                     \
-      oss_ << __FILE__ << ":" << __LINE__ << ": " << msg;                                         \
+      oss_ << __FILE__ << ":" << __LINE__ << ": " << (msg);                                        \
       throw ::tcict::assertion_error(oss_.str());                                                  \
     }                                                                                              \
   } while (false)
