@@ -374,7 +374,7 @@ void test_clear_and_reallocate(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto tensor = tci::eye<TenT>(ctx, 2);
   tci::clear(ctx, tensor);
-  tensor = tci::allocate<TenT>(ctx, {2, 2});
+  TCICT_ASSERT_NOTHROW(tensor = tci::allocate<TenT>(ctx, {2, 2}));
 }
 
 // --- move (in-place) ---
@@ -433,8 +433,8 @@ void test_move_empty(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT empty_source;
-  tci::move(ctx, empty_source);
+  TenT empty_source, empty_result;
+  TCICT_ASSERT_NOTHROW(empty_result = tci::move(ctx, empty_source));
 }
 
 // --- move preserves values ---
