@@ -20,11 +20,10 @@ void test_close_identical(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT tensor1, tensor2;
-  tci::eye(ctx, 2, tensor1);
-  tci::eye(ctx, 2, tensor2);
+  auto tensor1 = tci::eye<TenT>(ctx, 2);
+  auto tensor2 = tci::eye<TenT>(ctx, 2);
 
-  bool are_equal = tci::eq(ctx, tensor1, tensor2, eps);
+  bool are_equal = tci::close(ctx, tensor1, tensor2, eps);
   TCICT_ASSERT(are_equal == true);
 }
 
@@ -37,11 +36,10 @@ void test_close_different(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT tensor1, tensor2;
-  tci::eye(ctx, 2, tensor1);
-  tci::zeros(ctx, {2, 2}, tensor2);
+  auto tensor1 = tci::eye<TenT>(ctx, 2);
+  auto tensor2 = tci::zeros<TenT>(ctx, {2, 2});
 
-  bool are_equal = tci::eq(ctx, tensor1, tensor2, eps);
+  bool are_equal = tci::close(ctx, tensor1, tensor2, eps);
   TCICT_ASSERT(are_equal == false);
 }
 
@@ -84,8 +82,7 @@ void test_show(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT a;
-  tci::eye(ctx, 2, a);
+  auto a = tci::eye<TenT>(ctx, 2);
   TCICT_ASSERT_NOTHROW(tci::show(ctx, a));
 }
 
@@ -98,17 +95,17 @@ void test_convert_same_context(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a, b;
-  tci::eye(ctx, 3, a);
+  TenT b;
+  auto a = tci::eye<TenT>(ctx, 3);
 
   TCICT_ASSERT_NOTHROW(tci::convert(ctx, a, ctx, b));
-  TCICT_ASSERT(tci::eq(ctx, a, b, eps));
+  TCICT_ASSERT(tci::close(ctx, a, b, eps));
   TCICT_ASSERT(tci::shape(ctx, a) == tci::shape(ctx, b));
 
   // Verify independence
   TenT original_b = tci::copy(ctx, b);
   tci::set_elem(ctx, a, {0, 0}, make_elem<TenT>(999.0));
-  TCICT_ASSERT(tci::eq(ctx, b, original_b, eps));
+  TCICT_ASSERT(tci::close(ctx, b, original_b, eps));
 }
 
 // --- convert (different contexts) ---
@@ -120,14 +117,14 @@ void test_convert_different_context(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a, b;
-  tci::eye(ctx, 3, a);
+  TenT b;
+  auto a = tci::eye<TenT>(ctx, 3);
 
   tci::context_handle_t<TenT> ctx2;
   tci::create_context(ctx2);
 
   TCICT_ASSERT_NOTHROW(tci::convert(ctx, a, ctx2, b));
-  TCICT_ASSERT(tci::eq(ctx, a, b, eps));
+  TCICT_ASSERT(tci::close(ctx, a, b, eps));
   TCICT_ASSERT(tci::shape(ctx, a) == tci::shape(ctx, b));
 
   tci::destroy_context(ctx2);
@@ -142,8 +139,7 @@ void test_convert_data_integrity(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a;
-  tci::zeros(ctx, {2, 3}, a);
+  auto a = tci::zeros<TenT>(ctx, {2, 3});
   tci::set_elem(ctx, a, {0, 0}, make_elem<TenT>(1.23, 4.56));
   tci::set_elem(ctx, a, {1, 2}, make_elem<TenT>(-7.89, 0.12));
 

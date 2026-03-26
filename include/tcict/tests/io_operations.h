@@ -19,8 +19,7 @@ void test_save_load_roundtrip(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  TenT tensor;
-  tci::zeros(ctx, {2, 2}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(1.0, 0.0));
   tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(1.0, 0.0));
 
@@ -49,15 +48,14 @@ void test_load_data_integrity(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  TenT original;
-  tci::eye(ctx, 2, original);
+  auto original = tci::eye<TenT>(ctx, 2);
   std::string filepath = "/tmp/tcict_test_load_integrity";
   tci::save(ctx, original, filepath);
 
   TenT loaded;
   TCICT_ASSERT_NOTHROW(tci::load(ctx, filepath, loaded));
   TCICT_ASSERT(tci::shape(ctx, original) == tci::shape(ctx, loaded));
-  TCICT_ASSERT(tci::eq(ctx, original, loaded, eps));
+  TCICT_ASSERT(tci::close(ctx, original, loaded, eps));
 }
 
 }}  // namespace tcict::tests

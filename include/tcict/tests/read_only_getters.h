@@ -17,8 +17,7 @@ void test_order(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT tensor;
-  tci::zeros(ctx, {2, 3, 4}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 3, 4});
   TCICT_ASSERT(tci::order(ctx, tensor) == 3);
 }
 
@@ -30,8 +29,7 @@ void test_shape(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT tensor;
-  tci::zeros(ctx, {2, 3, 4}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 3, 4});
   auto result_shape = tci::shape(ctx, tensor);
   TCICT_ASSERT(result_shape.size() == 3);
   TCICT_ASSERT(result_shape[0] == 2);
@@ -47,8 +45,7 @@ void test_size(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT tensor;
-  tci::zeros(ctx, {2, 3, 4}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 3, 4});
   TCICT_ASSERT(tci::size(ctx, tensor) == 24);
 }
 
@@ -60,8 +57,7 @@ void test_size_bytes(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT tensor;
-  tci::zeros(ctx, {2, 3, 4}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 3, 4});
   auto bytes = tci::size_bytes(ctx, tensor);
   TCICT_ASSERT(bytes > 0);
   // Verify: 24 elements * sizeof(elem_t<TenT>)
@@ -77,8 +73,7 @@ void test_set_get_elem(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT tensor;
-  tci::zeros(ctx, {2, 2}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
 
   tci::elem_coors_t<TenT> coord = {0, 0};
   auto expected = make_elem<TenT>(2.5, 1.5);
@@ -97,8 +92,7 @@ void test_size_bytes_2x2(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT tensor;
-  tci::zeros(ctx, {2, 2}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   auto size = tci::size_bytes(ctx, tensor);
   TCICT_ASSERT(size > 0);
 }

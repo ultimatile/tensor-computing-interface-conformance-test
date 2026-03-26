@@ -20,8 +20,7 @@ void test_norm_identity(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT identity;
-  tci::eye(ctx, 3, identity);
+  auto identity = tci::eye<TenT>(ctx, 3);
 
   auto norm_val = tci::norm(ctx, identity);
   // Frobenius norm of 3x3 identity = sqrt(3)
@@ -38,10 +37,10 @@ void test_linear_combine_uniform(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  TenT tensor_a, tensor_b, tensor_c, result;
-  tci::zeros(ctx, {2, 2}, tensor_a);
-  tci::zeros(ctx, {2, 2}, tensor_b);
-  tci::zeros(ctx, {2, 2}, tensor_c);
+  TenT result;
+  auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
+  auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
+  auto tensor_c = tci::zeros<TenT>(ctx, {2, 2});
 
   // a = [[1,2],[3,4]], b = [[5,6],[7,8]], c = [[1,1],[1,1]]
   tci::set_elem(ctx, tensor_a, {0, 0}, make_elem<TenT>(1.0));
@@ -58,7 +57,7 @@ void test_linear_combine_uniform(tci_test_fixture<TenT>& fix) {
   tci::set_elem(ctx, tensor_c, {1, 1}, make_elem<TenT>(1.0));
 
   tci::List<TenT> tensors = {tensor_a, tensor_b, tensor_c};
-  TCICT_ASSERT_NOTHROW(tci::linear_combine(ctx, tensors, result));
+  result = tci::linear_combine(ctx, tensors);
 
   // Expected: [[7,9],[11,13]]
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 7.0, eps);
@@ -77,9 +76,9 @@ void test_linear_combine_weighted(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  TenT tensor_a, tensor_b, result;
-  tci::zeros(ctx, {2, 2}, tensor_a);
-  tci::zeros(ctx, {2, 2}, tensor_b);
+  TenT result;
+  auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
+  auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
 
   // a = [[2,4],[6,8]], b = [[1,3],[5,7]]
   tci::set_elem(ctx, tensor_a, {0, 0}, make_elem<TenT>(2.0));
@@ -93,7 +92,7 @@ void test_linear_combine_weighted(tci_test_fixture<TenT>& fix) {
 
   tci::List<TenT> tensors = {tensor_a, tensor_b};
   tci::List<tci::elem_t<TenT>> coefficients = {make_elem<TenT>(0.5), make_elem<TenT>(2.0)};
-  TCICT_ASSERT_NOTHROW(tci::linear_combine(ctx, tensors, coefficients, result));
+  result = tci::linear_combine(ctx, tensors, coefficients);
 
   // Expected: 0.5*a + 2*b = [[3,8],[13,18]]
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 3.0, eps);
@@ -112,16 +111,16 @@ void test_linear_combine_single(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  TenT single_tensor, result;
-  tci::zeros(ctx, {1, 1}, single_tensor);
+  TenT result;
+  auto single_tensor = tci::zeros<TenT>(ctx, {1, 1});
   tci::set_elem(ctx, single_tensor, {0, 0}, make_elem<TenT>(5.0));
 
   tci::List<TenT> single_list = {single_tensor};
-  TCICT_ASSERT_NOTHROW(tci::linear_combine(ctx, single_list, result));
+  result = tci::linear_combine(ctx, single_list);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 5.0, eps);
 
   tci::List<tci::elem_t<TenT>> single_coef = {make_elem<TenT>(3.0)};
-  TCICT_ASSERT_NOTHROW(tci::linear_combine(ctx, single_list, single_coef, result));
+  result = tci::linear_combine(ctx, single_list, single_coef);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 15.0, eps);
 }
 
@@ -135,8 +134,7 @@ void test_normalize_inplace(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  TenT tensor;
-  tci::zeros(ctx, {2, 2}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   // [[3,4],[0,0]] -> norm = 5
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.0));
   tci::set_elem(ctx, tensor, {0, 1}, make_elem<TenT>(4.0));
@@ -163,8 +161,8 @@ void test_normalize_outofplace(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  TenT original, normalized;
-  tci::zeros(ctx, {3, 1}, original);
+  TenT normalized;
+  auto original = tci::zeros<TenT>(ctx, {3, 1});
   // [[2],[2],[1]] -> norm = 3
   tci::set_elem(ctx, original, {0, 0}, make_elem<TenT>(2.0));
   tci::set_elem(ctx, original, {1, 0}, make_elem<TenT>(2.0));
@@ -195,8 +193,7 @@ void test_normalize_edge_cases(tci_test_fixture<TenT>& fix) {
   auto eps = fix.epsilon();
 
   // Single non-zero element
-  TenT single_elem;
-  tci::zeros(ctx, {2, 2}, single_elem);
+  auto single_elem = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, single_elem, {1, 1}, make_elem<TenT>(7.0));
 
   auto norm1 = tci::normalize(ctx, single_elem);
@@ -204,8 +201,7 @@ void test_normalize_edge_cases(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, single_elem, {1, 1})), 1.0, eps);
 
   // Zero tensor
-  TenT zero_tensor;
-  tci::zeros(ctx, {2, 2}, zero_tensor);
+  auto zero_tensor = tci::zeros<TenT>(ctx, {2, 2});
   auto norm_zero = tci::normalize(ctx, zero_tensor);
   TCICT_ASSERT_CLOSE(std::abs(norm_zero), 0.0, eps);
 }
@@ -219,8 +215,7 @@ void test_norm_2x2(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT identity;
-  tci::eye(ctx, 2, identity);
+  auto identity = tci::eye<TenT>(ctx, 2);
   auto norm_val = tci::norm(ctx, identity);
   TCICT_ASSERT_CLOSE(norm_val, std::sqrt(2.0), eps);
 }
@@ -234,9 +229,9 @@ void test_contract_matmul(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a, b, c;
-  tci::zeros(ctx, {2, 2}, a);
-  tci::zeros(ctx, {2, 2}, b);
+  TenT c;
+  auto a = tci::zeros<TenT>(ctx, {2, 2});
+  auto b = tci::zeros<TenT>(ctx, {2, 2});
 
   // A = [[1,2],[3,4]], B = [[5,6],[7,8]]
   tci::set_elem(ctx, a, {0, 0}, make_elem<TenT>(1.0));
@@ -266,9 +261,9 @@ void test_contract_dot_product(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a, b, c;
-  tci::zeros(ctx, {3}, a);
-  tci::zeros(ctx, {3}, b);
+  TenT c;
+  auto a = tci::zeros<TenT>(ctx, {3});
+  auto b = tci::zeros<TenT>(ctx, {3});
 
   // a = [1,2,3], b = [4,5,6]
   tci::set_elem(ctx, a, {0}, make_elem<TenT>(1.0));
@@ -296,9 +291,9 @@ void test_contract_outer_product(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a, b, c;
-  tci::zeros(ctx, {2}, a);
-  tci::zeros(ctx, {3}, b);
+  TenT c;
+  auto a = tci::zeros<TenT>(ctx, {2});
+  auto b = tci::zeros<TenT>(ctx, {3});
 
   tci::set_elem(ctx, a, {0}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, a, {1}, make_elem<TenT>(2.0));
@@ -323,8 +318,7 @@ void test_qr(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT matrix;
-  tci::zeros(ctx, {3, 3}, matrix);
+  auto matrix = tci::zeros<TenT>(ctx, {3, 3});
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 3; ++j)
       tci::set_elem(ctx, matrix,
@@ -346,8 +340,7 @@ void test_lq(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT matrix;
-  tci::zeros(ctx, {3, 3}, matrix);
+  auto matrix = tci::zeros<TenT>(ctx, {3, 3});
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 3; ++j)
       tci::set_elem(ctx, matrix,
@@ -369,8 +362,7 @@ void test_trunc_svd(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT matrix;
-  tci::zeros(ctx, {4, 4}, matrix);
+  auto matrix = tci::zeros<TenT>(ctx, {4, 4});
   // Diagonal with known singular values [3,2,1,0.1]
   for (int i = 0; i < 4; ++i)
     tci::set_elem(ctx, matrix,
@@ -407,8 +399,7 @@ void test_eig_identity(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT matrix;
-  tci::eye(ctx, 2, matrix);
+  auto matrix = tci::eye<TenT>(ctx, 2);
 
   TenT eigenvals, eigenvecs;
   tci::eig(ctx, matrix, 1, eigenvals, eigenvecs);
@@ -430,8 +421,7 @@ void test_eigh_identity(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT matrix;
-  tci::eye(ctx, 2, matrix);
+  auto matrix = tci::eye<TenT>(ctx, 2);
 
   tci::real_ten_t<TenT> eigenvals;
   TenT eigenvecs;
@@ -455,8 +445,7 @@ void test_exp_identity(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT identity;
-  tci::eye(ctx, 3, identity);
+  auto identity = tci::eye<TenT>(ctx, 3);
 
   TenT result;
   tci::exp(ctx, identity, 1, result);
@@ -476,8 +465,7 @@ void test_exp_diagonal(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT diagonal;
-  tci::zeros(ctx, {2, 2}, diagonal);
+  auto diagonal = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, diagonal, {0, 0}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, diagonal, {1, 1}, make_elem<TenT>(2.0));
 
@@ -499,8 +487,7 @@ void test_exp_zero(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT zero_matrix;
-  tci::zeros(ctx, {2, 2}, zero_matrix);
+  auto zero_matrix = tci::zeros<TenT>(ctx, {2, 2});
 
   TenT result;
   tci::exp(ctx, zero_matrix, 1, result);
@@ -519,8 +506,7 @@ void test_exp_anti_hermitian(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT anti_herm;
-  tci::zeros(ctx, {2, 2}, anti_herm);
+  auto anti_herm = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, anti_herm, {0, 1}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, anti_herm, {1, 0}, make_elem<TenT>(-1.0));
 
@@ -542,12 +528,11 @@ void test_exp_errors(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT non_square, result;
-  tci::zeros(ctx, {2, 3}, non_square);
+  TenT result;
+  auto non_square = tci::zeros<TenT>(ctx, {2, 3});
   TCICT_ASSERT_THROWS(std::invalid_argument, tci::exp(ctx, non_square, 1, result));
 
-  TenT square;
-  tci::zeros(ctx, {2, 2}, square);
+  auto square = tci::zeros<TenT>(ctx, {2, 2});
   TCICT_ASSERT_THROWS(std::invalid_argument, tci::exp(ctx, square, 3, result));
 }
 
@@ -560,8 +545,7 @@ void test_inverse(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT matrix;
-  tci::zeros(ctx, {2, 2}, matrix);
+  auto matrix = tci::zeros<TenT>(ctx, {2, 2});
   // [[4,7],[2,6]] → inv = [[0.6,-0.7],[-0.2,0.4]]
   tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(4.0));
   tci::set_elem(ctx, matrix, {0, 1}, make_elem<TenT>(7.0));
@@ -585,8 +569,8 @@ void test_inverse_errors(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT non_square, result;
-  tci::zeros(ctx, {2, 3}, non_square);
+  TenT result;
+  auto non_square = tci::zeros<TenT>(ctx, {2, 3});
   TCICT_ASSERT_THROWS(std::invalid_argument, tci::inverse(ctx, non_square, 1, result));
 }
 
@@ -600,8 +584,7 @@ void test_scale_inplace(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  TenT tensor;
-  tci::zeros(ctx, {2, 2}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(2.0));
   tci::set_elem(ctx, tensor, {0, 1}, make_elem<TenT>(4.0));
   tci::set_elem(ctx, tensor, {1, 0}, make_elem<TenT>(6.0));
@@ -625,8 +608,8 @@ void test_scale_outofplace(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  TenT tensor, result;
-  tci::zeros(ctx, {2, 2}, tensor);
+  TenT result;
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.0));
   tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(6.0));
 
@@ -648,8 +631,7 @@ void test_scale_by_zero(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  TenT tensor;
-  tci::eye(ctx, 2, tensor);
+  auto tensor = tci::eye<TenT>(ctx, 2);
   tci::scale(ctx, tensor, make_elem<TenT>(0.0));
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 0.0, eps);
@@ -667,8 +649,7 @@ void test_trace_partial(tci_test_fixture<TenT>& fix) {
   auto eps = fix.epsilon();
 
   // 2x2 diagonal matrix [[1,0],[0,4]] → trace over {0,1} = 1+4 = 5
-  TenT matrix;
-  tci::zeros(ctx, {2, 2}, matrix);
+  auto matrix = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(4.0));
 
@@ -691,8 +672,7 @@ void test_svd_basic(tci_test_fixture<TenT>& fix) {
   auto eps = fix.epsilon();
 
   // Diagonal matrix with known singular values [3, 1]
-  TenT matrix;
-  tci::zeros(ctx, {2, 2}, matrix);
+  auto matrix = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(3.0));
   tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(1.0));
 
@@ -732,8 +712,7 @@ void test_svd_reconstruction(tci_test_fixture<TenT>& fix) {
   auto eps = fix.epsilon();
 
   // [[1,2],[3,4]]
-  TenT matrix;
-  tci::zeros(ctx, {2, 2}, matrix);
+  auto matrix = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, matrix, {0, 1}, make_elem<TenT>(2.0));
   tci::set_elem(ctx, matrix, {1, 0}, make_elem<TenT>(3.0));
@@ -747,8 +726,7 @@ void test_svd_reconstruction(tci_test_fixture<TenT>& fix) {
   // u_scaled[i,j] = u[i,j] * s[j]
   auto bond = tci::size(ctx, s_diag);
   using RealTenT = tci::real_ten_t<TenT>;
-  TenT u_scaled;
-  tci::copy(ctx, u, u_scaled);
+  auto u_scaled = tci::copy(ctx, u);
   for (tci::elem_coor_t<TenT> j = 0; j < bond; ++j) {
     auto sj = real_part<RealTenT>(tci::get_elem(ctx, s_diag, {j}));
     for (tci::elem_coor_t<TenT> i = 0; i < 2; ++i) {
@@ -777,8 +755,7 @@ void test_eigvals_diagonal(tci_test_fixture<TenT>& fix) {
   auto eps = fix.epsilon();
 
   // diag(1, 2, 3) → eigenvalues {1, 2, 3}
-  TenT matrix;
-  tci::zeros(ctx, {3, 3}, matrix);
+  auto matrix = tci::zeros<TenT>(ctx, {3, 3});
   tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(2.0));
   tci::set_elem(ctx, matrix, {2, 2}, make_elem<TenT>(3.0));
@@ -810,8 +787,7 @@ void test_eigvals_errors(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT non_square;
-  tci::zeros(ctx, {2, 3}, non_square);
+  auto non_square = tci::zeros<TenT>(ctx, {2, 3});
   tci::cplx_ten_t<TenT> w;
   TCICT_ASSERT_THROWS(std::invalid_argument, tci::eigvals(ctx, non_square, 1, w));
 }
@@ -827,8 +803,7 @@ void test_eigvalsh_diagonal(tci_test_fixture<TenT>& fix) {
   auto eps = fix.epsilon();
 
   // diag(1, 2, 3) → eigenvalues {1, 2, 3} (real, ascending)
-  TenT matrix;
-  tci::zeros(ctx, {3, 3}, matrix);
+  auto matrix = tci::zeros<TenT>(ctx, {3, 3});
   tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(2.0));
   tci::set_elem(ctx, matrix, {2, 2}, make_elem<TenT>(3.0));
@@ -852,8 +827,7 @@ void test_eigvalsh_errors(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT non_square;
-  tci::zeros(ctx, {2, 3}, non_square);
+  auto non_square = tci::zeros<TenT>(ctx, {2, 3});
   tci::real_ten_t<TenT> w;
   TCICT_ASSERT_THROWS(std::invalid_argument, tci::eigvalsh(ctx, non_square, 1, w));
 }

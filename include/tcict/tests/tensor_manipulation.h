@@ -18,8 +18,7 @@ void test_shrink_inplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT tensor;
-  tci::zeros(ctx, {3, 3}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {3, 3});
 
   // Fill with values 1-9
   for (int i = 0; i < 3; ++i) {
@@ -57,8 +56,7 @@ void test_shrink_outofplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT input;
-  tci::zeros(ctx, {4, 4}, input);
+  auto input = tci::zeros<TenT>(ctx, {4, 4});
 
   // Set values in center 2x2 region [1:3, 1:3]
   tci::set_elem(ctx, input, {1, 1}, make_elem<TenT>(11.0));
@@ -93,8 +91,7 @@ void test_shrink_complex_values(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT tensor;
-  tci::zeros(ctx, {3, 3}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {3, 3});
 
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(1.5, 2.5));
   tci::set_elem(ctx, tensor, {0, 1}, make_elem<TenT>(3.5, 4.5));
@@ -127,8 +124,7 @@ void test_real_extraction(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT tensor;
-  tci::zeros(ctx, {2, 2}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.14, 2.71));
   tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-1.59, 0.58));
 
@@ -150,8 +146,7 @@ void test_imag_extraction(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT tensor;
-  tci::zeros(ctx, {2, 2}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.14, 2.71));
   tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-1.59, 0.58));
 
@@ -173,8 +168,7 @@ void test_real_imag_inplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT tensor;
-  tci::zeros(ctx, {2, 2}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(5.25, 7.75));
   tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-2.25, -3.75));
 
@@ -198,8 +192,7 @@ void test_cplx_conj_inplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT tensor;
-  tci::zeros(ctx, {2, 2}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(1.0, 2.0));
   tci::set_elem(ctx, tensor, {0, 1}, make_elem<TenT>(-3.0, 4.0));
   tci::set_elem(ctx, tensor, {1, 0}, make_elem<TenT>(5.0, -6.0));
@@ -227,8 +220,7 @@ void test_cplx_conj_outofplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT input;
-  tci::zeros(ctx, {2, 2}, input);
+  auto input = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, input, {0, 0}, make_elem<TenT>(3.14, 2.71));
   tci::set_elem(ctx, input, {1, 1}, make_elem<TenT>(-1.41, -1.73));
 
@@ -257,7 +249,7 @@ void test_to_cplx_outofplace(tci_test_fixture<RealTenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   RealTenT real_tensor;
-  tci::zeros(ctx, {2, 2}, real_tensor);
+  real_tensor = tci::zeros<RealTenT>(ctx, {2, 2});
 
   tci::set_elem(ctx, real_tensor, {0, 0}, static_cast<tci::elem_t<RealTenT>>(1.5));
   tci::set_elem(ctx, real_tensor, {0, 1}, static_cast<tci::elem_t<RealTenT>>(2.5));
@@ -285,7 +277,7 @@ void test_to_cplx_inplace(tci_test_fixture<RealTenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   RealTenT real_tensor;
-  tci::zeros(ctx, {2, 2}, real_tensor);
+  real_tensor = tci::zeros<RealTenT>(ctx, {2, 2});
 
   tci::set_elem(ctx, real_tensor, {0, 0}, static_cast<tci::elem_t<RealTenT>>(7.25));
   tci::set_elem(ctx, real_tensor, {1, 1}, static_cast<tci::elem_t<RealTenT>>(8.75));
@@ -311,8 +303,7 @@ void test_to_cplx_complex_to_complex(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT tensor;
-  tci::zeros(ctx, {2, 2}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.14, 2.71));
   tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-1.41, 1.73));
 
@@ -337,8 +328,7 @@ void test_for_each_doubling(tci_test_fixture<TenT>& fix) {
   auto eps = fix.epsilon();
   using Elem = tci::elem_t<TenT>;
 
-  TenT tensor;
-  tci::zeros(ctx, {2, 3}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 3});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, tensor, {0, 1}, make_elem<TenT>(2.0));
   tci::set_elem(ctx, tensor, {0, 2}, make_elem<TenT>(3.0));
@@ -364,8 +354,7 @@ void test_for_each_summation(tci_test_fixture<TenT>& fix) {
   auto eps = fix.epsilon();
   using Elem = tci::elem_t<TenT>;
 
-  TenT tensor;
-  tci::zeros(ctx, {2, 2}, tensor);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, tensor, {0, 1}, make_elem<TenT>(2.0));
   tci::set_elem(ctx, tensor, {1, 0}, make_elem<TenT>(3.0));
@@ -393,8 +382,7 @@ void test_for_each_capture(tci_test_fixture<TenT>& fix) {
   auto eps = fix.epsilon();
   using Elem = tci::elem_t<TenT>;
 
-  TenT tensor;
-  tci::fill(ctx, {2, 2}, make_elem<TenT>(3.0, 1.0), tensor);
+  auto tensor = tci::fill<TenT>(ctx, {2, 2}, make_elem<TenT>(3.0, 1.0));
 
   double multiplier = 0.5;
   tci::for_each(ctx, tensor, [multiplier](Elem& elem) { elem = elem * multiplier; });
@@ -415,8 +403,7 @@ void test_for_each_const(tci_test_fixture<TenT>& fix) {
   auto eps = fix.epsilon();
   using Elem = tci::elem_t<TenT>;
 
-  TenT tensor;
-  tci::fill(ctx, {3}, make_elem<TenT>(2.0, 3.0), tensor);
+  auto tensor = tci::fill<TenT>(ctx, {3}, make_elem<TenT>(2.0, 3.0));
 
   Elem sum = make_elem<TenT>(0.0);
   tci::for_each(ctx, static_cast<const TenT&>(tensor),
@@ -437,8 +424,7 @@ void test_for_each_inversion(tci_test_fixture<TenT>& fix) {
   auto eps = fix.epsilon();
   using Elem = tci::elem_t<TenT>;
 
-  TenT tensor;
-  tci::fill(ctx, {2, 2}, make_elem<TenT>(0.5), tensor);
+  auto tensor = tci::fill<TenT>(ctx, {2, 2}, make_elem<TenT>(0.5));
 
   tci::for_each(ctx, tensor, [](Elem& elem) {
     if (std::abs(elem) > 1e-12) {
@@ -507,8 +493,7 @@ void test_reshape(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT tensor;
-  tci::fill(ctx, {2, 3, 4}, make_elem<TenT>(1.0), tensor);
+  auto tensor = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
 
   tci::shape_t<TenT> new_shape = {6, 4};
   TCICT_ASSERT_NOTHROW(tci::reshape(ctx, tensor, new_shape));
@@ -524,8 +509,8 @@ void test_transpose(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT tensor, transposed;
-  tci::fill(ctx, {2, 3, 4}, make_elem<TenT>(1.0), tensor);
+  TenT transposed;
+  auto tensor = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
 
   tci::List<tci::bond_idx_t<TenT>> new_order = {2, 0, 1};
   TCICT_ASSERT_NOTHROW(tci::transpose(ctx, tensor, new_order, transposed));
@@ -542,9 +527,9 @@ void test_concatenate_basic(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT t1, t2, result;
-  tci::fill(ctx, {2, 3}, make_elem<TenT>(1.0), t1);
-  tci::fill(ctx, {2, 3}, make_elem<TenT>(2.0), t2);
+  TenT result;
+  auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
+  auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
 
   tci::List<TenT> tensors = {t1, t2};
 
@@ -567,10 +552,10 @@ void test_concatenate_values(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT a, b, c, d;
-  tci::fill(ctx, {2, 3, 4}, make_elem<TenT>(1.0), a);
-  tci::fill(ctx, {2, 1, 4}, make_elem<TenT>(2.0), b);
-  tci::fill(ctx, {2, 2, 4}, make_elem<TenT>(3.0), c);
+  TenT d;
+  auto a = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
+  auto b = tci::fill<TenT>(ctx, {2, 1, 4}, make_elem<TenT>(2.0));
+  auto c = tci::fill<TenT>(ctx, {2, 2, 4}, make_elem<TenT>(3.0));
 
   tci::List<TenT> tensors = {a, b, c};
   TCICT_ASSERT_NOTHROW(tci::concatenate(ctx, tensors, 1, d));
@@ -592,8 +577,8 @@ void test_concatenate_errors(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT tensor, result;
-  tci::fill(ctx, {2, 3, 4}, make_elem<TenT>(1.0), tensor);
+  TenT result;
+  auto tensor = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
 
   tci::List<TenT> single = {tensor};
   TCICT_ASSERT_THROWS(std::invalid_argument, tci::concatenate(ctx, single, 3, result));
@@ -611,11 +596,11 @@ void test_extract_sub(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a, sub;
-  tci::zeros(ctx, {3, 4, 2}, a);
+  auto a = tci::zeros<TenT>(ctx, {3, 4, 2});
   tci::set_elem(ctx, a, {1, 0, 0}, make_elem<TenT>(42.0));
   tci::set_elem(ctx, a, {2, 1, 1}, make_elem<TenT>(13.0));
 
+  TenT sub;
   tci::List<tci::Pair<tci::elem_coor_t<TenT>, tci::elem_coor_t<TenT>>>
       coor_pairs = {{1, 3}, {0, 2}, {0, 2}};
   TCICT_ASSERT_NOTHROW(tci::extract_sub(ctx, a, coor_pairs, sub));
@@ -637,8 +622,7 @@ void test_extract_sub_errors(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT a;
-  tci::zeros(ctx, {3, 3}, a);
+  auto a = tci::zeros<TenT>(ctx, {3, 3});
 
   // Wrong number of coordinate pairs
   tci::List<tci::Pair<tci::elem_coor_t<TenT>, tci::elem_coor_t<TenT>>>
@@ -660,9 +644,8 @@ void test_replace_sub_inplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a, sub;
-  tci::zeros(ctx, {3, 4, 2}, a);
-  tci::zeros(ctx, {2, 2, 2}, sub);
+  auto a = tci::zeros<TenT>(ctx, {3, 4, 2});
+  auto sub = tci::zeros<TenT>(ctx, {2, 2, 2});
   tci::set_elem(ctx, sub, {0, 0, 0}, make_elem<TenT>(42.0));
   tci::set_elem(ctx, sub, {1, 1, 1}, make_elem<TenT>(13.0));
 
@@ -683,11 +666,11 @@ void test_replace_sub_outofplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a, sub, result;
-  tci::zeros(ctx, {4, 4}, a);
+  TenT result;
+  auto a = tci::zeros<TenT>(ctx, {4, 4});
   tci::set_elem(ctx, a, {0, 0}, make_elem<TenT>(99.0));
 
-  tci::fill(ctx, {2, 2}, make_elem<TenT>(1.0), sub);
+  auto sub = tci::fill<TenT>(ctx, {2, 2}, make_elem<TenT>(1.0));
 
   tci::elem_coors_t<TenT> begin_pt = {1, 1};
   TCICT_ASSERT_NOTHROW(tci::replace_sub(ctx, a, sub, begin_pt, result));
@@ -706,16 +689,14 @@ void test_replace_sub_errors(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT a, sub;
-  tci::zeros(ctx, {3, 3}, a);
+  auto a = tci::zeros<TenT>(ctx, {3, 3});
 
   // Dimension mismatch
-  tci::zeros(ctx, {2, 2, 2}, sub);
+  auto sub = tci::zeros<TenT>(ctx, {2, 2, 2});
   TCICT_ASSERT_THROWS(std::exception, tci::replace_sub(ctx, a, sub, {0, 0}));
 
   // Out of bounds
-  TenT sub2;
-  tci::zeros(ctx, {2, 2}, sub2);
+  auto sub2 = tci::zeros<TenT>(ctx, {2, 2});
   TCICT_ASSERT_THROWS(std::exception, tci::replace_sub(ctx, a, sub2, {2, 2}));
 }
 
@@ -728,8 +709,7 @@ void test_expand_inplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a;
-  tci::zeros(ctx, {2, 2, 2}, a);
+  auto a = tci::zeros<TenT>(ctx, {2, 2, 2});
 
   tci::Map<tci::bond_idx_t<TenT>, tci::bond_dim_t<TenT>> bond_map = {{1, 2}, {0, 1}};
   TCICT_ASSERT_NOTHROW(tci::expand(ctx, a, bond_map));
@@ -749,8 +729,8 @@ void test_expand_outofplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a, expanded;
-  tci::zeros(ctx, {2, 2, 2}, a);
+  TenT expanded;
+  auto a = tci::zeros<TenT>(ctx, {2, 2, 2});
   tci::set_elem(ctx, a, {1, 1, 1}, make_elem<TenT>(5.0));
 
   tci::Map<tci::bond_idx_t<TenT>, tci::bond_dim_t<TenT>> bond_map = {{1, 2}, {0, 1}};
@@ -770,8 +750,7 @@ void test_expand_invalid_throws(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT a;
-  tci::zeros(ctx, {2, 2}, a);
+  auto a = tci::zeros<TenT>(ctx, {2, 2});
 
   tci::Map<tci::bond_idx_t<TenT>, tci::bond_dim_t<TenT>> invalid_map = {{3, 1}};
   TCICT_ASSERT_THROWS(std::exception, tci::expand(ctx, a, invalid_map));
@@ -786,8 +765,7 @@ void test_diag_vec_to_mat(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT vector;
-  tci::zeros(ctx, {3}, vector);
+  auto vector = tci::zeros<TenT>(ctx, {3});
   tci::set_elem(ctx, vector, {0}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, vector, {1}, make_elem<TenT>(2.0));
   tci::set_elem(ctx, vector, {2}, make_elem<TenT>(3.0));
@@ -813,8 +791,7 @@ void test_diag_mat_to_vec(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT identity;
-  tci::eye(ctx, 3, identity);
+  auto identity = tci::eye<TenT>(ctx, 3);
 
   tci::diag(ctx, identity);
 
@@ -835,9 +812,8 @@ void test_stack_basic(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  TenT t1, t2;
-  tci::fill(ctx, {2, 3}, make_elem<TenT>(1.0), t1);
-  tci::fill(ctx, {2, 3}, make_elem<TenT>(2.0), t2);
+  auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
+  auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
 
   TenT result;
   tci::List<TenT> tensors = {t1, t2};
@@ -866,10 +842,9 @@ void test_stack_last_axis(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  TenT t1, t2, t3;
-  tci::fill(ctx, {2, 3}, make_elem<TenT>(1.0), t1);
-  tci::fill(ctx, {2, 3}, make_elem<TenT>(2.0), t2);
-  tci::fill(ctx, {2, 3}, make_elem<TenT>(3.0), t3);
+  auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
+  auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
+  auto t3 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(3.0));
 
   TenT result;
   tci::List<TenT> tensors = {t1, t2, t3};

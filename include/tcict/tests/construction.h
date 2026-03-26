@@ -19,8 +19,7 @@ void test_zeros(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   tci::shape_t<TenT> shape = {2, 3};
-  TenT tensor;
-  TCICT_ASSERT_NOTHROW(tci::zeros(ctx, shape, tensor));
+  auto tensor = tci::zeros<TenT>(ctx, shape);
   TCICT_ASSERT(tci::order(ctx, tensor) == 2);
   auto result_shape = tci::shape(ctx, tensor);
   TCICT_ASSERT(result_shape.size() == 2);
@@ -36,8 +35,7 @@ void test_eye(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT identity;
-  TCICT_ASSERT_NOTHROW(tci::eye(ctx, 3, identity));
+  auto identity = tci::eye<TenT>(ctx, 3);
   TCICT_ASSERT(tci::order(ctx, identity) == 2);
   auto result_shape = tci::shape(ctx, identity);
   TCICT_ASSERT(result_shape.size() == 2);
@@ -116,12 +114,11 @@ void test_copy_inplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a, b;
-  tci::zeros(ctx, {2, 3}, a);
+  auto a = tci::zeros<TenT>(ctx, {2, 3});
   tci::set_elem(ctx, a, {0, 0}, make_elem<TenT>(42.0, 13.0));
   tci::set_elem(ctx, a, {1, 2}, make_elem<TenT>(-5.5, 7.7));
 
-  TCICT_ASSERT_NOTHROW(tci::copy(ctx, a, b));
+  auto b = tci::copy(ctx, a);
 
   auto val1 = tci::get_elem(ctx, b, {0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(val1), 42.0, eps);
@@ -144,8 +141,7 @@ void test_copy_outofplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a;
-  tci::zeros(ctx, {3, 4, 2}, a);
+  auto a = tci::zeros<TenT>(ctx, {3, 4, 2});
   tci::set_elem(ctx, a, {0, 1, 0}, make_elem<TenT>(1.23, 4.56));
   tci::set_elem(ctx, a, {2, 3, 1}, make_elem<TenT>(-9.87, 6.54));
 
@@ -169,11 +165,10 @@ void test_copy_independence(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a, b;
-  tci::zeros(ctx, {2, 2}, a);
+  auto a = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, a, {0, 0}, make_elem<TenT>(100.0));
 
-  tci::copy(ctx, a, b);
+  auto b = tci::copy(ctx, a);
   tci::set_elem(ctx, a, {0, 0}, make_elem<TenT>(999.0));
 
   auto copy_val = tci::get_elem(ctx, b, {0, 0});
@@ -192,8 +187,7 @@ void test_copy_single_element(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a;
-  tci::zeros(ctx, {1}, a);
+  auto a = tci::zeros<TenT>(ctx, {1});
   tci::set_elem(ctx, a, {0}, make_elem<TenT>(3.14, 2.71));
 
   auto b = tci::copy(ctx, a);
@@ -212,8 +206,7 @@ void test_copy_large(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT a;
-  tci::zeros(ctx, {10, 10, 10}, a);
+  auto a = tci::zeros<TenT>(ctx, {10, 10, 10});
   tci::set_elem(ctx, a, {0, 0, 0}, make_elem<TenT>(1.0, 0.0));
   tci::set_elem(ctx, a, {9, 9, 9}, make_elem<TenT>(0.0, 1.0));
 
@@ -306,8 +299,7 @@ void test_allocate_3d(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   tci::shape_t<TenT> shape = {3, 4, 5};
-  TenT tensor;
-  tci::allocate(ctx, shape, tensor);
+  auto tensor = tci::allocate<TenT>(ctx, shape);
 
   auto tensor_shape = tci::shape(ctx, tensor);
   TCICT_ASSERT(tensor_shape.size() == 3);
@@ -324,8 +316,7 @@ void test_allocate_2d(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   tci::shape_t<TenT> shape = {2, 3};
-  TenT tensor;
-  tci::allocate(ctx, shape, tensor);
+  auto tensor = tci::allocate<TenT>(ctx, shape);
 
   auto tensor_shape = tci::shape(ctx, tensor);
   TCICT_ASSERT(tensor_shape.size() == 2);
@@ -341,8 +332,7 @@ void test_allocate_1d(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   tci::shape_t<TenT> shape = {10};
-  TenT tensor;
-  tci::allocate(ctx, shape, tensor);
+  auto tensor = tci::allocate<TenT>(ctx, shape);
 
   auto tensor_shape = tci::shape(ctx, tensor);
   TCICT_ASSERT(tensor_shape.size() == 1);
@@ -358,8 +348,7 @@ void test_clear_basic(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT tensor;
-  tci::eye(ctx, 3, tensor);
+  auto tensor = tci::eye<TenT>(ctx, 3);
   TCICT_ASSERT(tci::size(ctx, tensor) == 9);
   TCICT_ASSERT_NOTHROW(tci::clear(ctx, tensor));
 }
@@ -380,10 +369,9 @@ void test_clear_and_reallocate(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT tensor;
-  tci::eye(ctx, 2, tensor);
+  auto tensor = tci::eye<TenT>(ctx, 2);
   tci::clear(ctx, tensor);
-  TCICT_ASSERT_NOTHROW(tci::allocate(ctx, {2, 2}, tensor));
+  tensor = tci::allocate<TenT>(ctx, {2, 2});
 }
 
 // --- move (in-place) ---
@@ -395,15 +383,13 @@ void test_move_inplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT source;
-  tci::eye(ctx, 3, source);
+  auto source = tci::eye<TenT>(ctx, 3);
 
   auto source_size = tci::size(ctx, source);
   auto source_shape = tci::shape(ctx, source);
   auto original_elem = tci::get_elem(ctx, source, {0, 0});
 
-  TenT destination;
-  tci::move(ctx, source, destination);
+  auto destination = tci::move(ctx, source);
 
   TCICT_ASSERT(tci::size(ctx, destination) == source_size);
   TCICT_ASSERT(tci::shape(ctx, destination) == source_shape);
@@ -421,8 +407,7 @@ void test_move_outofplace(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT source;
-  tci::eye(ctx, 2, source);
+  auto source = tci::eye<TenT>(ctx, 2);
 
   auto source_size = tci::size(ctx, source);
   auto source_shape = tci::shape(ctx, source);
@@ -445,8 +430,8 @@ void test_move_empty(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
-  TenT empty_source, destination;
-  TCICT_ASSERT_NOTHROW(tci::move(ctx, empty_source, destination));
+  TenT empty_source;
+  auto destination = tci::move(ctx, empty_source);
 }
 
 // --- move preserves values ---
@@ -458,16 +443,14 @@ void test_move_preserves_values(tci_test_fixture<TenT>& fix) {
 #endif
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
-  TenT source;
-  tci::zeros(ctx, {2, 3}, source);
+  auto source = tci::zeros<TenT>(ctx, {2, 3});
 
   auto val1 = make_elem<TenT>(2.5, 1.5);
   auto val2 = make_elem<TenT>(3.7, -2.1);
   tci::set_elem(ctx, source, {0, 1}, val1);
   tci::set_elem(ctx, source, {1, 2}, val2);
 
-  TenT destination;
-  tci::move(ctx, source, destination);
+  auto destination = tci::move(ctx, source);
 
   auto moved_val1 = tci::get_elem(ctx, destination, {0, 1});
   auto moved_val2 = tci::get_elem(ctx, destination, {1, 2});
