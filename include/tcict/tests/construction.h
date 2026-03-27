@@ -378,6 +378,8 @@ void test_clear_basic(tci_test_fixture<TenT>& fix) {
   auto tensor = tci::eye<TenT>(ctx, 3);
   TCICT_ASSERT(tci::size(ctx, tensor) == 9);
   TCICT_ASSERT_NOTHROW(tci::clear(ctx, tensor));
+  TCICT_ASSERT(tci::order(ctx, tensor) == 0);
+  TCICT_ASSERT(tci::shape(ctx, tensor).empty());
 }
 
 template <typename TenT>
@@ -388,6 +390,7 @@ void test_clear_empty(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   TenT empty_tensor;
   TCICT_ASSERT_NOTHROW(tci::clear(ctx, empty_tensor));
+  TCICT_ASSERT(tci::order(ctx, empty_tensor) == 0);
 }
 
 template <typename TenT>
@@ -398,7 +401,9 @@ void test_clear_and_reallocate(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto tensor = tci::eye<TenT>(ctx, 2);
   tci::clear(ctx, tensor);
+  TCICT_ASSERT(tci::order(ctx, tensor) == 0);
   TCICT_ASSERT_NOTHROW(tensor = tci::allocate<TenT>(ctx, {2, 2}));
+  TCICT_ASSERT(tci::order(ctx, tensor) == 2);
 }
 
 // --- move (in-place) ---
