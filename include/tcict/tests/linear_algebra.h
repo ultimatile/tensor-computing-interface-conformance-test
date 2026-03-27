@@ -567,15 +567,17 @@ void test_exp_anti_hermitian(tci_test_fixture<TenT> &fix) {
   TenT result;
   tci::exp(ctx, anti_herm, 1, result);
 
-  // exp(anti-Hermitian) should be unitary: U†U ≈ I
-  TenT result_dag;
-  tci::cplx_conj(ctx, result, result_dag);
-  TenT result_dag_t;
-  tci::transpose(ctx, result_dag, {1, 0}, result_dag_t);
-  TenT utu;
-  tci::contract(ctx, result_dag_t, "ij", result, "jk", utu, "ik");
-  auto identity = tci::eye<TenT>(ctx, 2);
-  TCICT_ASSERT(tci::close(ctx, utu, identity, eps * 100));
+  // exp([[0,1],[-1,0]]) = [[cos(1), sin(1)], [-sin(1), cos(1)]]
+  auto c = std::cos(1.0);
+  auto s = std::sin(1.0);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), c,
+                     eps * 100);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1})), s,
+                     eps * 100);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0})), -s,
+                     eps * 100);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), c,
+                     eps * 100);
 }
 
 // --- exp: error conditions ---
