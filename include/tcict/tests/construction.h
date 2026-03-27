@@ -428,6 +428,9 @@ void test_move_inplace(tci_test_fixture<TenT>& fix) {
   auto dest_elem = tci::get_elem(ctx, destination, {0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(dest_elem), real_part<TenT>(original_elem), eps);
   TCICT_ASSERT_CLOSE(imag_part<TenT>(dest_elem), imag_part<TenT>(original_elem), eps);
+
+  // Verify source is invalidated after move
+  TCICT_ASSERT(tci::order(ctx, source) == 0);
 }
 
 // --- move (out-of-place) ---
@@ -452,6 +455,9 @@ void test_move_outofplace(tci_test_fixture<TenT>& fix) {
   auto result_elem = tci::get_elem(ctx, result, {1, 1});
   TCICT_ASSERT_CLOSE(real_part<TenT>(result_elem), real_part<TenT>(original_elem), eps);
   TCICT_ASSERT_CLOSE(imag_part<TenT>(result_elem), imag_part<TenT>(original_elem), eps);
+
+  // Verify source is invalidated after move
+  TCICT_ASSERT(tci::order(ctx, source) == 0);
 }
 
 // --- move empty tensor ---
@@ -464,6 +470,7 @@ void test_move_empty(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   TenT empty_source, empty_result;
   TCICT_ASSERT_NOTHROW(empty_result = tci::move(ctx, empty_source));
+  TCICT_ASSERT(tci::order(ctx, empty_source) == 0);
 }
 
 // --- move preserves values ---
@@ -491,6 +498,9 @@ void test_move_preserves_values(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_CLOSE(imag_part<TenT>(moved_val1), imag_part<TenT>(val1), eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(moved_val2), real_part<TenT>(val2), eps);
   TCICT_ASSERT_CLOSE(imag_part<TenT>(moved_val2), imag_part<TenT>(val2), eps);
+
+  // Verify source is invalidated after move
+  TCICT_ASSERT(tci::order(ctx, source) == 0);
 }
 
 }}  // namespace tcict::tests
