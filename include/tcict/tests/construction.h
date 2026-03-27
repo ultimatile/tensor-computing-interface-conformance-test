@@ -38,6 +38,33 @@ void test_zeros(tci_test_fixture<TenT>& fix) {
   }
 }
 
+// --- fill ---
+
+template <typename TenT>
+void test_fill(tci_test_fixture<TenT>& fix) {
+#ifdef TCICT_SKIP_FILL
+  return;
+#endif
+  auto& ctx = fix.context();
+  auto eps = fix.epsilon();
+  auto val = make_elem<TenT>(42.0, -7.5);
+  auto tensor = tci::fill<TenT>(ctx, {3, 4}, val);
+
+  TCICT_ASSERT(tci::order(ctx, tensor) == 2);
+  auto s = tci::shape(ctx, tensor);
+  TCICT_ASSERT(s[0] == 3);
+  TCICT_ASSERT(s[1] == 4);
+
+  // Verify every element equals the fill value
+  for (std::size_t i = 0; i < 3; ++i) {
+    for (std::size_t j = 0; j < 4; ++j) {
+      auto elem = tci::get_elem(ctx, tensor, {i, j});
+      TCICT_ASSERT_CLOSE(real_part<TenT>(elem), real_part<TenT>(val), eps);
+      TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), imag_part<TenT>(val), eps);
+    }
+  }
+}
+
 // --- eye ---
 
 template <typename TenT>
