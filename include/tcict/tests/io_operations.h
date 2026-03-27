@@ -5,6 +5,7 @@
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
 
+#include <cstdio>
 #include <string>
 
 namespace tcict { namespace tests {
@@ -24,6 +25,8 @@ void test_save_load_roundtrip(tci_test_fixture<TenT>& fix) {
   tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(1.0, 0.0));
 
   std::string filepath = "/tmp/tcict_test_roundtrip";
+  // Remove stale file to ensure save actually writes
+  std::remove(filepath.c_str());
 
   TCICT_ASSERT_NOTHROW(tci::save(ctx, tensor, filepath));
 
@@ -36,6 +39,8 @@ void test_save_load_roundtrip(tci_test_fixture<TenT>& fix) {
   auto val11 = tci::get_elem(ctx, loaded_tensor, {1, 1});
   TCICT_ASSERT_CLOSE(real_part<TenT>(val00), 1.0, eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(val11), 1.0, eps);
+
+  std::remove(filepath.c_str());
 }
 
 // --- load verifies data integrity against original ---
@@ -50,12 +55,16 @@ void test_load_data_integrity(tci_test_fixture<TenT>& fix) {
 
   auto original = tci::eye<TenT>(ctx, 2);
   std::string filepath = "/tmp/tcict_test_load_integrity";
+  // Remove stale file to ensure save actually writes
+  std::remove(filepath.c_str());
   tci::save(ctx, original, filepath);
 
   TenT loaded;
   TCICT_ASSERT_NOTHROW(tci::load(ctx, filepath, loaded));
   TCICT_ASSERT(tci::shape(ctx, original) == tci::shape(ctx, loaded));
   TCICT_ASSERT(tci::close(ctx, original, loaded, eps));
+
+  std::remove(filepath.c_str());
 }
 
 }}  // namespace tcict::tests
