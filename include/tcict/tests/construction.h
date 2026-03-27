@@ -362,6 +362,7 @@ void test_allocate_3d(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(tensor_shape[1] == 4);
   TCICT_ASSERT(tensor_shape[2] == 5);
   TCICT_ASSERT(tci::size(ctx, tensor) == 60);
+  TCICT_ASSERT(tci::size_bytes(ctx, tensor) == 60 * sizeof(tci::elem_t<TenT>));
 
   // Verify element type by round-tripping a value
   auto val = make_elem<TenT>(1.5, 2.5);
@@ -386,6 +387,7 @@ void test_allocate_2d(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(tensor_shape[0] == 2);
   TCICT_ASSERT(tensor_shape[1] == 3);
   TCICT_ASSERT(tci::size(ctx, tensor) == 6);
+  TCICT_ASSERT(tci::size_bytes(ctx, tensor) == 6 * sizeof(tci::elem_t<TenT>));
 
   // Verify element type by round-tripping a value
   auto val = make_elem<TenT>(1.5, 2.5);
@@ -409,6 +411,7 @@ void test_allocate_1d(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(tensor_shape.size() == 1);
   TCICT_ASSERT(tensor_shape[0] == 10);
   TCICT_ASSERT(tci::size(ctx, tensor) == 10);
+  TCICT_ASSERT(tci::size_bytes(ctx, tensor) == 10 * sizeof(tci::elem_t<TenT>));
 
   // Verify element type by round-tripping a value
   auto val = make_elem<TenT>(1.5, 2.5);
