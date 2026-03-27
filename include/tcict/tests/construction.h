@@ -325,6 +325,7 @@ void test_allocate_3d(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
+  auto eps = fix.epsilon();
   tci::shape_t<TenT> shape = {3, 4, 5};
   auto tensor = tci::allocate<TenT>(ctx, shape);
 
@@ -334,6 +335,13 @@ void test_allocate_3d(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(tensor_shape[1] == 4);
   TCICT_ASSERT(tensor_shape[2] == 5);
   TCICT_ASSERT(tci::size(ctx, tensor) == 60);
+
+  // Verify element type by round-tripping a value
+  auto val = make_elem<TenT>(1.5, 2.5);
+  tci::set_elem(ctx, tensor, {0, 0, 0}, val);
+  auto got = tci::get_elem(ctx, tensor, {0, 0, 0});
+  TCICT_ASSERT_CLOSE(real_part<TenT>(got), real_part<TenT>(val), eps);
+  TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), eps);
 }
 
 template <typename TenT>
@@ -342,6 +350,7 @@ void test_allocate_2d(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
+  auto eps = fix.epsilon();
   tci::shape_t<TenT> shape = {2, 3};
   auto tensor = tci::allocate<TenT>(ctx, shape);
 
@@ -350,6 +359,13 @@ void test_allocate_2d(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(tensor_shape[0] == 2);
   TCICT_ASSERT(tensor_shape[1] == 3);
   TCICT_ASSERT(tci::size(ctx, tensor) == 6);
+
+  // Verify element type by round-tripping a value
+  auto val = make_elem<TenT>(1.5, 2.5);
+  tci::set_elem(ctx, tensor, {0, 0}, val);
+  auto got = tci::get_elem(ctx, tensor, {0, 0});
+  TCICT_ASSERT_CLOSE(real_part<TenT>(got), real_part<TenT>(val), eps);
+  TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), eps);
 }
 
 template <typename TenT>
@@ -358,6 +374,7 @@ void test_allocate_1d(tci_test_fixture<TenT>& fix) {
   return;
 #endif
   auto& ctx = fix.context();
+  auto eps = fix.epsilon();
   tci::shape_t<TenT> shape = {10};
   auto tensor = tci::allocate<TenT>(ctx, shape);
 
@@ -365,6 +382,13 @@ void test_allocate_1d(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(tensor_shape.size() == 1);
   TCICT_ASSERT(tensor_shape[0] == 10);
   TCICT_ASSERT(tci::size(ctx, tensor) == 10);
+
+  // Verify element type by round-tripping a value
+  auto val = make_elem<TenT>(1.5, 2.5);
+  tci::set_elem(ctx, tensor, {0}, val);
+  auto got = tci::get_elem(ctx, tensor, {0});
+  TCICT_ASSERT_CLOSE(real_part<TenT>(got), real_part<TenT>(val), eps);
+  TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), eps);
 }
 
 // --- clear ---
