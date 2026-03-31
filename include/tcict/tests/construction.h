@@ -96,7 +96,7 @@ void test_eye(tci_test_fixture<TenT>& fix) {
   }
 }
 
-// --- random (in-place) ---
+// --- random (shape {2,3}, verifies all elements) ---
 
 template <typename TenT>
 void test_random_inplace(tci_test_fixture<TenT>& fix) {
@@ -106,7 +106,6 @@ void test_random_inplace(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   tci::shape_t<TenT> shape = {2, 3};
-  TenT tensor;
   std::size_t counter = 0;
 
   auto gen = [&]() -> tci::elem_t<TenT> {
@@ -114,7 +113,8 @@ void test_random_inplace(tci_test_fixture<TenT>& fix) {
     return make_elem<TenT>(val, val + 0.5);
   };
 
-  TCICT_ASSERT_NOTHROW(tci::random(ctx, shape, gen, tensor));
+  TenT tensor;
+  TCICT_ASSERT_NOTHROW(tensor = tci::template random<TenT>(ctx, shape, gen));
   TCICT_ASSERT(counter == 6);
   TCICT_ASSERT(tci::shape(ctx, tensor) == shape);
 
