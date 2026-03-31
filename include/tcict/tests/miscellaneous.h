@@ -44,7 +44,7 @@ void test_close_different(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(are_equal == false);
 }
 
-// --- to_range (to_container) ---
+// --- to_range ---
 
 template <typename TenT> void test_to_range(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_TO_RANGE
@@ -67,7 +67,7 @@ template <typename TenT> void test_to_range(tci_test_fixture<TenT> &fix) {
     return coors[0] * 3 + coors[1];
   };
 
-  tci::to_container(ctx, a, container.begin(), row_major_map);
+  tci::to_range(ctx, a, container.begin(), row_major_map);
 
   for (int i = 0; i < 6; ++i) {
     TCICT_ASSERT_CLOSE(real_part<TenT>(container[i]), static_cast<double>(i),
