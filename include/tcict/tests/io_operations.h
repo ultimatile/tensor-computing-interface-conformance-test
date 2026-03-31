@@ -31,7 +31,7 @@ void test_save_load_roundtrip(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_NOTHROW(tci::save(ctx, tensor, filepath));
 
   TenT loaded_tensor;
-  TCICT_ASSERT_NOTHROW(tci::load(ctx, filepath, loaded_tensor));
+  TCICT_ASSERT_NOTHROW(loaded_tensor = tci::load<TenT>(ctx, filepath));
 
   TCICT_ASSERT(tci::shape(ctx, loaded_tensor) == tci::shape(ctx, tensor));
 
@@ -60,7 +60,7 @@ void test_load_data_integrity(tci_test_fixture<TenT>& fix) {
   tci::save(ctx, original, filepath);
 
   TenT loaded;
-  TCICT_ASSERT_NOTHROW(tci::load(ctx, filepath, loaded));
+  TCICT_ASSERT_NOTHROW(loaded = tci::load<TenT>(ctx, filepath));
   TCICT_ASSERT(tci::shape(ctx, original) == tci::shape(ctx, loaded));
   TCICT_ASSERT(tci::close(ctx, original, loaded, eps));
 
