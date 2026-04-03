@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <functional>
+#include <type_traits>
 
 namespace tcict { namespace tests {
 
@@ -120,15 +121,18 @@ void test_random_inplace(tci_test_fixture<TenT>& fix) {
 
   auto elem_00 = tci::get_elem(ctx, tensor, {0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(elem_00), 0.0, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_00), 0.5, eps);
 
   auto elem_01 = tci::get_elem(ctx, tensor, {0, 1});
   TCICT_ASSERT_CLOSE(real_part<TenT>(elem_01), 1.0, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_01), 1.5, eps);
 
   auto elem_12 = tci::get_elem(ctx, tensor, {1, 2});
   TCICT_ASSERT_CLOSE(real_part<TenT>(elem_12), 5.0, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_12), 5.5, eps);
+
+  if constexpr (std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_00), 0.5, eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_01), 1.5, eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_12), 5.5, eps);
+  }
 }
 
 // --- random (out-of-place) ---
@@ -155,7 +159,9 @@ void test_random_outofplace(tci_test_fixture<TenT>& fix) {
 
   auto elem_11 = tci::get_elem(ctx, tensor, {1, 1});
   TCICT_ASSERT_CLOSE(real_part<TenT>(elem_11), 3.0, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_11), 3.5, eps);
+  if constexpr (std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_11), 3.5, eps);
+  }
 }
 
 // --- copy (in-place) ---
