@@ -450,15 +450,16 @@ template <typename TenT> void test_eig_identity(tci_test_fixture<TenT> &fix) {
   auto eps = fix.epsilon();
   auto matrix = tci::eye<TenT>(ctx, 2);
 
-  TenT eigenvals, eigenvecs;
+  using CplxTenT = tci::cplx_ten_t<TenT>;
+  CplxTenT eigenvals, eigenvecs;
   tci::eig(ctx, matrix, 1, eigenvals, eigenvecs);
 
   TCICT_ASSERT(tci::order(ctx, eigenvals) == 1);
   TCICT_ASSERT(tci::size(ctx, eigenvals) == 2);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, eigenvals, {0})), 1.0,
-                     eps);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, eigenvals, {1})), 1.0,
-                     eps);
+  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(tci::get_elem(ctx, eigenvals, {0})),
+                     1.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(tci::get_elem(ctx, eigenvals, {1})),
+                     1.0, eps);
 
   TCICT_ASSERT(tci::order(ctx, eigenvecs) == 2);
 }
