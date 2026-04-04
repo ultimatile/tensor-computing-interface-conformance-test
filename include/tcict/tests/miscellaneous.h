@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace tcict {
@@ -150,11 +151,14 @@ void test_convert_data_integrity(tci_test_fixture<TenT> &fix) {
 
   auto val1 = tci::get_elem(ctx, b, {0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(val1), 1.23, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(val1), 4.56, eps);
 
   auto val2 = tci::get_elem(ctx, b, {1, 2});
   TCICT_ASSERT_CLOSE(real_part<TenT>(val2), -7.89, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(val2), 0.12, eps);
+
+  if constexpr (std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(val1), 4.56, eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(val2), 0.12, eps);
+  }
 
   tci::destroy_context(ctx2);
 }
