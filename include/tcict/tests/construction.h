@@ -182,11 +182,14 @@ void test_copy_inplace(tci_test_fixture<TenT>& fix) {
 
   auto val1 = tci::get_elem(ctx, b, {0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(val1), 42.0, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(val1), 13.0, eps);
 
   auto val2 = tci::get_elem(ctx, b, {1, 2});
   TCICT_ASSERT_CLOSE(real_part<TenT>(val2), -5.5, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(val2), 7.7, eps);
+
+  if constexpr (std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(val1), 13.0, eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(val2), 7.7, eps);
+  }
 
   TCICT_ASSERT(tci::shape(ctx, a) == tci::shape(ctx, b));
   TCICT_ASSERT(tci::order(ctx, a) == tci::order(ctx, b));
@@ -254,7 +257,9 @@ void test_copy_single_element(tci_test_fixture<TenT>& fix) {
 
   auto val = tci::get_elem(ctx, b, {0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(val), 3.14, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(val), 2.71, eps);
+  if constexpr (std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(val), 2.71, eps);
+  }
 }
 
 // --- copy large tensor ---
@@ -274,11 +279,16 @@ void test_copy_large(tci_test_fixture<TenT>& fix) {
 
   auto corner1 = tci::get_elem(ctx, b, {0, 0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(corner1), 1.0, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(corner1), 0.0, eps);
 
   auto corner2 = tci::get_elem(ctx, b, {9, 9, 9});
-  TCICT_ASSERT_CLOSE(real_part<TenT>(corner2), 0.0, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(corner2), 1.0, eps);
+  if constexpr (std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(corner1), 0.0, eps);
+    TCICT_ASSERT_CLOSE(real_part<TenT>(corner2), 0.0, eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(corner2), 1.0, eps);
+  } else {
+    // For real types, make_elem(0.0, 1.0) yields 0.0
+    TCICT_ASSERT_CLOSE(real_part<TenT>(corner2), 0.0, eps);
+  }
 
   TCICT_ASSERT(tci::shape(ctx, a) == tci::shape(ctx, b));
 }
