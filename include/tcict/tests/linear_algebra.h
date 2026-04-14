@@ -407,24 +407,23 @@ template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
 
 // --- truncated SVD ---
 
+// Helper: build 4×4 diagonal matrix with SVs [3, 2, 1, 0.1].
+template <typename TenT>
+TenT trunc_svd_test_matrix(typename tci::tensor_traits<TenT>::context_handle_t &ctx) {
+  auto matrix = tci::zeros<TenT>(ctx, {4, 4});
+  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(3.0));
+  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(2.0));
+  tci::set_elem(ctx, matrix, {2, 2}, make_elem<TenT>(1.0));
+  tci::set_elem(ctx, matrix, {3, 3}, make_elem<TenT>(0.1));
+  return matrix;
+}
+
 template <typename TenT> void test_trunc_svd(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_TRUNC_SVD
   return;
 #endif
   auto &ctx = fix.context();
-  auto matrix = tci::zeros<TenT>(ctx, {4, 4});
-  // Diagonal with known singular values [3,2,1,0.1]
-  for (int i = 0; i < 4; ++i)
-    tci::set_elem(ctx, matrix,
-                  {static_cast<tci::elem_coor_t<TenT>>(i),
-                   static_cast<tci::elem_coor_t<TenT>>(i)},
-                  make_elem<TenT>(3.0 - i * 0.9667)); // approx [3,2.1,1.1,0.1]
-
-  // Use exact diagonal values for cleaner test
-  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(3.0));
-  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(2.0));
-  tci::set_elem(ctx, matrix, {2, 2}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, matrix, {3, 3}, make_elem<TenT>(0.1));
+  auto matrix = trunc_svd_test_matrix<TenT>(ctx);
 
   TenT u, v_dag;
   tci::real_ten_t<TenT> s_diag;
@@ -438,6 +437,83 @@ template <typename TenT> void test_trunc_svd(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(s_shape.size() == 1);
   TCICT_ASSERT(s_shape[0] <= 2);
   TCICT_ASSERT(trunc_err >= 0.0);
+}
+
+/// Verify trunc_err equals the spec formula when truncation occurs.
+/// SVs = [3, 2, 1, 0.1], chi_max = 2 → keep [3, 2], discard [1, 0.1].
+/// epsilon = (1^2 + 0.1^2) / (3^2 + 2^2 + 1^2 + 0.1^2)
+///         = 1.01 / 14.01 ≈ 0.07209
+template <typename TenT>
+void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
+#ifdef TCICT_SKIP_TRUNC_SVD
+  return;
+#endif
+  auto &ctx = fix.context();
+  auto eps = fix.epsilon();
+  auto matrix = trunc_svd_test_matrix<TenT>(ctx);
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::real_t<TenT> trunc_err = -1.0;
+
+  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
+                 static_cast<tci::bond_dim_t<TenT>>(2), 0.0);
+
+  // Expected: sum(discarded^2) / sum(all^2) = (1 + 0.01) / (9 + 4 + 1 + 0.01)
+  tci::real_t<TenT> expected =
+      (1.0 * 1.0 + 0.1 * 0.1) / (3.0 * 3.0 + 2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1);
+  TCICT_ASSERT_CLOSE(trunc_err, expected, eps);
+}
+
+/// Verify trunc_err == 0 when no truncation occurs (chi_max >= kappa).
+template <typename TenT>
+void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
+#ifdef TCICT_SKIP_TRUNC_SVD
+  return;
+#endif
+  auto &ctx = fix.context();
+  auto eps = fix.epsilon();
+  auto matrix = trunc_svd_test_matrix<TenT>(ctx);
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::real_t<TenT> trunc_err = -1.0;
+
+  // chi_max = 10 > 4 (kappa), s_min = 0 → keep all SVs
+  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
+                 static_cast<tci::bond_dim_t<TenT>>(10), 0.0);
+
+  auto s_shape = tci::shape(ctx, s_diag);
+  TCICT_ASSERT(s_shape.size() == 1);
+  TCICT_ASSERT(s_shape[0] == 4);
+  TCICT_ASSERT_CLOSE(trunc_err, 0.0, eps);
+}
+
+/// Verify trunc_err is in [0, 1] (relative error is bounded).
+template <typename TenT>
+void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
+#ifdef TCICT_SKIP_TRUNC_SVD
+  return;
+#endif
+  auto &ctx = fix.context();
+  auto eps = fix.epsilon();
+  auto matrix = trunc_svd_test_matrix<TenT>(ctx);
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::real_t<TenT> trunc_err = -1.0;
+
+  // Keep only 1 SV: discard [2, 1, 0.1]
+  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
+                 static_cast<tci::bond_dim_t<TenT>>(1), 0.0);
+
+  TCICT_ASSERT(trunc_err >= 0.0);
+  TCICT_ASSERT(trunc_err <= 1.0);
+
+  // Expected: (4 + 1 + 0.01) / (9 + 4 + 1 + 0.01) = 5.01 / 14.01 ≈ 0.3576
+  tci::real_t<TenT> expected =
+      (2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1) / (3.0 * 3.0 + 2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1);
+  TCICT_ASSERT_CLOSE(trunc_err, expected, eps);
 }
 
 // --- eig (general eigendecomposition of identity) ---
