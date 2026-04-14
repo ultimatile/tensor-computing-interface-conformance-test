@@ -449,6 +449,7 @@ void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
   return;
 #endif
   auto &ctx = fix.context();
+  auto eps = fix.epsilon();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
 
   TenT u, v_dag;
@@ -461,7 +462,7 @@ void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
   // Expected: sum(discarded^2) / sum(all^2) = (1 + 0.01) / (9 + 4 + 1 + 0.01)
   tci::real_t<TenT> expected =
       (1.0 * 1.0 + 0.1 * 0.1) / (3.0 * 3.0 + 2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1);
-  TCICT_ASSERT_CLOSE(trunc_err, expected, 1e-10);
+  TCICT_ASSERT_CLOSE(trunc_err, expected, eps);
 }
 
 /// Verify trunc_err == 0 when no truncation occurs (chi_max >= kappa).
@@ -471,6 +472,7 @@ void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
   return;
 #endif
   auto &ctx = fix.context();
+  auto eps = fix.epsilon();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
 
   TenT u, v_dag;
@@ -482,8 +484,9 @@ void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
                  static_cast<tci::bond_dim_t<TenT>>(10), 0.0);
 
   auto s_shape = tci::shape(ctx, s_diag);
+  TCICT_ASSERT(s_shape.size() == 1);
   TCICT_ASSERT(s_shape[0] == 4);
-  TCICT_ASSERT_CLOSE(trunc_err, 0.0, 1e-15);
+  TCICT_ASSERT_CLOSE(trunc_err, 0.0, eps);
 }
 
 /// Verify trunc_err is in [0, 1] (relative error is bounded).
@@ -493,6 +496,7 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
   return;
 #endif
   auto &ctx = fix.context();
+  auto eps = fix.epsilon();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
 
   TenT u, v_dag;
@@ -509,7 +513,7 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
   // Expected: (4 + 1 + 0.01) / (9 + 4 + 1 + 0.01) = 5.01 / 14.01 ≈ 0.3576
   tci::real_t<TenT> expected =
       (2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1) / (3.0 * 3.0 + 2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1);
-  TCICT_ASSERT_CLOSE(trunc_err, expected, 1e-10);
+  TCICT_ASSERT_CLOSE(trunc_err, expected, eps);
 }
 
 // --- eig (general eigendecomposition of identity) ---
