@@ -155,7 +155,7 @@ void test_convert_data_integrity(tci_test_fixture<TenT> &fix) {
   auto val2 = tci::get_elem(ctx, b, {1, 2});
   TCICT_ASSERT_CLOSE(real_part<TenT>(val2), -7.89, eps);
 
-  if constexpr (std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>) {
+  if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(val1), 4.56, eps);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(val2), 0.12, eps);
   }

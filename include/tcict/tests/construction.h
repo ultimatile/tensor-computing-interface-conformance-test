@@ -34,7 +34,9 @@ void test_zeros(tci_test_fixture<TenT>& fix) {
     for (std::size_t j = 0; j < 3; ++j) {
       auto elem = tci::get_elem(ctx, tensor, {i, j});
       TCICT_ASSERT_CLOSE(real_part<TenT>(elem), 0.0, eps);
-      TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, eps);
+      if constexpr (is_complex_v<TenT>) {
+        TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, eps);
+      }
     }
   }
 }
@@ -61,7 +63,9 @@ void test_fill(tci_test_fixture<TenT>& fix) {
     for (std::size_t j = 0; j < 4; ++j) {
       auto elem = tci::get_elem(ctx, tensor, {i, j});
       TCICT_ASSERT_CLOSE(real_part<TenT>(elem), real_part<TenT>(val), eps);
-      TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), imag_part<TenT>(val), eps);
+      if constexpr (is_complex_v<TenT>) {
+        TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), imag_part<TenT>(val), eps);
+      }
     }
   }
 }
@@ -92,7 +96,9 @@ void test_eye(tci_test_fixture<TenT>& fix) {
       } else {
         TCICT_ASSERT_CLOSE(real_part<TenT>(elem), 0.0, eps);
       }
-      TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, eps);
+      if constexpr (is_complex_v<TenT>) {
+        TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, eps);
+      }
     }
   }
 }
@@ -128,7 +134,7 @@ void test_random_inplace(tci_test_fixture<TenT>& fix) {
   auto elem_12 = tci::get_elem(ctx, tensor, {1, 2});
   TCICT_ASSERT_CLOSE(real_part<TenT>(elem_12), 5.0, eps);
 
-  if constexpr (std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>) {
+  if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_00), 0.5, eps);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_01), 1.5, eps);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_12), 5.5, eps);
@@ -159,7 +165,7 @@ void test_random_outofplace(tci_test_fixture<TenT>& fix) {
 
   auto elem_11 = tci::get_elem(ctx, tensor, {1, 1});
   TCICT_ASSERT_CLOSE(real_part<TenT>(elem_11), 3.0, eps);
-  if constexpr (std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>) {
+  if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_11), 3.5, eps);
   }
 }
@@ -186,7 +192,7 @@ void test_copy_inplace(tci_test_fixture<TenT>& fix) {
   auto val2 = tci::get_elem(ctx, b, {1, 2});
   TCICT_ASSERT_CLOSE(real_part<TenT>(val2), -5.5, eps);
 
-  if constexpr (std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>) {
+  if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(val1), 13.0, eps);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(val2), 7.7, eps);
   }
@@ -213,7 +219,9 @@ void test_copy_outofplace(tci_test_fixture<TenT>& fix) {
   auto val1_a = tci::get_elem(ctx, a, {0, 1, 0});
   auto val1_b = tci::get_elem(ctx, b, {0, 1, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(val1_a), real_part<TenT>(val1_b), eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(val1_a), imag_part<TenT>(val1_b), eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(val1_a), imag_part<TenT>(val1_b), eps);
+  }
 
   TCICT_ASSERT(tci::shape(ctx, a) == tci::shape(ctx, b));
   TCICT_ASSERT(tci::order(ctx, a) == tci::order(ctx, b));
@@ -257,7 +265,7 @@ void test_copy_single_element(tci_test_fixture<TenT>& fix) {
 
   auto val = tci::get_elem(ctx, b, {0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(val), 3.14, eps);
-  if constexpr (std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>) {
+  if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(val), 2.71, eps);
   }
 }
@@ -281,7 +289,7 @@ void test_copy_large(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_CLOSE(real_part<TenT>(corner1), 1.0, eps);
 
   auto corner2 = tci::get_elem(ctx, b, {9, 9, 9});
-  if constexpr (std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>) {
+  if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(corner1), 0.0, eps);
     TCICT_ASSERT_CLOSE(real_part<TenT>(corner2), 0.0, eps);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(corner2), 1.0, eps);
@@ -385,7 +393,9 @@ void test_allocate_3d(tci_test_fixture<TenT>& fix) {
   tci::set_elem(ctx, tensor, {0, 0, 0}, val);
   auto got = tci::get_elem(ctx, tensor, {0, 0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(got), real_part<TenT>(val), eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), eps);
+  }
 }
 
 template <typename TenT>
@@ -410,7 +420,9 @@ void test_allocate_2d(tci_test_fixture<TenT>& fix) {
   tci::set_elem(ctx, tensor, {0, 0}, val);
   auto got = tci::get_elem(ctx, tensor, {0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(got), real_part<TenT>(val), eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), eps);
+  }
 }
 
 template <typename TenT>
@@ -434,7 +446,9 @@ void test_allocate_1d(tci_test_fixture<TenT>& fix) {
   tci::set_elem(ctx, tensor, {0}, val);
   auto got = tci::get_elem(ctx, tensor, {0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(got), real_part<TenT>(val), eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), eps);
+  }
 }
 
 // --- clear ---
@@ -497,7 +511,9 @@ void test_move_inplace(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(tci::shape(ctx, destination) == source_shape);
   auto dest_elem = tci::get_elem(ctx, destination, {0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(dest_elem), real_part<TenT>(original_elem), eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(dest_elem), imag_part<TenT>(original_elem), eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(dest_elem), imag_part<TenT>(original_elem), eps);
+  }
 
   // Verify source is invalidated after move
   TCICT_ASSERT(tci::order(ctx, source) == 0);
@@ -524,7 +540,9 @@ void test_move_outofplace(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(tci::shape(ctx, result) == source_shape);
   auto result_elem = tci::get_elem(ctx, result, {1, 1});
   TCICT_ASSERT_CLOSE(real_part<TenT>(result_elem), real_part<TenT>(original_elem), eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(result_elem), imag_part<TenT>(original_elem), eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(result_elem), imag_part<TenT>(original_elem), eps);
+  }
 
   // Verify source is invalidated after move
   TCICT_ASSERT(tci::order(ctx, source) == 0);
@@ -565,9 +583,11 @@ void test_move_preserves_values(tci_test_fixture<TenT>& fix) {
   auto moved_val2 = tci::get_elem(ctx, destination, {1, 2});
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(moved_val1), real_part<TenT>(val1), eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(moved_val1), imag_part<TenT>(val1), eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(moved_val2), real_part<TenT>(val2), eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(moved_val2), imag_part<TenT>(val2), eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(moved_val1), imag_part<TenT>(val1), eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(moved_val2), imag_part<TenT>(val2), eps);
+  }
 
   // Verify source is invalidated after move
   TCICT_ASSERT(tci::order(ctx, source) == 0);

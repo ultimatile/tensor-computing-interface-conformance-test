@@ -118,9 +118,11 @@ void test_shrink_complex_values(tci_test_fixture<TenT> &fix) {
   auto e00 = tci::get_elem(ctx, output, {0, 0});
   auto e01 = tci::get_elem(ctx, output, {0, 1});
   TCICT_ASSERT_CLOSE(real_part<TenT>(e00), 1.5, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(e00), 2.5, eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(e01), 3.5, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(e01), 4.5, eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(e00), 2.5, eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(e01), 4.5, eps);
+  }
 }
 
 // --- real extraction (out-of-place) ---
@@ -152,19 +154,23 @@ void test_imag_extraction(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_IMAG
   return;
 #endif
-  auto &ctx = fix.context();
-  auto eps = fix.epsilon();
-  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
-  tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.14, 2.71));
-  tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-1.59, 0.58));
+  // Per TCI spec, tci::imag on a real tensor yields a zero tensor, so the
+  // non-zero imaginary expectations below are meaningful only for complex TenT.
+  if constexpr (is_complex_v<TenT>) {
+    auto &ctx = fix.context();
+    auto eps = fix.epsilon();
+    auto tensor = tci::zeros<TenT>(ctx, {2, 2});
+    tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.14, 2.71));
+    tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-1.59, 0.58));
 
-  auto imag_tensor = tci::imag(ctx, tensor);
+    auto imag_tensor = tci::imag(ctx, tensor);
 
-  using RealTenT = tci::real_ten_t<TenT>;
-  auto elem00 = tci::get_elem(ctx, imag_tensor, {0, 0});
-  auto elem11 = tci::get_elem(ctx, imag_tensor, {1, 1});
-  TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 2.71, eps);
-  TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.58, eps);
+    using RealTenT = tci::real_ten_t<TenT>;
+    auto elem00 = tci::get_elem(ctx, imag_tensor, {0, 0});
+    auto elem11 = tci::get_elem(ctx, imag_tensor, {1, 1});
+    TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 2.71, eps);
+    TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.58, eps);
+  }
 }
 
 // --- real and imag extraction (in-place) ---
@@ -174,25 +180,29 @@ void test_real_imag_inplace(tci_test_fixture<TenT> &fix) {
 #if defined(TCICT_SKIP_REAL) || defined(TCICT_SKIP_IMAG)
   return;
 #endif
-  auto &ctx = fix.context();
-  auto eps = fix.epsilon();
-  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
-  tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(5.25, 7.75));
-  tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-2.25, -3.75));
+  // Per TCI spec, tci::imag on a real tensor yields a zero tensor; the
+  // imaginary-side expectations below assume complex input.
+  if constexpr (is_complex_v<TenT>) {
+    auto &ctx = fix.context();
+    auto eps = fix.epsilon();
+    auto tensor = tci::zeros<TenT>(ctx, {2, 2});
+    tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(5.25, 7.75));
+    tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-2.25, -3.75));
 
-  tci::real_ten_t<TenT> real_output, imag_output;
-  tci::real(ctx, tensor, real_output);
-  tci::imag(ctx, tensor, imag_output);
+    tci::real_ten_t<TenT> real_output, imag_output;
+    tci::real(ctx, tensor, real_output);
+    tci::imag(ctx, tensor, imag_output);
 
-  using RealTenT = tci::real_ten_t<TenT>;
-  TCICT_ASSERT_CLOSE(
-      real_part<RealTenT>(tci::get_elem(ctx, real_output, {0, 0})), 5.25, eps);
-  TCICT_ASSERT_CLOSE(
-      real_part<RealTenT>(tci::get_elem(ctx, real_output, {1, 1})), -2.25, eps);
-  TCICT_ASSERT_CLOSE(
-      real_part<RealTenT>(tci::get_elem(ctx, imag_output, {0, 0})), 7.75, eps);
-  TCICT_ASSERT_CLOSE(
-      real_part<RealTenT>(tci::get_elem(ctx, imag_output, {1, 1})), -3.75, eps);
+    using RealTenT = tci::real_ten_t<TenT>;
+    TCICT_ASSERT_CLOSE(
+        real_part<RealTenT>(tci::get_elem(ctx, real_output, {0, 0})), 5.25, eps);
+    TCICT_ASSERT_CLOSE(
+        real_part<RealTenT>(tci::get_elem(ctx, real_output, {1, 1})), -2.25, eps);
+    TCICT_ASSERT_CLOSE(
+        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {0, 0})), 7.75, eps);
+    TCICT_ASSERT_CLOSE(
+        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {1, 1})), -3.75, eps);
+  }
 }
 
 // --- cplx_conj (in-place) ---
@@ -212,23 +222,26 @@ void test_cplx_conj_inplace(tci_test_fixture<TenT> &fix) {
 
   tci::cplx_conj(ctx, tensor);
 
-  // Real parts unchanged, imaginary parts negated
+  // Real parts unchanged for both real and complex (cplx_conj on real tensors
+  // is a no-op per TCI spec); imaginary parts only exist for complex.
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 1.0,
-                     eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), -2.0,
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 1})), -3.0,
                      eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {0, 1})), -4.0,
-                     eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 0})), 5.0,
-                     eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {1, 0})), 6.0,
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), -7.0,
                      eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 8.0,
-                     eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), -2.0,
+                       eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {0, 1})), -4.0,
+                       eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {1, 0})), 6.0,
+                       eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 8.0,
+                       eps);
+  }
 }
 
 // --- cplx_conj (out-of-place) ---
@@ -247,21 +260,23 @@ void test_cplx_conj_outofplace(tci_test_fixture<TenT> &fix) {
   TenT output;
   tci::cplx_conj(ctx, input, output);
 
-  // Input unchanged
+  // Real parts hold for both real and complex (cplx_conj out-of-place is a
+  // deep copy for real tensors per TCI spec); imaginary parts only exist for
+  // complex.
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, input, {0, 0})), 3.14,
                      eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, input, {0, 0})), 2.71,
-                     eps);
-
-  // Output conjugated
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, output, {0, 0})), 3.14,
-                     eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, output, {0, 0})), -2.71,
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, output, {1, 1})), -1.41,
                      eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, output, {1, 1})), 1.73,
-                     eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, input, {0, 0})), 2.71,
+                       eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, output, {0, 0})), -2.71,
+                       eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, output, {1, 1})), 1.73,
+                       eps);
+  }
 }
 
 // --- to_cplx (out-of-place, from real type) ---
@@ -333,20 +348,25 @@ void test_to_cplx_complex_to_complex(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_TO_CPLX
   return;
 #endif
-  auto &ctx = fix.context();
-  auto eps = fix.epsilon();
-  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
-  tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.14, 2.71));
-  tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-1.41, 1.73));
+  // For real TenT, tci::to_cplx returns cplx_ten_t<TenT> whose elements are
+  // cplx_t<TenT>; calling imag_part<TenT>(cplx_elem) would be a type error.
+  // This test therefore only runs when TenT is already complex.
+  if constexpr (is_complex_v<TenT>) {
+    auto &ctx = fix.context();
+    auto eps = fix.epsilon();
+    auto tensor = tci::zeros<TenT>(ctx, {2, 2});
+    tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.14, 2.71));
+    tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-1.41, 1.73));
 
-  auto result = tci::to_cplx(ctx, tensor);
+    auto result = tci::to_cplx(ctx, tensor);
 
-  auto elem00 = tci::get_elem(ctx, result, {0, 0});
-  auto elem11 = tci::get_elem(ctx, result, {1, 1});
-  TCICT_ASSERT_CLOSE(real_part<TenT>(elem00), 3.14, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(elem00), 2.71, eps);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(elem11), -1.41, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(elem11), 1.73, eps);
+    auto elem00 = tci::get_elem(ctx, result, {0, 0});
+    auto elem11 = tci::get_elem(ctx, result, {1, 1});
+    TCICT_ASSERT_CLOSE(real_part<TenT>(elem00), 3.14, eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(elem00), 2.71, eps);
+    TCICT_ASSERT_CLOSE(real_part<TenT>(elem11), -1.41, eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(elem11), 1.73, eps);
+  }
 }
 
 // --- for_each: element doubling ---
@@ -425,7 +445,9 @@ void test_for_each_capture(tci_test_fixture<TenT> &fix) {
 
   auto result = tci::get_elem(ctx, tensor, {0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(result), 1.5, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(result), 0.5, eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(result), 0.5, eps);
+  }
 }
 
 // --- for_each: const version ---
@@ -445,7 +467,9 @@ template <typename TenT> void test_for_each_const(tci_test_fixture<TenT> &fix) {
                 [&sum](const Elem &elem) { sum = sum + elem; });
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(sum), 6.0, eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(sum), 9.0, eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(sum), 9.0, eps);
+  }
 }
 
 // --- for_each: element-wise inversion ---
@@ -463,7 +487,7 @@ void test_for_each_inversion(tci_test_fixture<TenT> &fix) {
 
   tci::for_each(ctx, tensor, [](Elem &elem) {
     if (std::abs(elem) > 1e-12) {
-      elem = Elem(1.0, 0.0) / elem;
+      elem = make_elem<TenT>(1.0, 0.0) / elem;
     }
   });
 
