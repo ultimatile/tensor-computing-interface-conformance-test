@@ -154,22 +154,25 @@ void test_imag_extraction(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_IMAG
   return;
 #endif
-  // Per TCI spec, tci::imag on a real tensor yields a zero tensor, so the
-  // non-zero imaginary expectations below are meaningful only for complex TenT.
+  auto &ctx = fix.context();
+  auto eps = fix.epsilon();
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
+  tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.14, 2.71));
+  tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-1.59, 0.58));
+
+  auto imag_tensor = tci::imag(ctx, tensor);
+
+  using RealTenT = tci::real_ten_t<TenT>;
+  auto elem00 = tci::get_elem(ctx, imag_tensor, {0, 0});
+  auto elem11 = tci::get_elem(ctx, imag_tensor, {1, 1});
   if constexpr (is_complex_v<TenT>) {
-    auto &ctx = fix.context();
-    auto eps = fix.epsilon();
-    auto tensor = tci::zeros<TenT>(ctx, {2, 2});
-    tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.14, 2.71));
-    tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-1.59, 0.58));
-
-    auto imag_tensor = tci::imag(ctx, tensor);
-
-    using RealTenT = tci::real_ten_t<TenT>;
-    auto elem00 = tci::get_elem(ctx, imag_tensor, {0, 0});
-    auto elem11 = tci::get_elem(ctx, imag_tensor, {1, 1});
+    // Complex input: imag(tensor) extracts the imaginary parts set above.
     TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 2.71, eps);
     TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.58, eps);
+  } else {
+    // Real input: tci::imag returns a zero tensor per TCI spec.
+    TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 0.0, eps);
+    TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.0, eps);
   }
 }
 
@@ -180,28 +183,35 @@ void test_real_imag_inplace(tci_test_fixture<TenT> &fix) {
 #if defined(TCICT_SKIP_REAL) || defined(TCICT_SKIP_IMAG)
   return;
 #endif
-  // Per TCI spec, tci::imag on a real tensor yields a zero tensor; the
-  // imaginary-side expectations below assume complex input.
+  auto &ctx = fix.context();
+  auto eps = fix.epsilon();
+  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
+  tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(5.25, 7.75));
+  tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-2.25, -3.75));
+
+  tci::real_ten_t<TenT> real_output, imag_output;
+  tci::real(ctx, tensor, real_output);
+  tci::imag(ctx, tensor, imag_output);
+
+  using RealTenT = tci::real_ten_t<TenT>;
+  // Real side: tci::real copies the real parts (== the stored values, since
+  // make_elem drops imag for real TenT; identity for complex TenT).
+  TCICT_ASSERT_CLOSE(
+      real_part<RealTenT>(tci::get_elem(ctx, real_output, {0, 0})), 5.25, eps);
+  TCICT_ASSERT_CLOSE(
+      real_part<RealTenT>(tci::get_elem(ctx, real_output, {1, 1})), -2.25, eps);
   if constexpr (is_complex_v<TenT>) {
-    auto &ctx = fix.context();
-    auto eps = fix.epsilon();
-    auto tensor = tci::zeros<TenT>(ctx, {2, 2});
-    tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(5.25, 7.75));
-    tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-2.25, -3.75));
-
-    tci::real_ten_t<TenT> real_output, imag_output;
-    tci::real(ctx, tensor, real_output);
-    tci::imag(ctx, tensor, imag_output);
-
-    using RealTenT = tci::real_ten_t<TenT>;
-    TCICT_ASSERT_CLOSE(
-        real_part<RealTenT>(tci::get_elem(ctx, real_output, {0, 0})), 5.25, eps);
-    TCICT_ASSERT_CLOSE(
-        real_part<RealTenT>(tci::get_elem(ctx, real_output, {1, 1})), -2.25, eps);
+    // Complex input: imag_output holds the imaginary parts set above.
     TCICT_ASSERT_CLOSE(
         real_part<RealTenT>(tci::get_elem(ctx, imag_output, {0, 0})), 7.75, eps);
     TCICT_ASSERT_CLOSE(
         real_part<RealTenT>(tci::get_elem(ctx, imag_output, {1, 1})), -3.75, eps);
+  } else {
+    // Real input: tci::imag yields a zero tensor per TCI spec.
+    TCICT_ASSERT_CLOSE(
+        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {0, 0})), 0.0, eps);
+    TCICT_ASSERT_CLOSE(
+        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {1, 1})), 0.0, eps);
   }
 }
 
