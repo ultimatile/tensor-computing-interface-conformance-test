@@ -984,3 +984,43 @@ void test_eigvalsh_errors(tci_test_fixture<TenT> &fix) {
 
 } // namespace tests
 } // namespace tcict
+
+// Bulk registration helper: invokes X(..., "category", test_fn) once per test.
+// See include/tcict/adapters/doctest.h for usage.
+#define TCICT_FOREACH_LINEAR_ALGEBRA_TEST_ALL_TYPES(X, ...) \
+  X(__VA_ARGS__, "linear_algebra", test_norm_identity) \
+  X(__VA_ARGS__, "linear_algebra", test_linear_combine_uniform) \
+  X(__VA_ARGS__, "linear_algebra", test_linear_combine_weighted) \
+  X(__VA_ARGS__, "linear_algebra", test_linear_combine_single) \
+  X(__VA_ARGS__, "linear_algebra", test_normalize_inplace) \
+  X(__VA_ARGS__, "linear_algebra", test_normalize_outofplace) \
+  X(__VA_ARGS__, "linear_algebra", test_normalize_edge_cases) \
+  X(__VA_ARGS__, "linear_algebra", test_norm_2x2) \
+  X(__VA_ARGS__, "linear_algebra", test_contract_matmul) \
+  X(__VA_ARGS__, "linear_algebra", test_contract_dot_product) \
+  X(__VA_ARGS__, "linear_algebra", test_contract_outer_product) \
+  X(__VA_ARGS__, "linear_algebra", test_qr) \
+  X(__VA_ARGS__, "linear_algebra", test_lq) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_value) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_no_truncation) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_bounded) \
+  X(__VA_ARGS__, "linear_algebra", test_eig_identity) \
+  X(__VA_ARGS__, "linear_algebra", test_eigh_identity) \
+  X(__VA_ARGS__, "linear_algebra", test_exp_identity) \
+  X(__VA_ARGS__, "linear_algebra", test_exp_diagonal) \
+  X(__VA_ARGS__, "linear_algebra", test_exp_zero) \
+  X(__VA_ARGS__, "linear_algebra", test_exp_anti_hermitian) \
+  X(__VA_ARGS__, "linear_algebra", test_exp_errors) \
+  X(__VA_ARGS__, "linear_algebra", test_inverse) \
+  X(__VA_ARGS__, "linear_algebra", test_inverse_errors) \
+  X(__VA_ARGS__, "linear_algebra", test_scale_inplace) \
+  X(__VA_ARGS__, "linear_algebra", test_scale_outofplace) \
+  X(__VA_ARGS__, "linear_algebra", test_scale_by_zero) \
+  X(__VA_ARGS__, "linear_algebra", test_trace_partial) \
+  X(__VA_ARGS__, "linear_algebra", test_svd_basic) \
+  X(__VA_ARGS__, "linear_algebra", test_svd_reconstruction) \
+  X(__VA_ARGS__, "linear_algebra", test_eigvals_diagonal) \
+  X(__VA_ARGS__, "linear_algebra", test_eigvals_errors) \
+  X(__VA_ARGS__, "linear_algebra", test_eigvalsh_diagonal) \
+  X(__VA_ARGS__, "linear_algebra", test_eigvalsh_errors)

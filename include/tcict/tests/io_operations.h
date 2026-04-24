@@ -68,3 +68,9 @@ void test_load_data_integrity(tci_test_fixture<TenT>& fix) {
 }
 
 }}  // namespace tcict::tests
+
+// Bulk registration helper: invokes X(..., "category", test_fn) once per test.
+// See include/tcict/adapters/doctest.h for usage.
+#define TCICT_FOREACH_IO_OPERATIONS_TEST_ALL_TYPES(X, ...) \
+  X(__VA_ARGS__, "io_operations", test_save_load_roundtrip) \
+  X(__VA_ARGS__, "io_operations", test_load_data_integrity)

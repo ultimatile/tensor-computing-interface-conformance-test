@@ -100,3 +100,13 @@ void test_size_bytes_2x2(tci_test_fixture<TenT>& fix) {
 }
 
 }}  // namespace tcict::tests
+
+// Bulk registration helper: invokes X(..., "category", test_fn) once per test.
+// See include/tcict/adapters/doctest.h for usage.
+#define TCICT_FOREACH_READ_ONLY_GETTERS_TEST_ALL_TYPES(X, ...) \
+  X(__VA_ARGS__, "read_only_getters", test_order) \
+  X(__VA_ARGS__, "read_only_getters", test_shape) \
+  X(__VA_ARGS__, "read_only_getters", test_size) \
+  X(__VA_ARGS__, "read_only_getters", test_size_bytes) \
+  X(__VA_ARGS__, "read_only_getters", test_set_get_elem) \
+  X(__VA_ARGS__, "read_only_getters", test_size_bytes_2x2)

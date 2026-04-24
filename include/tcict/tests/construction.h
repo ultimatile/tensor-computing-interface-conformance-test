@@ -594,3 +594,29 @@ void test_move_preserves_values(tci_test_fixture<TenT>& fix) {
 }
 
 }}  // namespace tcict::tests
+
+// Bulk registration helper: invokes X(..., "category", test_fn) once per test.
+// See include/tcict/adapters/doctest.h for usage.
+#define TCICT_FOREACH_CONSTRUCTION_TEST_ALL_TYPES(X, ...) \
+  X(__VA_ARGS__, "construction", test_zeros) \
+  X(__VA_ARGS__, "construction", test_fill) \
+  X(__VA_ARGS__, "construction", test_eye) \
+  X(__VA_ARGS__, "construction", test_random_inplace) \
+  X(__VA_ARGS__, "construction", test_random_outofplace) \
+  X(__VA_ARGS__, "construction", test_copy_inplace) \
+  X(__VA_ARGS__, "construction", test_copy_outofplace) \
+  X(__VA_ARGS__, "construction", test_copy_independence) \
+  X(__VA_ARGS__, "construction", test_copy_single_element) \
+  X(__VA_ARGS__, "construction", test_copy_large) \
+  X(__VA_ARGS__, "construction", test_assign_from_range_row_major) \
+  X(__VA_ARGS__, "construction", test_assign_from_range_column_major) \
+  X(__VA_ARGS__, "construction", test_allocate_3d) \
+  X(__VA_ARGS__, "construction", test_allocate_2d) \
+  X(__VA_ARGS__, "construction", test_allocate_1d) \
+  X(__VA_ARGS__, "construction", test_clear_basic) \
+  X(__VA_ARGS__, "construction", test_clear_empty) \
+  X(__VA_ARGS__, "construction", test_clear_and_reallocate) \
+  X(__VA_ARGS__, "construction", test_move_inplace) \
+  X(__VA_ARGS__, "construction", test_move_outofplace) \
+  X(__VA_ARGS__, "construction", test_move_empty) \
+  X(__VA_ARGS__, "construction", test_move_preserves_values)

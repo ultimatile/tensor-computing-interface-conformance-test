@@ -23,15 +23,43 @@ git submodule add https://github.com/ultimatile/tensor-computing-interface-confo
 target_include_directories(my_tests PRIVATE ${CMAKE_SOURCE_DIR}/external/tcict/include)
 ```
 
-### 3. Write a thin registration layer
+### 3. Register tests
 
-Each backend provides a small bridge file that maps TCICT test functions to the backend's test framework.
+Each backend provides a small bridge file that maps TCICT test functions to the backend's test framework. Two options are available, depending on the backend's needs.
+
+#### Option A — Bulk registration (recommended)
+
+Use the provided doctest adapter to register all applicable tests for each type variant with a single macro call:
+
+```cpp
+#include <tcict/adapters/doctest.h>
+#include <my_backend/tci.h>
+
+using MyTen_F  = my_backend::Tensor<float>;
+using MyTen_D  = my_backend::Tensor<double>;
+using MyTen_CF = my_backend::Tensor<std::complex<float>>;
+using MyTen_CD = my_backend::Tensor<std::complex<double>>;
+
+TCICT_DOCTEST_REGISTER_REAL(float,   MyTen_F)
+TCICT_DOCTEST_REGISTER_REAL(double,  MyTen_D)
+TCICT_DOCTEST_REGISTER_CPLX(cfloat,  MyTen_CF)
+TCICT_DOCTEST_REGISTER_CPLX(cdouble, MyTen_CD)
+```
+
+`TCICT_DOCTEST_REGISTER_REAL` registers all `ALL_TYPES` tests plus the `REAL_ONLY` tests (currently `test_to_cplx_outofplace`, `test_to_cplx_inplace`).
+`TCICT_DOCTEST_REGISTER_CPLX` registers all `ALL_TYPES` tests plus the `CPLX_ONLY` tests (currently `test_to_cplx_complex_to_complex`).
+
+Constraints:
+- `tag` must be identifier-like (stringized into the `TEST_CASE` name to disambiguate type variants).
+- `TenT` must be a single preprocessor token — use a `using` alias. Types with unparenthesized commas (`std::map<K, V>`) cannot be passed directly.
+
+#### Option B — Per-test registration (fine-grained control)
+
+For selectively registering specific tests (e.g., during incremental backend development), use the per-test bridge:
 
 ```cpp
 #include <tcict/tcict.h>
 #include <my_backend/tci.h>
-
-// Example with doctest
 #include <doctest/doctest.h>
 
 #define TCICT_DOCTEST_CASE(category, test_func, TenT)          \
@@ -77,6 +105,8 @@ See `include/tcict/skip.h` for the full list of available skip macros.
 - **`fixture.h`** -- `tci_test_fixture<TenT>` template managing context lifecycle and epsilon
 - **`elem_helper.h`** -- `make_elem<TenT>(re, im)` and `real_part`/`imag_part` helpers for backend-agnostic element construction
 - **`skip.h`** -- `TCICT_SKIP_*` opt-out macros for unimplemented functions
+- **`tests/_list.h`** -- X-macro aggregators (`TCICT_FOREACH_TEST_ALL_TYPES`, `_REAL_ONLY`, `_CPLX_ONLY`) used by framework adapters
+- **`adapters/doctest.h`** -- Bulk-registration bridge for doctest (`TCICT_DOCTEST_REGISTER_REAL/CPLX`)
 
 ## Requirements
 

@@ -970,3 +970,54 @@ template <typename TenT> void test_stack_errors(tci_test_fixture<TenT> &fix) {
 
 } // namespace tests
 } // namespace tcict
+
+// Bulk registration helpers: invoke X(..., "category", test_fn) once per test.
+// See include/tcict/adapters/doctest.h for usage.
+//
+// ALL_TYPES: safe for both real and complex TenT (imag-part assertions are
+//   dual-guarded via `if constexpr (is_complex_v<TenT>)`).
+#define TCICT_FOREACH_TENSOR_MANIPULATION_TEST_ALL_TYPES(X, ...) \
+  X(__VA_ARGS__, "tensor_manipulation", test_shrink_inplace) \
+  X(__VA_ARGS__, "tensor_manipulation", test_shrink_outofplace) \
+  X(__VA_ARGS__, "tensor_manipulation", test_shrink_complex_values) \
+  X(__VA_ARGS__, "tensor_manipulation", test_real_extraction) \
+  X(__VA_ARGS__, "tensor_manipulation", test_imag_extraction) \
+  X(__VA_ARGS__, "tensor_manipulation", test_real_imag_inplace) \
+  X(__VA_ARGS__, "tensor_manipulation", test_cplx_conj_inplace) \
+  X(__VA_ARGS__, "tensor_manipulation", test_cplx_conj_outofplace) \
+  X(__VA_ARGS__, "tensor_manipulation", test_for_each_doubling) \
+  X(__VA_ARGS__, "tensor_manipulation", test_for_each_summation) \
+  X(__VA_ARGS__, "tensor_manipulation", test_for_each_capture) \
+  X(__VA_ARGS__, "tensor_manipulation", test_for_each_const) \
+  X(__VA_ARGS__, "tensor_manipulation", test_for_each_inversion) \
+  X(__VA_ARGS__, "tensor_manipulation", test_for_each_with_coors) \
+  X(__VA_ARGS__, "tensor_manipulation", test_for_each_with_coors_const) \
+  X(__VA_ARGS__, "tensor_manipulation", test_reshape) \
+  X(__VA_ARGS__, "tensor_manipulation", test_transpose) \
+  X(__VA_ARGS__, "tensor_manipulation", test_concatenate_basic) \
+  X(__VA_ARGS__, "tensor_manipulation", test_concatenate_values) \
+  X(__VA_ARGS__, "tensor_manipulation", test_concatenate_errors) \
+  X(__VA_ARGS__, "tensor_manipulation", test_extract_sub) \
+  X(__VA_ARGS__, "tensor_manipulation", test_extract_sub_errors) \
+  X(__VA_ARGS__, "tensor_manipulation", test_replace_sub_inplace) \
+  X(__VA_ARGS__, "tensor_manipulation", test_replace_sub_outofplace) \
+  X(__VA_ARGS__, "tensor_manipulation", test_replace_sub_errors) \
+  X(__VA_ARGS__, "tensor_manipulation", test_expand_inplace) \
+  X(__VA_ARGS__, "tensor_manipulation", test_expand_outofplace) \
+  X(__VA_ARGS__, "tensor_manipulation", test_expand_invalid_throws) \
+  X(__VA_ARGS__, "tensor_manipulation", test_diag_vec_to_mat) \
+  X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec) \
+  X(__VA_ARGS__, "tensor_manipulation", test_stack_basic) \
+  X(__VA_ARGS__, "tensor_manipulation", test_stack_last_axis) \
+  X(__VA_ARGS__, "tensor_manipulation", test_stack_errors)
+
+// REAL_ONLY: TCI `to_cplx` takes a real tensor and lifts to complex; these
+//   tests are only meaningful for real TenT.
+#define TCICT_FOREACH_TENSOR_MANIPULATION_TEST_REAL_ONLY(X, ...) \
+  X(__VA_ARGS__, "tensor_manipulation", test_to_cplx_outofplace) \
+  X(__VA_ARGS__, "tensor_manipulation", test_to_cplx_inplace)
+
+// CPLX_ONLY: body is wrapped in `if constexpr (is_complex_v<TenT>)`; running
+//   for real TenT would be a no-op, so skip registration.
+#define TCICT_FOREACH_TENSOR_MANIPULATION_TEST_CPLX_ONLY(X, ...) \
+  X(__VA_ARGS__, "tensor_manipulation", test_to_cplx_complex_to_complex)

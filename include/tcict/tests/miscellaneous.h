@@ -180,3 +180,15 @@ template <typename TenT> void test_version(tci_test_fixture<TenT> &fix) {
 
 } // namespace tests
 } // namespace tcict
+
+// Bulk registration helper: invokes X(..., "category", test_fn) once per test.
+// See include/tcict/adapters/doctest.h for usage.
+#define TCICT_FOREACH_MISCELLANEOUS_TEST_ALL_TYPES(X, ...) \
+  X(__VA_ARGS__, "miscellaneous", test_close_identical) \
+  X(__VA_ARGS__, "miscellaneous", test_close_different) \
+  X(__VA_ARGS__, "miscellaneous", test_to_range) \
+  X(__VA_ARGS__, "miscellaneous", test_show) \
+  X(__VA_ARGS__, "miscellaneous", test_convert_same_context) \
+  X(__VA_ARGS__, "miscellaneous", test_convert_different_context) \
+  X(__VA_ARGS__, "miscellaneous", test_convert_data_integrity) \
+  X(__VA_ARGS__, "miscellaneous", test_version)
