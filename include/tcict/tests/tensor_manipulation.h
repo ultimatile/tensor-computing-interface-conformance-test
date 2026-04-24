@@ -194,8 +194,10 @@ void test_real_imag_inplace(tci_test_fixture<TenT> &fix) {
   tci::imag(ctx, tensor, imag_output);
 
   using RealTenT = tci::real_ten_t<TenT>;
-  // Real side: tci::real copies the real parts (== the stored values, since
-  // make_elem drops imag for real TenT; identity for complex TenT).
+  // Real side: tci::real copies the real parts. For real TenT it is a
+  // deep copy (identity), and make_elem already dropped the imaginary
+  // argument so these are the stored values; for complex TenT, tci::real
+  // extracts the real components into real_output.
   TCICT_ASSERT_CLOSE(
       real_part<RealTenT>(tci::get_elem(ctx, real_output, {0, 0})), 5.25, eps);
   TCICT_ASSERT_CLOSE(
