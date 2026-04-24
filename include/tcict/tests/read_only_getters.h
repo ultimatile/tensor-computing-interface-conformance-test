@@ -81,7 +81,9 @@ void test_set_get_elem(tci_test_fixture<TenT>& fix) {
 
   auto retrieved = tci::get_elem(ctx, tensor, coord);
   TCICT_ASSERT_CLOSE(real_part<TenT>(retrieved), real_part<TenT>(expected), eps);
-  TCICT_ASSERT_CLOSE(imag_part<TenT>(retrieved), imag_part<TenT>(expected), eps);
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(retrieved), imag_part<TenT>(expected), eps);
+  }
 }
 
 // --- size_bytes for small tensor ---

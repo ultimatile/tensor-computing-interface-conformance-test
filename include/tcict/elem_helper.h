@@ -47,6 +47,13 @@ double imag_part(tci::elem_t<TenT> elem) {
   }
 }
 
+/// True when the tensor type's element type is complex.
+/// Tests branch on this to guard assertions that only make sense for complex
+/// elements (e.g. verifying a non-zero imaginary part).
+template <typename TenT>
+inline constexpr bool is_complex_v
+    = std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>;
+
 /// True when the tensor type's real_t is single-precision (float).
 /// Tests can branch on this when accumulation-heavy operations need a
 /// coarser tolerance than the fixture's default epsilon.
