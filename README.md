@@ -69,7 +69,7 @@ For selectively registering specific tests (e.g., during incremental backend dev
 #include <complex>
 
 #define TCICT_DOCTEST_CASE(category, test_func, TenT)          \
-  TEST_CASE("TCICT: " category " - " #test_func) {            \
+  DOCTEST_TEST_CASE("TCICT: " category " - " #test_func) {     \
     tcict::tci_test_fixture<TenT> fix;                         \
     tcict::tests::test_func<TenT>(fix);                        \
   }
@@ -83,7 +83,7 @@ TCICT_DOCTEST_CASE("construction", test_eye, MyTensor)
 
 ### 4. Skip unimplemented functions
 
-Define `TCICT_SKIP_*` macros to opt out of tests for functions a backend has not yet implemented. Each skip macro **excludes the test body at preprocessing time**, so the corresponding `tci::*` function does not even need to be declared:
+Define `TCICT_SKIP_*` macros to opt out of tests for functions a backend has not yet implemented. Each skip macro **excludes — at preprocessing time — the body of the test(s) it directly guards**, removing those references to the corresponding `tci::*` API:
 
 ```cmake
 target_compile_definitions(my_tests PRIVATE
@@ -93,6 +93,8 @@ target_compile_definitions(my_tests PRIVATE
 ```
 
 A skipped test still compiles, registers as a test case, and immediately passes (it has no assertions). See `include/tcict/skip.h` for the full list.
+
+**Caveat: skip is per-test, not per-API.** The same `tci::*` function may be called as a setup / verification helper in unrelated tests. For example, `tci::get_elem` is used inside many tests beyond the one guarded by `TCICT_SKIP_GET_ELEM`. Skipping a single feature therefore does not guarantee that every reference to its API disappears — to compile against a backend that omits a particular declaration, you may need to skip every test that uses it.
 
 **Baseline requirement.** Some functions must always be declared, regardless of skip macros, because they are used as setup / teardown by every test fixture:
 
