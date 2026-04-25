@@ -30,8 +30,10 @@
 #endif
 
 // Single-case bridge; suitable as the X-callable of TCICT_FOREACH_*.
+// Uses the prefixed DOCTEST_TEST_CASE so this adapter still compiles when
+// users enable DOCTEST_CONFIG_NO_SHORT_MACRO_NAMES.
 #define TCICT_DOCTEST_CASE_BRIDGE(tag, TenT, category, fn) \
-  TEST_CASE("TCICT[" #tag "]: " category " - " #fn) { \
+  DOCTEST_TEST_CASE("TCICT[" #tag "]: " category " - " #fn) { \
     tcict::tci_test_fixture<TenT> fix_; \
     tcict::tests::fn<TenT>(fix_); \
   }
