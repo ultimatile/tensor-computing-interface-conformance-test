@@ -35,6 +35,8 @@ Use the provided doctest adapter to register all applicable tests for each type 
 #include <tcict/adapters/doctest.h>
 #include <my_backend/tci.h>
 
+#include <complex>
+
 using MyTen_F  = my_backend::Tensor<float>;
 using MyTen_D  = my_backend::Tensor<double>;
 using MyTen_CF = my_backend::Tensor<std::complex<float>>;
@@ -61,6 +63,8 @@ For selectively registering specific tests (e.g., during incremental backend dev
 #include <tcict/tcict.h>
 #include <my_backend/tci.h>
 #include <doctest/doctest.h>
+
+#include <complex>
 
 #define TCICT_DOCTEST_CASE(category, test_func, TenT)          \
   TEST_CASE("TCICT: " category " - " #test_func) {            \
