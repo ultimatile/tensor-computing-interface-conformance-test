@@ -14,9 +14,7 @@ namespace tcict { namespace tests {
 
 template <typename TenT>
 void test_save_load_roundtrip(tci_test_fixture<TenT>& fix) {
-#if defined(TCICT_SKIP_SAVE) || defined(TCICT_SKIP_LOAD)
-  return;
-#endif
+#if !defined(TCICT_SKIP_SAVE) && !defined(TCICT_SKIP_LOAD)
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -41,15 +39,16 @@ void test_save_load_roundtrip(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_CLOSE(real_part<TenT>(val11), 1.0, eps);
 
   std::remove(filepath.c_str());
+#else
+  (void)fix;
+#endif
 }
 
 // --- load verifies data integrity against original ---
 
 template <typename TenT>
 void test_load_data_integrity(tci_test_fixture<TenT>& fix) {
-#if defined(TCICT_SKIP_SAVE) || defined(TCICT_SKIP_LOAD)
-  return;
-#endif
+#if !defined(TCICT_SKIP_SAVE) && !defined(TCICT_SKIP_LOAD)
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -65,6 +64,9 @@ void test_load_data_integrity(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(tci::close(ctx, original, loaded, eps));
 
   std::remove(filepath.c_str());
+#else
+  (void)fix;
+#endif
 }
 
 }}  // namespace tcict::tests

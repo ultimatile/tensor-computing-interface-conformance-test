@@ -83,7 +83,7 @@ TCICT_DOCTEST_CASE("construction", test_eye, MyTensor)
 
 ### 4. Skip unimplemented functions
 
-Define `TCICT_SKIP_*` macros to opt out of tests for functions not yet implemented:
+Define `TCICT_SKIP_*` macros to opt out of tests for functions a backend has not yet implemented. Each skip macro **excludes the test body at preprocessing time**, so the corresponding `tci::*` function does not even need to be declared:
 
 ```cmake
 target_compile_definitions(my_tests PRIVATE
@@ -92,7 +92,14 @@ target_compile_definitions(my_tests PRIVATE
 )
 ```
 
-See `include/tcict/skip.h` for the full list of available skip macros.
+A skipped test still compiles, registers as a test case, and immediately passes (it has no assertions). See `include/tcict/skip.h` for the full list.
+
+**Baseline requirement.** Some functions must always be declared, regardless of skip macros, because they are used as setup / teardown by every test fixture:
+
+- `tci::create_context`, `tci::destroy_context` (called by `tci_test_fixture`'s constructor/destructor)
+- `tci::tensor_traits<TenT>` and the type aliases it exports
+
+A backend that does not provide these cannot use TCICT at all, with or without skip macros.
 
 ## Test Categories
 

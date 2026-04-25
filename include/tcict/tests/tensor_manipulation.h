@@ -13,9 +13,7 @@ namespace tests {
 // --- shrink (in-place) ---
 
 template <typename TenT> void test_shrink_inplace(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_SHRINK
-  return;
-#endif
+#ifndef TCICT_SKIP_SHRINK
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto tensor = tci::zeros<TenT>(ctx, {3, 3});
@@ -49,15 +47,16 @@ template <typename TenT> void test_shrink_inplace(tci_test_fixture<TenT> &fix) {
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 5.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- shrink (out-of-place) ---
 
 template <typename TenT>
 void test_shrink_outofplace(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_SHRINK
-  return;
-#endif
+#ifndef TCICT_SKIP_SHRINK
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto input = tci::zeros<TenT>(ctx, {4, 4});
@@ -88,15 +87,16 @@ void test_shrink_outofplace(tci_test_fixture<TenT> &fix) {
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, output, {1, 1})), 22.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- shrink preserves complex values ---
 
 template <typename TenT>
 void test_shrink_complex_values(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_SHRINK
-  return;
-#endif
+#ifndef TCICT_SKIP_SHRINK
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto tensor = tci::zeros<TenT>(ctx, {3, 3});
@@ -123,15 +123,16 @@ void test_shrink_complex_values(tci_test_fixture<TenT> &fix) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(e00), 2.5, eps);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(e01), 4.5, eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- real extraction (out-of-place) ---
 
 template <typename TenT>
 void test_real_extraction(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_REAL
-  return;
-#endif
+#ifndef TCICT_SKIP_REAL
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
@@ -145,15 +146,16 @@ void test_real_extraction(tci_test_fixture<TenT> &fix) {
   auto elem11 = tci::get_elem(ctx, real_tensor, {1, 1});
   TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 3.14, eps);
   TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), -1.59, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- imag extraction (out-of-place) ---
 
 template <typename TenT>
 void test_imag_extraction(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_IMAG
-  return;
-#endif
+#ifndef TCICT_SKIP_IMAG
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
@@ -174,15 +176,16 @@ void test_imag_extraction(tci_test_fixture<TenT> &fix) {
     TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 0.0, eps);
     TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.0, eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- real and imag extraction (in-place) ---
 
 template <typename TenT>
 void test_real_imag_inplace(tci_test_fixture<TenT> &fix) {
-#if defined(TCICT_SKIP_REAL) || defined(TCICT_SKIP_IMAG)
-  return;
-#endif
+#if !defined(TCICT_SKIP_REAL) && !defined(TCICT_SKIP_IMAG)
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
@@ -215,15 +218,16 @@ void test_real_imag_inplace(tci_test_fixture<TenT> &fix) {
     TCICT_ASSERT_CLOSE(
         real_part<RealTenT>(tci::get_elem(ctx, imag_output, {1, 1})), 0.0, eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- cplx_conj (in-place) ---
 
 template <typename TenT>
 void test_cplx_conj_inplace(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CPLX_CONJ
-  return;
-#endif
+#ifndef TCICT_SKIP_CPLX_CONJ
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
@@ -254,15 +258,16 @@ void test_cplx_conj_inplace(tci_test_fixture<TenT> &fix) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 8.0,
                        eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- cplx_conj (out-of-place) ---
 
 template <typename TenT>
 void test_cplx_conj_outofplace(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CPLX_CONJ
-  return;
-#endif
+#ifndef TCICT_SKIP_CPLX_CONJ
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto input = tci::zeros<TenT>(ctx, {2, 2});
@@ -289,6 +294,9 @@ void test_cplx_conj_outofplace(tci_test_fixture<TenT> &fix) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, output, {1, 1})), 1.73,
                        eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- to_cplx (out-of-place, from real type) ---
@@ -296,9 +304,7 @@ void test_cplx_conj_outofplace(tci_test_fixture<TenT> &fix) {
 
 template <typename RealTenT>
 void test_to_cplx_outofplace(tci_test_fixture<RealTenT> &fix) {
-#ifdef TCICT_SKIP_TO_CPLX
-  return;
-#endif
+#ifndef TCICT_SKIP_TO_CPLX
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   RealTenT real_tensor;
@@ -322,15 +328,16 @@ void test_to_cplx_outofplace(tci_test_fixture<RealTenT> &fix) {
   TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem00), 0.0, eps);
   TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem11), 4.5, eps);
   TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem11), 0.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- to_cplx (in-place, from real type) ---
 
 template <typename RealTenT>
 void test_to_cplx_inplace(tci_test_fixture<RealTenT> &fix) {
-#ifdef TCICT_SKIP_TO_CPLX
-  return;
-#endif
+#ifndef TCICT_SKIP_TO_CPLX
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   RealTenT real_tensor;
@@ -351,15 +358,16 @@ void test_to_cplx_inplace(tci_test_fixture<RealTenT> &fix) {
   TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem00), 0.0, eps);
   TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem11), 8.75, eps);
   TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem11), 0.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- to_cplx (complex to complex) ---
 
 template <typename TenT>
 void test_to_cplx_complex_to_complex(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_TO_CPLX
-  return;
-#endif
+#ifndef TCICT_SKIP_TO_CPLX
   // For real TenT, tci::to_cplx returns cplx_ten_t<TenT> whose elements are
   // cplx_t<TenT>; calling imag_part<TenT>(cplx_elem) would be a type error.
   // This test therefore only runs when TenT is already complex.
@@ -379,15 +387,16 @@ void test_to_cplx_complex_to_complex(tci_test_fixture<TenT> &fix) {
     TCICT_ASSERT_CLOSE(real_part<TenT>(elem11), -1.41, eps);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(elem11), 1.73, eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- for_each: element doubling ---
 
 template <typename TenT>
 void test_for_each_doubling(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_FOR_EACH
-  return;
-#endif
+#ifndef TCICT_SKIP_FOR_EACH
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   using Elem = tci::elem_t<TenT>;
@@ -408,15 +417,16 @@ void test_for_each_doubling(tci_test_fixture<TenT> &fix) {
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 2})), 12.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- for_each: iteration and summation ---
 
 template <typename TenT>
 void test_for_each_summation(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_FOR_EACH
-  return;
-#endif
+#ifndef TCICT_SKIP_FOR_EACH
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   using Elem = tci::elem_t<TenT>;
@@ -436,15 +446,16 @@ void test_for_each_summation(tci_test_fixture<TenT> &fix) {
 
   TCICT_ASSERT(count == 4);
   TCICT_ASSERT_CLOSE(real_part<TenT>(sum), 10.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- for_each: scalar multiplication with capture ---
 
 template <typename TenT>
 void test_for_each_capture(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_FOR_EACH
-  return;
-#endif
+#ifndef TCICT_SKIP_FOR_EACH
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   using Elem = tci::elem_t<TenT>;
@@ -460,14 +471,15 @@ void test_for_each_capture(tci_test_fixture<TenT> &fix) {
   if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(result), 0.5, eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- for_each: const version ---
 
 template <typename TenT> void test_for_each_const(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_FOR_EACH
-  return;
-#endif
+#ifndef TCICT_SKIP_FOR_EACH
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   using Elem = tci::elem_t<TenT>;
@@ -482,15 +494,16 @@ template <typename TenT> void test_for_each_const(tci_test_fixture<TenT> &fix) {
   if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(sum), 9.0, eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- for_each: element-wise inversion ---
 
 template <typename TenT>
 void test_for_each_inversion(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_FOR_EACH
-  return;
-#endif
+#ifndef TCICT_SKIP_FOR_EACH
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   using Elem = tci::elem_t<TenT>;
@@ -505,15 +518,16 @@ void test_for_each_inversion(tci_test_fixture<TenT> &fix) {
 
   auto result = tci::get_elem(ctx, tensor, {0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(result), 2.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- for_each_with_coors: mutable ---
 
 template <typename TenT>
 void test_for_each_with_coors(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_FOR_EACH_WITH_COORS
-  return;
-#endif
+#ifndef TCICT_SKIP_FOR_EACH_WITH_COORS
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   using Elem = tci::elem_t<TenT>;
@@ -528,15 +542,16 @@ void test_for_each_with_coors(tci_test_fixture<TenT> &fix) {
       });
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {0, 0})), 2.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- for_each_with_coors: const version ---
 
 template <typename TenT>
 void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_FOR_EACH_WITH_COORS
-  return;
-#endif
+#ifndef TCICT_SKIP_FOR_EACH_WITH_COORS
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   using Elem = tci::elem_t<TenT>;
@@ -554,14 +569,15 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
       });
 
   TCICT_ASSERT_CLOSE(sum_diagonal, 2.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- reshape (in-place) ---
 
 template <typename TenT> void test_reshape(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_RESHAPE
-  return;
-#endif
+#ifndef TCICT_SKIP_RESHAPE
   auto &ctx = fix.context();
   auto tensor = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
 
@@ -569,14 +585,15 @@ template <typename TenT> void test_reshape(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT_NOTHROW(tci::reshape(ctx, tensor, new_shape));
   TCICT_ASSERT(tci::shape(ctx, tensor) == new_shape);
   TCICT_ASSERT(tci::size(ctx, tensor) == 24);
+#else
+  (void)fix;
+#endif
 }
 
 // --- transpose (out-of-place) ---
 
 template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_TRANSPOSE
-  return;
-#endif
+#ifndef TCICT_SKIP_TRANSPOSE
   auto &ctx = fix.context();
   auto tensor = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
 
@@ -586,15 +603,16 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
 
   tci::shape_t<TenT> expected_shape = {4, 2, 3};
   TCICT_ASSERT(tci::shape(ctx, transposed) == expected_shape);
+#else
+  (void)fix;
+#endif
 }
 
 // --- concatenate: basic 2D ---
 
 template <typename TenT>
 void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CONCATENATE
-  return;
-#endif
+#ifndef TCICT_SKIP_CONCATENATE
   auto &ctx = fix.context();
   auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
   auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
@@ -611,15 +629,16 @@ void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT_NOTHROW(tci::concatenate(ctx, tensors, 1, result));
   tci::shape_t<TenT> expected_h = {2, 6};
   TCICT_ASSERT(tci::shape(ctx, result) == expected_h);
+#else
+  (void)fix;
+#endif
 }
 
 // --- concatenate: multi-tensor with value verification ---
 
 template <typename TenT>
 void test_concatenate_values(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CONCATENATE
-  return;
-#endif
+#ifndef TCICT_SKIP_CONCATENATE
   auto &ctx = fix.context();
   auto a = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
   auto b = tci::fill<TenT>(ctx, {2, 1, 4}, make_elem<TenT>(2.0));
@@ -636,15 +655,16 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
   auto el_b = tci::get_elem(ctx, b, {0, 0, 0});
   auto el_d3 = tci::get_elem(ctx, d, {0, 3, 0});
   TCICT_ASSERT(el_b == el_d3);
+#else
+  (void)fix;
+#endif
 }
 
 // --- concatenate: error cases ---
 
 template <typename TenT>
 void test_concatenate_errors(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CONCATENATE
-  return;
-#endif
+#ifndef TCICT_SKIP_CONCATENATE
   auto &ctx = fix.context();
   auto tensor = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
 
@@ -656,14 +676,15 @@ void test_concatenate_errors(tci_test_fixture<TenT> &fix) {
   tci::List<TenT> empty;
   TCICT_ASSERT_THROWS(std::invalid_argument,
                       tci::concatenate(ctx, empty, 0, result));
+#else
+  (void)fix;
+#endif
 }
 
 // --- extract_sub (out-of-place) ---
 
 template <typename TenT> void test_extract_sub(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EXTRACT_SUB
-  return;
-#endif
+#ifndef TCICT_SKIP_EXTRACT_SUB
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {3, 4, 2});
@@ -684,15 +705,16 @@ template <typename TenT> void test_extract_sub(tci_test_fixture<TenT> &fix) {
   // (2,1,1) in original maps to (1,1,1) in sub
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, sub, {1, 1, 1})), 13.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- extract_sub: error handling ---
 
 template <typename TenT>
 void test_extract_sub_errors(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EXTRACT_SUB
-  return;
-#endif
+#ifndef TCICT_SKIP_EXTRACT_SUB
   auto &ctx = fix.context();
   auto a = tci::zeros<TenT>(ctx, {3, 3});
 
@@ -705,15 +727,16 @@ void test_extract_sub_errors(tci_test_fixture<TenT> &fix) {
   tci::List<tci::Pair<tci::elem_coor_t<TenT>, tci::elem_coor_t<TenT>>>
       invalid_range = {{2, 1}, {0, 2}};
   TCICT_ASSERT_THROWS(std::exception, tci::extract_sub(ctx, a, invalid_range));
+#else
+  (void)fix;
+#endif
 }
 
 // --- replace_sub (in-place) ---
 
 template <typename TenT>
 void test_replace_sub_inplace(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_REPLACE_SUB
-  return;
-#endif
+#ifndef TCICT_SKIP_REPLACE_SUB
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {3, 4, 2});
@@ -730,15 +753,16 @@ void test_replace_sub_inplace(tci_test_fixture<TenT> &fix) {
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {0, 0, 0})), 0.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- replace_sub (out-of-place) ---
 
 template <typename TenT>
 void test_replace_sub_outofplace(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_REPLACE_SUB
-  return;
-#endif
+#ifndef TCICT_SKIP_REPLACE_SUB
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {4, 4});
@@ -756,15 +780,16 @@ void test_replace_sub_outofplace(tci_test_fixture<TenT> &fix) {
                      eps);
   // Original unchanged
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {1, 1})), 0.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- replace_sub: error cases ---
 
 template <typename TenT>
 void test_replace_sub_errors(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_REPLACE_SUB
-  return;
-#endif
+#ifndef TCICT_SKIP_REPLACE_SUB
   auto &ctx = fix.context();
   auto a = tci::zeros<TenT>(ctx, {3, 3});
 
@@ -775,14 +800,15 @@ void test_replace_sub_errors(tci_test_fixture<TenT> &fix) {
   // Out of bounds
   auto sub2 = tci::zeros<TenT>(ctx, {2, 2});
   TCICT_ASSERT_THROWS(std::exception, tci::replace_sub(ctx, a, sub2, {2, 2}));
+#else
+  (void)fix;
+#endif
 }
 
 // --- expand (in-place) ---
 
 template <typename TenT> void test_expand_inplace(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EXPAND
-  return;
-#endif
+#ifndef TCICT_SKIP_EXPAND
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {2, 2, 2});
@@ -796,15 +822,16 @@ template <typename TenT> void test_expand_inplace(tci_test_fixture<TenT> &fix) {
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {2, 3, 0})), 0.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- expand (out-of-place) ---
 
 template <typename TenT>
 void test_expand_outofplace(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EXPAND
-  return;
-#endif
+#ifndef TCICT_SKIP_EXPAND
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {2, 2, 2});
@@ -821,29 +848,31 @@ void test_expand_outofplace(tci_test_fixture<TenT> &fix) {
                      5.0, eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, expanded, {2, 3, 0})),
                      0.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- expand: invalid bond throws ---
 
 template <typename TenT>
 void test_expand_invalid_throws(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EXPAND
-  return;
-#endif
+#ifndef TCICT_SKIP_EXPAND
   auto &ctx = fix.context();
   auto a = tci::zeros<TenT>(ctx, {2, 2});
 
   tci::Map<tci::bond_idx_t<TenT>, tci::bond_dim_t<TenT>> invalid_map = {{3, 1}};
   TCICT_ASSERT_THROWS(std::exception, tci::expand(ctx, a, invalid_map));
+#else
+  (void)fix;
+#endif
 }
 
 // --- diag: vector to matrix ---
 
 template <typename TenT>
 void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_DIAG
-  return;
-#endif
+#ifndef TCICT_SKIP_DIAG
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto vector = tci::zeros<TenT>(ctx, {3});
@@ -864,15 +893,16 @@ void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {2, 2})), 3.0,
                      eps);
   TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, vector, {0, 1})), 0.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- diag: matrix to vector ---
 
 template <typename TenT>
 void test_diag_mat_to_vec(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_DIAG
-  return;
-#endif
+#ifndef TCICT_SKIP_DIAG
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto identity = tci::eye<TenT>(ctx, 3);
@@ -887,14 +917,15 @@ void test_diag_mat_to_vec(tci_test_fixture<TenT> &fix) {
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, identity, {2})), 1.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- stack: basic ---
 
 template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_STACK
-  return;
-#endif
+#ifndef TCICT_SKIP_STACK
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -920,15 +951,16 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
                      2.0, eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1, 2})),
                      2.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- stack: last axis ---
 
 template <typename TenT>
 void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_STACK
-  return;
-#endif
+#ifndef TCICT_SKIP_STACK
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -952,20 +984,24 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
                      2.0, eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 2})),
                      3.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- stack: errors ---
 
 template <typename TenT> void test_stack_errors(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_STACK
-  return;
-#endif
+#ifndef TCICT_SKIP_STACK
   auto &ctx = fix.context();
 
   // Empty list
   TenT result;
   tci::List<TenT> empty;
   TCICT_ASSERT_THROWS(std::invalid_argument, tci::stack(ctx, empty, 0, result));
+#else
+  (void)fix;
+#endif
 }
 
 } // namespace tests

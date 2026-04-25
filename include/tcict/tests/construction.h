@@ -15,9 +15,7 @@ namespace tcict { namespace tests {
 
 template <typename TenT>
 void test_zeros(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_ZEROS
-  return;
-#endif
+#ifndef TCICT_SKIP_ZEROS
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   tci::shape_t<TenT> shape = {2, 3};
@@ -39,15 +37,16 @@ void test_zeros(tci_test_fixture<TenT>& fix) {
       }
     }
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- fill ---
 
 template <typename TenT>
 void test_fill(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_FILL
-  return;
-#endif
+#ifndef TCICT_SKIP_FILL
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   auto val = make_elem<TenT>(42.0, -7.5);
@@ -68,15 +67,16 @@ void test_fill(tci_test_fixture<TenT>& fix) {
       }
     }
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- eye ---
 
 template <typename TenT>
 void test_eye(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_EYE
-  return;
-#endif
+#ifndef TCICT_SKIP_EYE
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   TenT identity;
@@ -101,15 +101,16 @@ void test_eye(tci_test_fixture<TenT>& fix) {
       }
     }
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- random (shape {2,3}, verifies all elements) ---
 
 template <typename TenT>
 void test_random_inplace(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_RANDOM
-  return;
-#endif
+#ifndef TCICT_SKIP_RANDOM
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   tci::shape_t<TenT> shape = {2, 3};
@@ -139,15 +140,16 @@ void test_random_inplace(tci_test_fixture<TenT>& fix) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_01), 1.5, eps);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_12), 5.5, eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- random (out-of-place) ---
 
 template <typename TenT>
 void test_random_outofplace(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_RANDOM
-  return;
-#endif
+#ifndef TCICT_SKIP_RANDOM
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   tci::shape_t<TenT> shape = {2, 2};
@@ -168,15 +170,16 @@ void test_random_outofplace(tci_test_fixture<TenT>& fix) {
   if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(elem_11), 3.5, eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- copy (in-place) ---
 
 template <typename TenT>
 void test_copy_inplace(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_COPY
-  return;
-#endif
+#ifndef TCICT_SKIP_COPY
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {2, 3});
@@ -199,15 +202,16 @@ void test_copy_inplace(tci_test_fixture<TenT>& fix) {
 
   TCICT_ASSERT(tci::shape(ctx, a) == tci::shape(ctx, b));
   TCICT_ASSERT(tci::order(ctx, a) == tci::order(ctx, b));
+#else
+  (void)fix;
+#endif
 }
 
 // --- copy (out-of-place) ---
 
 template <typename TenT>
 void test_copy_outofplace(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_COPY
-  return;
-#endif
+#ifndef TCICT_SKIP_COPY
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {3, 4, 2});
@@ -225,15 +229,16 @@ void test_copy_outofplace(tci_test_fixture<TenT>& fix) {
 
   TCICT_ASSERT(tci::shape(ctx, a) == tci::shape(ctx, b));
   TCICT_ASSERT(tci::order(ctx, a) == tci::order(ctx, b));
+#else
+  (void)fix;
+#endif
 }
 
 // --- copy independence ---
 
 template <typename TenT>
 void test_copy_independence(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_COPY
-  return;
-#endif
+#ifndef TCICT_SKIP_COPY
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {2, 2});
@@ -247,15 +252,16 @@ void test_copy_independence(tci_test_fixture<TenT>& fix) {
 
   auto orig_val = tci::get_elem(ctx, a, {0, 0});
   TCICT_ASSERT_CLOSE(real_part<TenT>(orig_val), 999.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- copy single element ---
 
 template <typename TenT>
 void test_copy_single_element(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_COPY
-  return;
-#endif
+#ifndef TCICT_SKIP_COPY
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {1});
@@ -268,15 +274,16 @@ void test_copy_single_element(tci_test_fixture<TenT>& fix) {
   if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(val), 2.71, eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- copy large tensor ---
 
 template <typename TenT>
 void test_copy_large(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_COPY
-  return;
-#endif
+#ifndef TCICT_SKIP_COPY
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {10, 10, 10});
@@ -299,15 +306,16 @@ void test_copy_large(tci_test_fixture<TenT>& fix) {
   }
 
   TCICT_ASSERT(tci::shape(ctx, a) == tci::shape(ctx, b));
+#else
+  (void)fix;
+#endif
 }
 
 // --- assign_from_range (row-major) ---
 
 template <typename TenT>
 void test_assign_from_range_row_major(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_ASSIGN_FROM_RANGE
-  return;
-#endif
+#ifndef TCICT_SKIP_ASSIGN_FROM_RANGE
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -335,15 +343,16 @@ void test_assign_from_range_row_major(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 1})), 2.0, eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 0})), 4.0, eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 2})), 6.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- assign_from_range (column-major) ---
 
 template <typename TenT>
 void test_assign_from_range_column_major(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_ASSIGN_FROM_RANGE
-  return;
-#endif
+#ifndef TCICT_SKIP_ASSIGN_FROM_RANGE
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -366,15 +375,16 @@ void test_assign_from_range_column_major(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 1})), 2.0, eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 0})), 3.0, eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 4.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- allocate ---
 
 template <typename TenT>
 void test_allocate_3d(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_ALLOCATE
-  return;
-#endif
+#ifndef TCICT_SKIP_ALLOCATE
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   tci::shape_t<TenT> shape = {3, 4, 5};
@@ -396,13 +406,14 @@ void test_allocate_3d(tci_test_fixture<TenT>& fix) {
   if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 template <typename TenT>
 void test_allocate_2d(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_ALLOCATE
-  return;
-#endif
+#ifndef TCICT_SKIP_ALLOCATE
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   tci::shape_t<TenT> shape = {2, 3};
@@ -423,13 +434,14 @@ void test_allocate_2d(tci_test_fixture<TenT>& fix) {
   if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 template <typename TenT>
 void test_allocate_1d(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_ALLOCATE
-  return;
-#endif
+#ifndef TCICT_SKIP_ALLOCATE
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   tci::shape_t<TenT> shape = {10};
@@ -449,54 +461,58 @@ void test_allocate_1d(tci_test_fixture<TenT>& fix) {
   if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- clear ---
 
 template <typename TenT>
 void test_clear_basic(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_CLEAR
-  return;
-#endif
+#ifndef TCICT_SKIP_CLEAR
   auto& ctx = fix.context();
   auto tensor = tci::eye<TenT>(ctx, 3);
   TCICT_ASSERT(tci::size(ctx, tensor) == 9);
   TCICT_ASSERT_NOTHROW(tci::clear(ctx, tensor));
   TCICT_ASSERT(tci::order(ctx, tensor) == 0);
   TCICT_ASSERT(tci::shape(ctx, tensor).empty());
+#else
+  (void)fix;
+#endif
 }
 
 template <typename TenT>
 void test_clear_empty(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_CLEAR
-  return;
-#endif
+#ifndef TCICT_SKIP_CLEAR
   auto& ctx = fix.context();
   TenT empty_tensor;
   TCICT_ASSERT_NOTHROW(tci::clear(ctx, empty_tensor));
   TCICT_ASSERT(tci::order(ctx, empty_tensor) == 0);
+#else
+  (void)fix;
+#endif
 }
 
 template <typename TenT>
 void test_clear_and_reallocate(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_CLEAR
-  return;
-#endif
+#ifndef TCICT_SKIP_CLEAR
   auto& ctx = fix.context();
   auto tensor = tci::eye<TenT>(ctx, 2);
   tci::clear(ctx, tensor);
   TCICT_ASSERT(tci::order(ctx, tensor) == 0);
   TCICT_ASSERT_NOTHROW(tensor = tci::allocate<TenT>(ctx, {2, 2}));
   TCICT_ASSERT(tci::order(ctx, tensor) == 2);
+#else
+  (void)fix;
+#endif
 }
 
 // --- move (in-place) ---
 
 template <typename TenT>
 void test_move_inplace(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_MOVE
-  return;
-#endif
+#ifndef TCICT_SKIP_MOVE
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   auto source = tci::eye<TenT>(ctx, 3);
@@ -517,15 +533,16 @@ void test_move_inplace(tci_test_fixture<TenT>& fix) {
 
   // Verify source is invalidated after move
   TCICT_ASSERT(tci::order(ctx, source) == 0);
+#else
+  (void)fix;
+#endif
 }
 
 // --- move (out-of-place) ---
 
 template <typename TenT>
 void test_move_outofplace(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_MOVE
-  return;
-#endif
+#ifndef TCICT_SKIP_MOVE
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   auto source = tci::eye<TenT>(ctx, 2);
@@ -546,28 +563,30 @@ void test_move_outofplace(tci_test_fixture<TenT>& fix) {
 
   // Verify source is invalidated after move
   TCICT_ASSERT(tci::order(ctx, source) == 0);
+#else
+  (void)fix;
+#endif
 }
 
 // --- move empty tensor ---
 
 template <typename TenT>
 void test_move_empty(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_MOVE
-  return;
-#endif
+#ifndef TCICT_SKIP_MOVE
   auto& ctx = fix.context();
   TenT empty_source, empty_result;
   TCICT_ASSERT_NOTHROW(empty_result = tci::move(ctx, empty_source));
   TCICT_ASSERT(tci::order(ctx, empty_source) == 0);
+#else
+  (void)fix;
+#endif
 }
 
 // --- move preserves values ---
 
 template <typename TenT>
 void test_move_preserves_values(tci_test_fixture<TenT>& fix) {
-#ifdef TCICT_SKIP_MOVE
-  return;
-#endif
+#ifndef TCICT_SKIP_MOVE
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
   auto source = tci::zeros<TenT>(ctx, {2, 3});
@@ -591,6 +610,9 @@ void test_move_preserves_values(tci_test_fixture<TenT>& fix) {
 
   // Verify source is invalidated after move
   TCICT_ASSERT(tci::order(ctx, source) == 0);
+#else
+  (void)fix;
+#endif
 }
 
 }}  // namespace tcict::tests
