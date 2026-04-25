@@ -25,13 +25,9 @@ target_include_directories(my_tests PRIVATE ${CMAKE_SOURCE_DIR}/external/tcict/i
 
 ### 3. Register tests
 
-Each backend provides a small bridge file that maps TCICT test functions to the backend's test framework. Two options are available, depending on the backend's needs.
+Use the provided doctest adapter to register all applicable conformance tests for each tensor type variant in a single macro call.
 
-#### Option A — Bulk registration (recommended)
-
-Use the provided doctest adapter to register all applicable tests for each type variant with a single macro call:
-
-The backend's TCI header must be included **before** the adapter, because some test templates call non-dependent `tci::` functions (e.g., `tci::create_context` in the fixture constructor) that are resolved at the first parsing phase.
+The backend's TCI header must be included **before** the adapter, because some test templates call non-dependent `tci::` functions (e.g., `tci::create_context` in the fixture constructor) that are resolved during the first parsing phase.
 
 ```cpp
 #include <my_backend/tci.h>           // backend first: declares tci::create_context, tci::zeros, ...
@@ -50,19 +46,20 @@ TCICT_DOCTEST_REGISTER_CPLX(cfloat,  MyTen_CF)
 TCICT_DOCTEST_REGISTER_CPLX(cdouble, MyTen_CD)
 ```
 
-`TCICT_DOCTEST_REGISTER_REAL` registers all `ALL_TYPES` tests plus the `REAL_ONLY` tests (currently `test_to_cplx_outofplace`, `test_to_cplx_inplace`).
-`TCICT_DOCTEST_REGISTER_CPLX` registers all `ALL_TYPES` tests plus the `CPLX_ONLY` tests (currently `test_to_cplx_complex_to_complex`).
+`TCICT_DOCTEST_REGISTER_REAL` registers every test that applies to real tensors (the full `ALL_TYPES` set plus `REAL_ONLY` tests such as `test_to_cplx_outofplace` / `test_to_cplx_inplace`).
+`TCICT_DOCTEST_REGISTER_CPLX` registers every test that applies to complex tensors (`ALL_TYPES` plus `CPLX_ONLY` tests such as `test_to_cplx_complex_to_complex`).
 
 Constraints:
-- `tag` must be identifier-like (stringized into the `TEST_CASE` name to disambiguate type variants).
-- `TenT` must be passable as a single macro argument. Types with unparenthesized commas (for example, `std::map<K, V>`) cannot be passed directly, so use a `using` alias in those cases.
+- `tag` must be identifier-like; it is stringized into each `TEST_CASE` name to disambiguate type variants.
+- `TenT` must be passable as a single macro argument. Types with unparenthesized commas (e.g., `std::map<K, V>`) cannot be passed directly — introduce a `using` alias first.
 
-#### Option B — Per-test registration (fine-grained control)
+<details>
+<summary>Per-test registration (advanced, rarely needed)</summary>
 
-For selectively registering specific tests (e.g., during incremental backend development), use the per-test bridge:
+If you need fine-grained control — for example, registering an individual test during incremental backend development before bulk registration is viable — define a per-test bridge instead:
 
 ```cpp
-#include <my_backend/tci.h>           // backend first (see note in Option A)
+#include <my_backend/tci.h>           // backend first
 #include <tcict/tcict.h>
 #include <doctest/doctest.h>
 
@@ -77,9 +74,13 @@ For selectively registering specific tests (e.g., during incremental backend dev
 using MyTensor = my_backend::Tensor<std::complex<double>>;
 
 TCICT_DOCTEST_CASE("construction", test_zeros, MyTensor)
-TCICT_DOCTEST_CASE("construction", test_eye, MyTensor)
+TCICT_DOCTEST_CASE("construction", test_eye,   MyTensor)
 // ... register more tests
 ```
+
+Prefer the bulk macros above unless you have a concrete reason to drop down to this form.
+
+</details>
 
 ### 4. Skip unimplemented functions
 
@@ -105,23 +106,14 @@ A backend that does not provide these cannot use TCICT at all, with or without s
 
 ## Test Categories
 
-| Category | Header | Functions |
+| Category | Header | Functions exercised |
 |---|---|---|
-| Construction | `tests/construction.h` | allocate, zeros, fill, eye, random, copy, move, clear, assign_from_range |
-| Read-only getters | `tests/read_only_getters.h` | order, shape, size, size_bytes, get_elem |
-| Tensor manipulation | `tests/tensor_manipulation.h` | reshape, transpose, shrink, expand, concatenate, extract_sub, replace_sub, diag, for_each, cplx_conj, to_cplx, real, imag |
-| Linear algebra | `tests/linear_algebra.h` | norm, normalize, linear_combine, contract, QR, LQ, truncated SVD, eig, eigh, exp, inverse |
-| I/O | `tests/io_operations.h` | save, load |
-| Miscellaneous | `tests/miscellaneous.h` | close/eq, to_range, show, convert, version |
-
-## Architecture
-
-- **`assertion.h`** -- Exception-based assertion macros (`TCICT_ASSERT`, `TCICT_ASSERT_CLOSE`, etc.)
-- **`fixture.h`** -- `tci_test_fixture<TenT>` template managing context lifecycle and epsilon
-- **`elem_helper.h`** -- `make_elem<TenT>(re, im)` and `real_part`/`imag_part` helpers for backend-agnostic element construction
-- **`skip.h`** -- `TCICT_SKIP_*` opt-out macros for unimplemented functions
-- **`tests/_list.h`** -- X-macro aggregators (`TCICT_FOREACH_TEST_ALL_TYPES`, `_REAL_ONLY`, `_CPLX_ONLY`) used by framework adapters
-- **`adapters/doctest.h`** -- Bulk-registration bridge for doctest (`TCICT_DOCTEST_REGISTER_REAL/CPLX`)
+| Construction | `tests/construction.h` | `allocate`, `assign_from_range`, `clear`, `copy`, `eye`, `fill`, `move`, `random`, `zeros` |
+| Read-only getters | `tests/read_only_getters.h` | `get_elem`, `order`, `set_elem`, `shape`, `size`, `size_bytes` |
+| Tensor manipulation | `tests/tensor_manipulation.h` | `concatenate`, `cplx_conj`, `diag`, `expand`, `extract_sub`, `for_each`, `for_each_with_coors`, `imag`, `real`, `replace_sub`, `reshape`, `shrink`, `stack`, `to_cplx`, `transpose` |
+| Linear algebra | `tests/linear_algebra.h` | `contract`, `eig`, `eigh`, `eigvals`, `eigvalsh`, `exp`, `inverse`, `linear_combine`, `lq`, `norm`, `normalize`, `qr`, `scale`, `svd`, `trace`, `trunc_svd` |
+| I/O | `tests/io_operations.h` | `load`, `save` |
+| Miscellaneous | `tests/miscellaneous.h` | `close`, `convert`, `show`, `to_range`, `version` |
 
 ## Requirements
 
