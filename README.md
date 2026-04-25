@@ -51,7 +51,7 @@ TCICT_DOCTEST_REGISTER_CPLX(cdouble, MyTen_CD)
 
 Constraints:
 - `tag` must be identifier-like (stringized into the `TEST_CASE` name to disambiguate type variants).
-- `TenT` must be a single preprocessor token — use a `using` alias. Types with unparenthesized commas (`std::map<K, V>`) cannot be passed directly.
+- `TenT` must be passable as a single macro argument. Types with unparenthesized commas (for example, `std::map<K, V>`) cannot be passed directly, so use a `using` alias in those cases.
 
 #### Option B — Per-test registration (fine-grained control)
 

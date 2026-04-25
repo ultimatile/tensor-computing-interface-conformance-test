@@ -11,9 +11,9 @@
 //
 // `tag` is stringized into the TEST_CASE name to disambiguate across type
 // variants; it must be identifier-like.
-// `TenT` must be a single preprocessor token (a typedef/`using` alias).
-// Types with unparenthesized commas (`std::map<K, V>`) cannot be passed
-// directly — alias them first.
+// `TenT` must be passable as a single macro argument. Types with
+// unparenthesized commas (e.g., `std::map<K, V>`) cannot be passed directly;
+// in those cases create a `using` alias first.
 
 #include <tcict/fixture.h>
 #include <tcict/tests/_list.h>
