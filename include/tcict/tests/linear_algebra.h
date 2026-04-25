@@ -15,9 +15,7 @@ namespace tests {
 // --- norm (basic: identity matrix) ---
 
 template <typename TenT> void test_norm_identity(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_NORM
-  return;
-#endif
+#ifndef TCICT_SKIP_NORM
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto identity = tci::eye<TenT>(ctx, 3);
@@ -25,15 +23,16 @@ template <typename TenT> void test_norm_identity(tci_test_fixture<TenT> &fix) {
   auto norm_val = tci::norm(ctx, identity);
   // Frobenius norm of 3x3 identity = sqrt(3)
   TCICT_ASSERT_CLOSE(norm_val, std::sqrt(3.0), eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- linear_combine: uniform coefficients ---
 
 template <typename TenT>
 void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_LINEAR_COMBINE
-  return;
-#endif
+#ifndef TCICT_SKIP_LINEAR_COMBINE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -68,15 +67,16 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), 13.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- linear_combine: weighted coefficients ---
 
 template <typename TenT>
 void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_LINEAR_COMBINE
-  return;
-#endif
+#ifndef TCICT_SKIP_LINEAR_COMBINE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -110,15 +110,16 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), 18.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- linear_combine: single tensor ---
 
 template <typename TenT>
 void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_LINEAR_COMBINE
-  return;
-#endif
+#ifndef TCICT_SKIP_LINEAR_COMBINE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -136,15 +137,16 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
                            tci::linear_combine(ctx, single_list, single_coef));
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 15.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- normalize: in-place ---
 
 template <typename TenT>
 void test_normalize_inplace(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_NORMALIZE
-  return;
-#endif
+#ifndef TCICT_SKIP_NORMALIZE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -165,15 +167,16 @@ void test_normalize_inplace(tci_test_fixture<TenT> &fix) {
   // New norm should be 1
   auto new_norm = tci::norm(ctx, tensor);
   TCICT_ASSERT_CLOSE(new_norm, 1.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- normalize: out-of-place ---
 
 template <typename TenT>
 void test_normalize_outofplace(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_NORMALIZE
-  return;
-#endif
+#ifndef TCICT_SKIP_NORMALIZE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -199,15 +202,16 @@ void test_normalize_outofplace(tci_test_fixture<TenT> &fix) {
 
   auto new_norm = tci::norm(ctx, normalized);
   TCICT_ASSERT_CLOSE(new_norm, 1.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- normalize: edge cases ---
 
 template <typename TenT>
 void test_normalize_edge_cases(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_NORMALIZE
-  return;
-#endif
+#ifndef TCICT_SKIP_NORMALIZE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -224,28 +228,30 @@ void test_normalize_edge_cases(tci_test_fixture<TenT> &fix) {
   auto zero_tensor = tci::zeros<TenT>(ctx, {2, 2});
   auto norm_zero = tci::normalize(ctx, zero_tensor);
   TCICT_ASSERT_CLOSE(std::abs(norm_zero), 0.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- norm: 2x2 identity ---
 
 template <typename TenT> void test_norm_2x2(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_NORM
-  return;
-#endif
+#ifndef TCICT_SKIP_NORM
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto identity = tci::eye<TenT>(ctx, 2);
   auto norm_val = tci::norm(ctx, identity);
   TCICT_ASSERT_CLOSE(norm_val, std::sqrt(2.0), eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- contract: matrix multiplication via Einstein notation ---
 
 template <typename TenT>
 void test_contract_matmul(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CONTRACT
-  return;
-#endif
+#ifndef TCICT_SKIP_CONTRACT
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {2, 2});
@@ -269,15 +275,16 @@ void test_contract_matmul(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {0, 1})), 22.0, eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {1, 0})), 43.0, eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {1, 1})), 50.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- contract: dot product ---
 
 template <typename TenT>
 void test_contract_dot_product(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CONTRACT
-  return;
-#endif
+#ifndef TCICT_SKIP_CONTRACT
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {3});
@@ -299,15 +306,16 @@ void test_contract_dot_product(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(c_shape.size() == 1);
   TCICT_ASSERT(c_shape[0] == 1);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {0})), 32.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- contract: outer product ---
 
 template <typename TenT>
 void test_contract_outer_product(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CONTRACT
-  return;
-#endif
+#ifndef TCICT_SKIP_CONTRACT
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {2});
@@ -327,14 +335,15 @@ void test_contract_outer_product(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(c_shape[1] == 3);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {0, 0})), 3.0, eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {1, 2})), 10.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- QR decomposition ---
 
 template <typename TenT> void test_qr(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_QR
-  return;
-#endif
+#ifndef TCICT_SKIP_QR
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});
@@ -365,14 +374,15 @@ template <typename TenT> void test_qr(tci_test_fixture<TenT> &fix) {
   auto bond_dim = tci::shape(ctx, q)[1];
   auto identity = tci::eye<TenT>(ctx, bond_dim);
   TCICT_ASSERT(tci::close(ctx, qtq, identity, eps * 100));
+#else
+  (void)fix;
+#endif
 }
 
 // --- LQ decomposition ---
 
 template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_LQ
-  return;
-#endif
+#ifndef TCICT_SKIP_LQ
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});
@@ -403,11 +413,17 @@ template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
   auto bond_dim = tci::shape(ctx, q)[0];
   auto identity = tci::eye<TenT>(ctx, bond_dim);
   TCICT_ASSERT(tci::close(ctx, qqt, identity, eps * 100));
+#else
+  (void)fix;
+#endif
 }
 
 // --- truncated SVD ---
 
+#ifndef TCICT_SKIP_TRUNC_SVD
 // Helper: build 4×4 diagonal matrix with SVs [3, 2, 1, 0.1].
+// Only defined when TRUNC_SVD tests are active so partial backends without
+// tci::zeros / tci::set_elem do not need to declare them.
 template <typename TenT>
 TenT trunc_svd_test_matrix(typename tci::tensor_traits<TenT>::context_handle_t &ctx) {
   auto matrix = tci::zeros<TenT>(ctx, {4, 4});
@@ -417,11 +433,10 @@ TenT trunc_svd_test_matrix(typename tci::tensor_traits<TenT>::context_handle_t &
   tci::set_elem(ctx, matrix, {3, 3}, make_elem<TenT>(0.1));
   return matrix;
 }
+#endif
 
 template <typename TenT> void test_trunc_svd(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_TRUNC_SVD
-  return;
-#endif
+#ifndef TCICT_SKIP_TRUNC_SVD
   auto &ctx = fix.context();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
 
@@ -437,6 +452,9 @@ template <typename TenT> void test_trunc_svd(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(s_shape.size() == 1);
   TCICT_ASSERT(s_shape[0] <= 2);
   TCICT_ASSERT(trunc_err >= 0.0);
+#else
+  (void)fix;
+#endif
 }
 
 /// Verify trunc_err equals the spec formula when truncation occurs.
@@ -445,9 +463,7 @@ template <typename TenT> void test_trunc_svd(tci_test_fixture<TenT> &fix) {
 ///         = 1.01 / 14.01 ≈ 0.07209
 template <typename TenT>
 void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_TRUNC_SVD
-  return;
-#endif
+#ifndef TCICT_SKIP_TRUNC_SVD
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
@@ -463,14 +479,15 @@ void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
   tci::real_t<TenT> expected =
       (1.0 * 1.0 + 0.1 * 0.1) / (3.0 * 3.0 + 2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1);
   TCICT_ASSERT_CLOSE(trunc_err, expected, eps);
+#else
+  (void)fix;
+#endif
 }
 
 /// Verify trunc_err == 0 when no truncation occurs (chi_max >= kappa).
 template <typename TenT>
 void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_TRUNC_SVD
-  return;
-#endif
+#ifndef TCICT_SKIP_TRUNC_SVD
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
@@ -487,14 +504,15 @@ void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(s_shape.size() == 1);
   TCICT_ASSERT(s_shape[0] == 4);
   TCICT_ASSERT_CLOSE(trunc_err, 0.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 /// Verify trunc_err is in [0, 1] (relative error is bounded).
 template <typename TenT>
 void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_TRUNC_SVD
-  return;
-#endif
+#ifndef TCICT_SKIP_TRUNC_SVD
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
@@ -514,14 +532,15 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
   tci::real_t<TenT> expected =
       (2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1) / (3.0 * 3.0 + 2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1);
   TCICT_ASSERT_CLOSE(trunc_err, expected, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- eig (general eigendecomposition of identity) ---
 
 template <typename TenT> void test_eig_identity(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EIG
-  return;
-#endif
+#ifndef TCICT_SKIP_EIG
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = tci::eye<TenT>(ctx, 2);
@@ -538,14 +557,15 @@ template <typename TenT> void test_eig_identity(tci_test_fixture<TenT> &fix) {
                      1.0, eps);
 
   TCICT_ASSERT(tci::order(ctx, eigenvecs) == 2);
+#else
+  (void)fix;
+#endif
 }
 
 // --- eigh (Hermitian eigendecomposition of identity) ---
 
 template <typename TenT> void test_eigh_identity(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EIGH
-  return;
-#endif
+#ifndef TCICT_SKIP_EIGH
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = tci::eye<TenT>(ctx, 2);
@@ -563,14 +583,15 @@ template <typename TenT> void test_eigh_identity(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, eigenvals, {1})),
                      1.0, eps);
   TCICT_ASSERT(tci::order(ctx, eigenvecs) == 2);
+#else
+  (void)fix;
+#endif
 }
 
 // --- exp: identity matrix ---
 
 template <typename TenT> void test_exp_identity(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EXP
-  return;
-#endif
+#ifndef TCICT_SKIP_EXP
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto identity = tci::eye<TenT>(ctx, 3);
@@ -583,14 +604,15 @@ template <typename TenT> void test_exp_identity(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})),
                      expected_e, eps);
   TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, result, {0, 1})), 0.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- exp: diagonal matrix ---
 
 template <typename TenT> void test_exp_diagonal(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EXP
-  return;
-#endif
+#ifndef TCICT_SKIP_EXP
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto diagonal = tci::zeros<TenT>(ctx, {2, 2});
@@ -606,14 +628,15 @@ template <typename TenT> void test_exp_diagonal(tci_test_fixture<TenT> &fix) {
                      std::exp(2.0), eps);
   TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, result, {0, 1})), 0.0, eps);
   TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, result, {1, 0})), 0.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- exp: zero matrix → identity ---
 
 template <typename TenT> void test_exp_zero(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EXP
-  return;
-#endif
+#ifndef TCICT_SKIP_EXP
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto zero_matrix = tci::zeros<TenT>(ctx, {2, 2});
@@ -626,15 +649,16 @@ template <typename TenT> void test_exp_zero(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), 1.0,
                      eps);
   TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, result, {0, 1})), 0.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- exp: anti-Hermitian → unitary ---
 
 template <typename TenT>
 void test_exp_anti_hermitian(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EXP
-  return;
-#endif
+#ifndef TCICT_SKIP_EXP
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto anti_herm = tci::zeros<TenT>(ctx, {2, 2});
@@ -655,14 +679,15 @@ void test_exp_anti_hermitian(tci_test_fixture<TenT> &fix) {
                      eps * 100);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), c,
                      eps * 100);
+#else
+  (void)fix;
+#endif
 }
 
 // --- exp: error conditions ---
 
 template <typename TenT> void test_exp_errors(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EXP
-  return;
-#endif
+#ifndef TCICT_SKIP_EXP
   auto &ctx = fix.context();
   TenT result;
   auto non_square = tci::zeros<TenT>(ctx, {2, 3});
@@ -671,14 +696,15 @@ template <typename TenT> void test_exp_errors(tci_test_fixture<TenT> &fix) {
 
   auto square = tci::zeros<TenT>(ctx, {2, 2});
   TCICT_ASSERT_THROWS(std::invalid_argument, tci::exp(ctx, square, 3, result));
+#else
+  (void)fix;
+#endif
 }
 
 // --- inverse ---
 
 template <typename TenT> void test_inverse(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_INVERSE
-  return;
-#endif
+#ifndef TCICT_SKIP_INVERSE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = tci::zeros<TenT>(ctx, {2, 2});
@@ -699,27 +725,29 @@ template <typename TenT> void test_inverse(tci_test_fixture<TenT> &fix) {
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, inv, {1, 1})), 0.4,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- inverse: non-square error ---
 
 template <typename TenT> void test_inverse_errors(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_INVERSE
-  return;
-#endif
+#ifndef TCICT_SKIP_INVERSE
   auto &ctx = fix.context();
   TenT result;
   auto non_square = tci::zeros<TenT>(ctx, {2, 3});
   TCICT_ASSERT_THROWS(std::invalid_argument,
                       tci::inverse(ctx, non_square, 1, result));
+#else
+  (void)fix;
+#endif
 }
 
 // --- scale: in-place ---
 
 template <typename TenT> void test_scale_inplace(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_SCALE
-  return;
-#endif
+#ifndef TCICT_SKIP_SCALE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -739,15 +767,16 @@ template <typename TenT> void test_scale_inplace(tci_test_fixture<TenT> &fix) {
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 4.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- scale: out-of-place ---
 
 template <typename TenT>
 void test_scale_outofplace(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_SCALE
-  return;
-#endif
+#ifndef TCICT_SKIP_SCALE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -765,14 +794,15 @@ void test_scale_outofplace(tci_test_fixture<TenT> &fix) {
   // Original unchanged
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 3.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- scale: by zero ---
 
 template <typename TenT> void test_scale_by_zero(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_SCALE
-  return;
-#endif
+#ifndef TCICT_SKIP_SCALE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -783,14 +813,15 @@ template <typename TenT> void test_scale_by_zero(tci_test_fixture<TenT> &fix) {
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 0.0,
                      eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- trace: 2x2 matrix ---
 
 template <typename TenT> void test_trace_partial(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_TRACE
-  return;
-#endif
+#ifndef TCICT_SKIP_TRACE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -805,14 +836,15 @@ template <typename TenT> void test_trace_partial(tci_test_fixture<TenT> &fix) {
   // TCI spec: all bonds paired yields a scalar (order 0)
   TCICT_ASSERT(tci::order(ctx, result) == 0);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {})), 5.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- svd: basic singular values and shapes ---
 
 template <typename TenT> void test_svd_basic(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_SVD
-  return;
-#endif
+#ifndef TCICT_SKIP_SVD
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -844,15 +876,16 @@ template <typename TenT> void test_svd_basic(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(u_shape[0] == 2);
   TCICT_ASSERT(v_shape.size() == 2);
   TCICT_ASSERT(v_shape[1] == 2);
+#else
+  (void)fix;
+#endif
 }
 
 // --- svd: reconstruction U * diag(S) * V† ≈ A ---
 
 template <typename TenT>
 void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_SVD
-  return;
-#endif
+#ifndef TCICT_SKIP_SVD
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -887,15 +920,16 @@ void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
   tci::contract(ctx, u_scaled, "ik", v_dag, "kj", reconstructed, "ij");
 
   TCICT_ASSERT(tci::close(ctx, reconstructed, matrix, eps * 100));
+#else
+  (void)fix;
+#endif
 }
 
 // --- eigvals: diagonal matrix ---
 
 template <typename TenT>
 void test_eigvals_diagonal(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EIGVALS
-  return;
-#endif
+#ifndef TCICT_SKIP_EIGVALS
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -923,28 +957,30 @@ void test_eigvals_diagonal(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT_CLOSE(ev_real[0], 1.0, eps);
   TCICT_ASSERT_CLOSE(ev_real[1], 2.0, eps);
   TCICT_ASSERT_CLOSE(ev_real[2], 3.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- eigvals: error on non-square ---
 
 template <typename TenT> void test_eigvals_errors(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EIGVALS
-  return;
-#endif
+#ifndef TCICT_SKIP_EIGVALS
   auto &ctx = fix.context();
   auto non_square = tci::zeros<TenT>(ctx, {2, 3});
   tci::cplx_ten_t<TenT> w;
   TCICT_ASSERT_THROWS(std::invalid_argument,
                       tci::eigvals(ctx, non_square, 1, w));
+#else
+  (void)fix;
+#endif
 }
 
 // --- eigvalsh: symmetric matrix ---
 
 template <typename TenT>
 void test_eigvalsh_diagonal(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EIGVALSH
-  return;
-#endif
+#ifndef TCICT_SKIP_EIGVALSH
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -966,21 +1002,65 @@ void test_eigvalsh_diagonal(tci_test_fixture<TenT> &fix) {
                      2.0, eps);
   TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, eigenvalues, {2})),
                      3.0, eps);
+#else
+  (void)fix;
+#endif
 }
 
 // --- eigvalsh: error on non-square ---
 
 template <typename TenT>
 void test_eigvalsh_errors(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_EIGVALSH
-  return;
-#endif
+#ifndef TCICT_SKIP_EIGVALSH
   auto &ctx = fix.context();
   auto non_square = tci::zeros<TenT>(ctx, {2, 3});
   tci::real_ten_t<TenT> w;
   TCICT_ASSERT_THROWS(std::invalid_argument,
                       tci::eigvalsh(ctx, non_square, 1, w));
+#else
+  (void)fix;
+#endif
 }
 
 } // namespace tests
 } // namespace tcict
+
+// Bulk registration helper: invokes X(..., "category", test_fn) once per test.
+// See include/tcict/adapters/doctest.h for usage.
+#define TCICT_FOREACH_LINEAR_ALGEBRA_TEST_ALL_TYPES(X, ...) \
+  X(__VA_ARGS__, "linear_algebra", test_norm_identity) \
+  X(__VA_ARGS__, "linear_algebra", test_linear_combine_uniform) \
+  X(__VA_ARGS__, "linear_algebra", test_linear_combine_weighted) \
+  X(__VA_ARGS__, "linear_algebra", test_linear_combine_single) \
+  X(__VA_ARGS__, "linear_algebra", test_normalize_inplace) \
+  X(__VA_ARGS__, "linear_algebra", test_normalize_outofplace) \
+  X(__VA_ARGS__, "linear_algebra", test_normalize_edge_cases) \
+  X(__VA_ARGS__, "linear_algebra", test_norm_2x2) \
+  X(__VA_ARGS__, "linear_algebra", test_contract_matmul) \
+  X(__VA_ARGS__, "linear_algebra", test_contract_dot_product) \
+  X(__VA_ARGS__, "linear_algebra", test_contract_outer_product) \
+  X(__VA_ARGS__, "linear_algebra", test_qr) \
+  X(__VA_ARGS__, "linear_algebra", test_lq) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_value) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_no_truncation) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_bounded) \
+  X(__VA_ARGS__, "linear_algebra", test_eig_identity) \
+  X(__VA_ARGS__, "linear_algebra", test_eigh_identity) \
+  X(__VA_ARGS__, "linear_algebra", test_exp_identity) \
+  X(__VA_ARGS__, "linear_algebra", test_exp_diagonal) \
+  X(__VA_ARGS__, "linear_algebra", test_exp_zero) \
+  X(__VA_ARGS__, "linear_algebra", test_exp_anti_hermitian) \
+  X(__VA_ARGS__, "linear_algebra", test_exp_errors) \
+  X(__VA_ARGS__, "linear_algebra", test_inverse) \
+  X(__VA_ARGS__, "linear_algebra", test_inverse_errors) \
+  X(__VA_ARGS__, "linear_algebra", test_scale_inplace) \
+  X(__VA_ARGS__, "linear_algebra", test_scale_outofplace) \
+  X(__VA_ARGS__, "linear_algebra", test_scale_by_zero) \
+  X(__VA_ARGS__, "linear_algebra", test_trace_partial) \
+  X(__VA_ARGS__, "linear_algebra", test_svd_basic) \
+  X(__VA_ARGS__, "linear_algebra", test_svd_reconstruction) \
+  X(__VA_ARGS__, "linear_algebra", test_eigvals_diagonal) \
+  X(__VA_ARGS__, "linear_algebra", test_eigvals_errors) \
+  X(__VA_ARGS__, "linear_algebra", test_eigvalsh_diagonal) \
+  X(__VA_ARGS__, "linear_algebra", test_eigvalsh_errors)

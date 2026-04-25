@@ -17,9 +17,7 @@ namespace tests {
 
 template <typename TenT>
 void test_close_identical(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CLOSE
-  return;
-#endif
+#ifndef TCICT_SKIP_CLOSE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto tensor1 = tci::eye<TenT>(ctx, 2);
@@ -27,15 +25,16 @@ void test_close_identical(tci_test_fixture<TenT> &fix) {
 
   bool are_equal = tci::close(ctx, tensor1, tensor2, eps);
   TCICT_ASSERT(are_equal == true);
+#else
+  (void)fix;
+#endif
 }
 
 // --- close (eq) : different tensors ---
 
 template <typename TenT>
 void test_close_different(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CLOSE
-  return;
-#endif
+#ifndef TCICT_SKIP_CLOSE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto tensor1 = tci::eye<TenT>(ctx, 2);
@@ -43,14 +42,15 @@ void test_close_different(tci_test_fixture<TenT> &fix) {
 
   bool are_equal = tci::close(ctx, tensor1, tensor2, eps);
   TCICT_ASSERT(are_equal == false);
+#else
+  (void)fix;
+#endif
 }
 
 // --- to_range ---
 
 template <typename TenT> void test_to_range(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_TO_RANGE
-  return;
-#endif
+#ifndef TCICT_SKIP_TO_RANGE
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -74,26 +74,28 @@ template <typename TenT> void test_to_range(tci_test_fixture<TenT> &fix) {
     TCICT_ASSERT_CLOSE(real_part<TenT>(container[i]), static_cast<double>(i),
                        eps);
   }
+#else
+  (void)fix;
+#endif
 }
 
 // --- show (does not throw) ---
 
 template <typename TenT> void test_show(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_SHOW
-  return;
-#endif
+#ifndef TCICT_SKIP_SHOW
   auto &ctx = fix.context();
   auto a = tci::eye<TenT>(ctx, 2);
   TCICT_ASSERT_NOTHROW(tci::show(ctx, a));
+#else
+  (void)fix;
+#endif
 }
 
 // --- convert (same context) ---
 
 template <typename TenT>
 void test_convert_same_context(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CONVERT
-  return;
-#endif
+#ifndef TCICT_SKIP_CONVERT
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::eye<TenT>(ctx, 3);
@@ -107,15 +109,16 @@ void test_convert_same_context(tci_test_fixture<TenT> &fix) {
   TenT original_b = tci::copy(ctx, b);
   tci::set_elem(ctx, a, {0, 0}, make_elem<TenT>(999.0));
   TCICT_ASSERT(tci::close(ctx, b, original_b, eps));
+#else
+  (void)fix;
+#endif
 }
 
 // --- convert (different contexts) ---
 
 template <typename TenT>
 void test_convert_different_context(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CONVERT
-  return;
-#endif
+#ifndef TCICT_SKIP_CONVERT
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::eye<TenT>(ctx, 3);
@@ -129,15 +132,16 @@ void test_convert_different_context(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(tci::shape(ctx, a) == tci::shape(ctx, b));
 
   tci::destroy_context(ctx2);
+#else
+  (void)fix;
+#endif
 }
 
 // --- convert (data integrity) ---
 
 template <typename TenT>
 void test_convert_data_integrity(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_CONVERT
-  return;
-#endif
+#ifndef TCICT_SKIP_CONVERT
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto a = tci::zeros<TenT>(ctx, {2, 3});
@@ -161,14 +165,15 @@ void test_convert_data_integrity(tci_test_fixture<TenT> &fix) {
   }
 
   tci::destroy_context(ctx2);
+#else
+  (void)fix;
+#endif
 }
 
 // --- version ---
 
 template <typename TenT> void test_version(tci_test_fixture<TenT> &fix) {
-#ifdef TCICT_SKIP_VERSION
-  return;
-#endif
+#ifndef TCICT_SKIP_VERSION
   std::string ver = tci::template version<TenT>();
   TCICT_ASSERT(!ver.empty());
   // Version string should contain digits and a dot
@@ -176,7 +181,22 @@ template <typename TenT> void test_version(tci_test_fixture<TenT> &fix) {
       (ver.find_first_of("0123456789") != std::string::npos) &&
       (ver.find('.') != std::string::npos);
   TCICT_ASSERT(has_version_pattern);
+#else
+  (void)fix;
+#endif
 }
 
 } // namespace tests
 } // namespace tcict
+
+// Bulk registration helper: invokes X(..., "category", test_fn) once per test.
+// See include/tcict/adapters/doctest.h for usage.
+#define TCICT_FOREACH_MISCELLANEOUS_TEST_ALL_TYPES(X, ...) \
+  X(__VA_ARGS__, "miscellaneous", test_close_identical) \
+  X(__VA_ARGS__, "miscellaneous", test_close_different) \
+  X(__VA_ARGS__, "miscellaneous", test_to_range) \
+  X(__VA_ARGS__, "miscellaneous", test_show) \
+  X(__VA_ARGS__, "miscellaneous", test_convert_same_context) \
+  X(__VA_ARGS__, "miscellaneous", test_convert_different_context) \
+  X(__VA_ARGS__, "miscellaneous", test_convert_data_integrity) \
+  X(__VA_ARGS__, "miscellaneous", test_version)
