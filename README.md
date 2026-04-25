@@ -31,9 +31,11 @@ Each backend provides a small bridge file that maps TCICT test functions to the 
 
 Use the provided doctest adapter to register all applicable tests for each type variant with a single macro call:
 
+The backend's TCI header must be included **before** the adapter, because some test templates call non-dependent `tci::` functions (e.g., `tci::create_context` in the fixture constructor) that are resolved at the first parsing phase.
+
 ```cpp
-#include <tcict/adapters/doctest.h>
-#include <my_backend/tci.h>
+#include <my_backend/tci.h>           // backend first: declares tci::create_context, tci::zeros, ...
+#include <tcict/adapters/doctest.h>   // then the adapter, which pulls in the test templates
 
 #include <complex>
 
@@ -60,8 +62,8 @@ Constraints:
 For selectively registering specific tests (e.g., during incremental backend development), use the per-test bridge:
 
 ```cpp
+#include <my_backend/tci.h>           // backend first (see note in Option A)
 #include <tcict/tcict.h>
-#include <my_backend/tci.h>
 #include <doctest/doctest.h>
 
 #include <complex>

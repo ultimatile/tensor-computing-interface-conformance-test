@@ -2,8 +2,13 @@
 
 // Doctest adapter for bulk registration of TCICT conformance tests.
 //
+// Include the backend's TCI header BEFORE this adapter: some test templates
+// call non-dependent `tci::` functions (notably tci::create_context in the
+// fixture constructor) that must be visible at the first parsing phase.
+//
 // Usage:
-//   #include <tcict/adapters/doctest.h>
+//   #include <my_backend/tci.h>           // backend first
+//   #include <tcict/adapters/doctest.h>   // then the adapter
 //   using MyTen_F  = backend::Tensor<float>;
 //   using MyTen_CD = backend::Tensor<std::complex<double>>;
 //   TCICT_DOCTEST_REGISTER_REAL(float,   MyTen_F)
