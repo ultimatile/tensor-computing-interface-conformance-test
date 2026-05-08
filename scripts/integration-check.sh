@@ -62,7 +62,10 @@ sync_default_path() {
     log "syncing existing cytnx checkout at $CYTNX_BACKEND_DIR"
     git -C "$CYTNX_BACKEND_DIR" fetch
     git -C "$CYTNX_BACKEND_DIR" reset --hard "$CYTNX_REF"
-    git -C "$CYTNX_BACKEND_DIR" submodule update --init --recursive
+    # --force is required: a previous run leaves external/tcict with the override's
+    # working-tree content, and a non-forced submodule update refuses to checkout
+    # a different pin over those files.
+    git -C "$CYTNX_BACKEND_DIR" submodule update --init --recursive --force
   fi
 }
 
