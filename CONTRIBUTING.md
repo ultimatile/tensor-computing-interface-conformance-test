@@ -14,7 +14,7 @@ make integration-check
 
 This:
 
-1. Clones cytnx (with submodules) into `./build/tensor-computing-interface-backend-cytnx/` on first run, or runs `git fetch`, `git reset --hard origin/main`, and `git submodule update --init --recursive` on subsequent runs.
+1. Clones cytnx (with submodules) into `./build/tensor-computing-interface-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard origin/main`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF`.
 2. Replaces `external/tcict/` content with this repo's tracked HEAD via `git archive HEAD | tar -x`.
 3. Builds the cytnx test target (`TCITests`).
 
@@ -71,5 +71,5 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 |---|---|---|
 | `CYTNX_BACKEND_DIR` | `./build/tensor-computing-interface-backend-cytnx` | cytnx checkout to override into; **set** disables auto-clone/sync |
 | `CYTNX_REPO_URL` | `https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx.git` | URL used only when auto-cloning the default path |
-| `CYTNX_REF` | `origin/main` | ref the default-path checkout is reset to on subsequent runs |
+| `CYTNX_REF` | `origin/main` | ref the default-path checkout is reset to on every run |
 | `INTEGRATION_CMAKE_ARGS` | (empty) | extra args appended to the cmake configure command |

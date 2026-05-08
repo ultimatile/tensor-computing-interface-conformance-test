@@ -58,15 +58,18 @@ sync_default_path() {
     log "cloning cytnx into $CYTNX_BACKEND_DIR"
     mkdir -p "$(dirname "$CYTNX_BACKEND_DIR")"
     git clone --recurse-submodules "$CYTNX_REPO_URL" "$CYTNX_BACKEND_DIR"
-  else
-    log "syncing existing cytnx checkout at $CYTNX_BACKEND_DIR"
-    git -C "$CYTNX_BACKEND_DIR" fetch
-    git -C "$CYTNX_BACKEND_DIR" reset --hard "$CYTNX_REF"
-    # --force is required: a previous run leaves external/tcict with the override's
-    # working-tree content, and a non-forced submodule update refuses to checkout
-    # a different pin over those files.
-    git -C "$CYTNX_BACKEND_DIR" submodule update --init --recursive --force
   fi
+  # Always fetch + reset + submodule update, including immediately after the
+  # initial clone. `git clone` lands on the upstream default branch, so a
+  # CYTNX_REF override (a tag, a feature branch) only takes effect once we
+  # explicitly reset to it.
+  log "syncing cytnx checkout at $CYTNX_BACKEND_DIR to $CYTNX_REF"
+  git -C "$CYTNX_BACKEND_DIR" fetch
+  git -C "$CYTNX_BACKEND_DIR" reset --hard "$CYTNX_REF"
+  # --force is required: a previous run leaves external/tcict with the override's
+  # working-tree content, and a non-forced submodule update refuses to checkout
+  # a different pin over those files.
+  git -C "$CYTNX_BACKEND_DIR" submodule update --init --recursive --force
 }
 
 require_sentinel() {
