@@ -59,6 +59,11 @@ sync_default_path() {
     mkdir -p "$(dirname "$CYTNX_BACKEND_DIR")"
     git clone --recurse-submodules "$CYTNX_REPO_URL" "$CYTNX_BACKEND_DIR"
   fi
+  # An existing path may have been left behind by a partial clone or unrelated
+  # work; reject it explicitly rather than letting `git fetch` print a raw
+  # not-a-repo error.
+  git -C "$CYTNX_BACKEND_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    || fail "$CYTNX_BACKEND_DIR exists but is not a git checkout (remove it or set CYTNX_BACKEND_DIR to a real cytnx clone)"
   # Always fetch + reset + submodule update, including immediately after the
   # initial clone. `git clone` lands on the upstream default branch, so a
   # CYTNX_REF override (a tag, a feature branch) only takes effect once we
@@ -83,8 +88,9 @@ override_tcict() {
   # does not delete; the wipe is what makes the override idempotent.
   find "$DEST" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf -- {} +
   # Ship only tracked files from HEAD; working-tree artefacts (build outputs,
-  # editor backups) do not leak into the override.
-  git -C "$TCICT_ROOT" archive HEAD | tar -x -C "$DEST"
+  # editor backups) do not leak into the override. `tar -xf -` makes the stdin
+  # archive source explicit for portability across tar implementations.
+  git -C "$TCICT_ROOT" archive HEAD | tar -xf - -C "$DEST"
 }
 
 cmake_build() {
@@ -105,6 +111,12 @@ run_tests() {
 restore_tcict() {
   [[ -d "$CYTNX_BACKEND_DIR/.git" || -f "$CYTNX_BACKEND_DIR/.git" ]] \
     || fail "$CYTNX_BACKEND_DIR is not a git checkout"
+  # Restore must work from a half-broken state too: a previous override may
+  # have wiped DEST and failed before re-extracting, leaving no sentinel.
+  # The cytnx-is-a-repo check above is enough; the submodule-update step
+  # below repairs the working tree regardless.
+  git -C "$CYTNX_BACKEND_DIR" config -f .gitmodules submodule.external/tcict.path >/dev/null 2>&1 \
+    || fail "external/tcict is not a registered submodule of $CYTNX_BACKEND_DIR"
   log "restoring $DEST to cytnx submodule pin"
   git -C "$CYTNX_BACKEND_DIR" submodule update --init --force external/tcict
   # The submodule pin does not include files added by the override (Makefile,
@@ -134,7 +146,6 @@ main() {
       ;;
     restore)
       [[ -d "$CYTNX_BACKEND_DIR" ]] || fail "$CYTNX_BACKEND_DIR does not exist"
-      require_sentinel
       restore_tcict
       ;;
     -h|--help|help|"")

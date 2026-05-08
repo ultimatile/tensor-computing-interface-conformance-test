@@ -14,8 +14,8 @@ make integration-check
 
 This:
 
-1. Clones cytnx (with submodules) into `./build/tensor-computing-interface-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard origin/main`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF`.
-2. Replaces `external/tcict/` content with this repo's tracked HEAD via `git archive HEAD | tar -x`.
+1. Clones cytnx (with submodules) into `./build/tensor-computing-interface-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard $CYTNX_REF`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF` (default `origin/main`).
+2. Replaces `external/tcict/` content with this repo's tracked HEAD via `git archive HEAD | tar -xf -`.
 3. Builds the cytnx test target (`TCITests`).
 
 `build/` is gitignored, so the cloned backend and its cmake artefacts stay untracked.
