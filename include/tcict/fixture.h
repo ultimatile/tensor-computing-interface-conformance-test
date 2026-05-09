@@ -2,6 +2,7 @@
 
 #include <tci/tensor_traits.h>
 
+#include <cstddef>
 #include <limits>
 #include <type_traits>
 
@@ -38,5 +39,49 @@ struct tci_test_fixture {
     }
   }
 };
+
+/// Backward-error categories for numerical comparisons. Tolerances scale with
+/// the operation's expected error growth (Higham, Accuracy and Stability of
+/// Numerical Algorithms, 2nd ed.).
+enum class tol_category {
+  /// No floating-point arithmetic (copy, reshape, fill, zeros, eye).
+  exact,
+  /// O(eps): single multiply / assignment (scale, set_elem / get_elem).
+  elementwise,
+  /// O(sqrt(N) * eps): pairwise / Kahan summation (norm, trace, linear_combine).
+  reduction,
+  /// O(N * eps * cond): BLAS / LAPACK backward stability (QR, LQ, SVD, eig, eigh).
+  factorization,
+  /// O(N^k * eps): algorithm-dependent composite (exp, inverse).
+  iterative,
+};
+
+/// Comparison tolerance for an operation in a given backward-error category.
+///
+/// `N` is reserved for future N-scaling of factorization / iterative
+/// tolerances and is currently ignored; v1 returns category-specific
+/// constants that match the test suite's pre-existing hardcoded multipliers.
+/// Backends that need a different tolerance schedule specialize this free
+/// function template (or specialize the fixture's `epsilon()`, since the
+/// helper composes the result from `fix.epsilon()`).
+template <typename TenT>
+auto tolerance(tci_test_fixture<TenT>& fix, tol_category cat,
+               std::size_t /*N*/ = 1) -> tci::real_t<TenT> {
+  using real_type = tci::real_t<TenT>;
+  const auto eps = fix.epsilon();
+  switch (cat) {
+    case tol_category::exact:
+      return real_type{0};
+    case tol_category::elementwise:
+      return eps;
+    case tol_category::reduction:
+      return eps;
+    case tol_category::factorization:
+      return eps * real_type{100};
+    case tol_category::iterative:
+      return eps * real_type{100};
+  }
+  return eps;  // unreachable; switch is exhaustive over all enum values
+}
 
 }  // namespace tcict
