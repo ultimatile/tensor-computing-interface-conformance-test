@@ -119,3 +119,7 @@ A backend that does not provide these cannot use TCICT at all, with or without s
 
 - C++17
 - TCI headers (`tci/tensor_traits.h` and backend-specific trait specialization)
+
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the local integration check against the cytnx backend.
