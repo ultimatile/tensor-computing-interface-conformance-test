@@ -409,7 +409,8 @@ void test_for_each_doubling(tci_test_fixture<TenT> &fix) {
   tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(5.0));
   tci::set_elem(ctx, tensor, {1, 2}, make_elem<TenT>(6.0));
 
-  tci::for_each(ctx, tensor, [](Elem &elem) { elem = elem * 2.0; });
+  tci::for_each(ctx, tensor,
+                [](Elem &elem) { elem = elem * make_elem<TenT>(2.0); });
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 2.0,
                      eps);
@@ -462,7 +463,7 @@ void test_for_each_capture(tci_test_fixture<TenT> &fix) {
 
   auto tensor = tci::fill<TenT>(ctx, {2, 2}, make_elem<TenT>(3.0, 1.0));
 
-  double multiplier = 0.5;
+  auto multiplier = make_elem<TenT>(0.5);
   tci::for_each(ctx, tensor,
                 [multiplier](Elem &elem) { elem = elem * multiplier; });
 
