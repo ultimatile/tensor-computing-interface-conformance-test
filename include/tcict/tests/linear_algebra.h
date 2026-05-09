@@ -17,12 +17,12 @@ namespace tests {
 template <typename TenT> void test_norm_identity(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_NORM
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 9);
   auto identity = tci::eye<TenT>(ctx, 3);
 
   auto norm_val = tci::norm(ctx, identity);
   // Frobenius norm of 3x3 identity = sqrt(3)
-  TCICT_ASSERT_CLOSE(norm_val, std::sqrt(3.0), eps);
+  TCICT_ASSERT_CLOSE(norm_val, std::sqrt(3.0), tol);
 #else
   (void)fix;
 #endif
@@ -34,7 +34,7 @@ template <typename TenT>
 void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_LINEAR_COMBINE
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 3);
 
   auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
@@ -60,13 +60,13 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
 
   // Expected: [[7,9],[11,13]]
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 7.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1})), 9.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0})), 11.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), 13.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -78,7 +78,7 @@ template <typename TenT>
 void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_LINEAR_COMBINE
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 2);
 
   auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
@@ -103,13 +103,13 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 
   // Expected: 0.5*a + 2*b = [[3,8],[13,18]]
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 3.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1})), 8.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0})), 13.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), 18.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -121,7 +121,7 @@ template <typename TenT>
 void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_LINEAR_COMBINE
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
 
   auto single_tensor = tci::zeros<TenT>(ctx, {1, 1});
   tci::set_elem(ctx, single_tensor, {0, 0}, make_elem<TenT>(5.0));
@@ -130,13 +130,13 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
   tci::List<TenT> single_list = {single_tensor};
   TCICT_ASSERT_NOTHROW(result = tci::linear_combine(ctx, single_list));
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 5.0,
-                     eps);
+                     tol);
 
   tci::List<tci::elem_t<TenT>> single_coef = {make_elem<TenT>(3.0)};
   TCICT_ASSERT_NOTHROW(result =
                            tci::linear_combine(ctx, single_list, single_coef));
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 15.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -148,7 +148,7 @@ template <typename TenT>
 void test_normalize_inplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_NORMALIZE
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 4);
 
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   // [[3,4],[0,0]] -> norm = 5
@@ -156,17 +156,17 @@ void test_normalize_inplace(tci_test_fixture<TenT> &fix) {
   tci::set_elem(ctx, tensor, {0, 1}, make_elem<TenT>(4.0));
 
   auto original_norm = tci::normalize(ctx, tensor);
-  TCICT_ASSERT_CLOSE(std::abs(original_norm), 5.0, eps);
+  TCICT_ASSERT_CLOSE(std::abs(original_norm), 5.0, tol);
 
   // Verify normalized values
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 0.6,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 1})), 0.8,
-                     eps);
+                     tol);
 
   // New norm should be 1
   auto new_norm = tci::norm(ctx, tensor);
-  TCICT_ASSERT_CLOSE(new_norm, 1.0, eps);
+  TCICT_ASSERT_CLOSE(new_norm, 1.0, tol);
 #else
   (void)fix;
 #endif
@@ -178,7 +178,7 @@ template <typename TenT>
 void test_normalize_outofplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_NORMALIZE
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 3);
 
   auto original = tci::zeros<TenT>(ctx, {3, 1});
   // [[2],[2],[1]] -> norm = 3
@@ -188,20 +188,20 @@ void test_normalize_outofplace(tci_test_fixture<TenT> &fix) {
 
   TenT normalized;
   auto original_norm = tci::normalize(ctx, original, normalized);
-  TCICT_ASSERT_CLOSE(std::abs(original_norm), 3.0, eps);
+  TCICT_ASSERT_CLOSE(std::abs(original_norm), 3.0, tol);
 
   // Original unchanged
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, original, {0, 0})), 2.0,
-                     eps);
+                     tol);
 
   // Normalized tensor
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, normalized, {0, 0})),
-                     2.0 / 3.0, eps);
+                     2.0 / 3.0, tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, normalized, {2, 0})),
-                     1.0 / 3.0, eps);
+                     1.0 / 3.0, tol);
 
   auto new_norm = tci::norm(ctx, normalized);
-  TCICT_ASSERT_CLOSE(new_norm, 1.0, eps);
+  TCICT_ASSERT_CLOSE(new_norm, 1.0, tol);
 #else
   (void)fix;
 #endif
@@ -213,21 +213,21 @@ template <typename TenT>
 void test_normalize_edge_cases(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_NORMALIZE
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 4);
 
   // Single non-zero element
   auto single_elem = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, single_elem, {1, 1}, make_elem<TenT>(7.0));
 
   auto norm1 = tci::normalize(ctx, single_elem);
-  TCICT_ASSERT_CLOSE(std::abs(norm1), 7.0, eps);
+  TCICT_ASSERT_CLOSE(std::abs(norm1), 7.0, tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, single_elem, {1, 1})),
-                     1.0, eps);
+                     1.0, tol);
 
   // Zero tensor
   auto zero_tensor = tci::zeros<TenT>(ctx, {2, 2});
   auto norm_zero = tci::normalize(ctx, zero_tensor);
-  TCICT_ASSERT_CLOSE(std::abs(norm_zero), 0.0, eps);
+  TCICT_ASSERT_CLOSE(std::abs(norm_zero), 0.0, tol);
 #else
   (void)fix;
 #endif
@@ -238,10 +238,10 @@ void test_normalize_edge_cases(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_norm_2x2(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_NORM
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 4);
   auto identity = tci::eye<TenT>(ctx, 2);
   auto norm_val = tci::norm(ctx, identity);
-  TCICT_ASSERT_CLOSE(norm_val, std::sqrt(2.0), eps);
+  TCICT_ASSERT_CLOSE(norm_val, std::sqrt(2.0), tol);
 #else
   (void)fix;
 #endif
@@ -253,7 +253,7 @@ template <typename TenT>
 void test_contract_matmul(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_CONTRACT
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 2);
   auto a = tci::zeros<TenT>(ctx, {2, 2});
   auto b = tci::zeros<TenT>(ctx, {2, 2});
 
@@ -271,10 +271,10 @@ void test_contract_matmul(tci_test_fixture<TenT> &fix) {
   tci::contract(ctx, a, "ij", b, "jk", c, "ik");
 
   // A*B = [[19,22],[43,50]]
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {0, 0})), 19.0, eps);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {0, 1})), 22.0, eps);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {1, 0})), 43.0, eps);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {1, 1})), 50.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {0, 0})), 19.0, tol);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {0, 1})), 22.0, tol);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {1, 0})), 43.0, tol);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {1, 1})), 50.0, tol);
 #else
   (void)fix;
 #endif
@@ -286,7 +286,7 @@ template <typename TenT>
 void test_contract_dot_product(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_CONTRACT
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 3);
   auto a = tci::zeros<TenT>(ctx, {3});
   auto b = tci::zeros<TenT>(ctx, {3});
 
@@ -305,7 +305,7 @@ void test_contract_dot_product(tci_test_fixture<TenT> &fix) {
   auto c_shape = tci::shape(ctx, c);
   TCICT_ASSERT(c_shape.size() == 1);
   TCICT_ASSERT(c_shape[0] == 1);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {0})), 32.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {0})), 32.0, tol);
 #else
   (void)fix;
 #endif
@@ -317,7 +317,7 @@ template <typename TenT>
 void test_contract_outer_product(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_CONTRACT
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto a = tci::zeros<TenT>(ctx, {2});
   auto b = tci::zeros<TenT>(ctx, {3});
 
@@ -333,8 +333,8 @@ void test_contract_outer_product(tci_test_fixture<TenT> &fix) {
   auto c_shape = tci::shape(ctx, c);
   TCICT_ASSERT(c_shape[0] == 2);
   TCICT_ASSERT(c_shape[1] == 3);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {0, 0})), 3.0, eps);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {1, 2})), 10.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {0, 0})), 3.0, tol);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {1, 2})), 10.0, tol);
 #else
   (void)fix;
 #endif
@@ -747,7 +747,7 @@ template <typename TenT> void test_inverse_errors(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_scale_inplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_SCALE
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
 
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(2.0));
@@ -758,13 +758,13 @@ template <typename TenT> void test_scale_inplace(tci_test_fixture<TenT> &fix) {
   tci::scale(ctx, tensor, make_elem<TenT>(0.5));
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 1.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 1})), 2.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 0})), 3.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 4.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -776,7 +776,7 @@ template <typename TenT>
 void test_scale_outofplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_SCALE
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
 
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.0));
@@ -786,12 +786,12 @@ void test_scale_outofplace(tci_test_fixture<TenT> &fix) {
   tci::scale(ctx, tensor, make_elem<TenT>(-2.0), result);
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), -6.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), -12.0,
-                     eps);
+                     tol);
   // Original unchanged
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 3.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -802,15 +802,15 @@ void test_scale_outofplace(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_scale_by_zero(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_SCALE
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
 
   auto tensor = tci::eye<TenT>(ctx, 2);
   tci::scale(ctx, tensor, make_elem<TenT>(0.0));
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 0.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 0.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -821,7 +821,7 @@ template <typename TenT> void test_scale_by_zero(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_trace_partial(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_TRACE
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 2);
 
   // 2x2 diagonal matrix [[1,0],[0,4]] → trace over {0,1} = 1+4 = 5
   auto matrix = tci::zeros<TenT>(ctx, {2, 2});
@@ -833,7 +833,7 @@ template <typename TenT> void test_trace_partial(tci_test_fixture<TenT> &fix) {
 
   // TCI spec: all bonds paired yields a scalar (order 0)
   TCICT_ASSERT(tci::order(ctx, result) == 0);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {})), 5.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {})), 5.0, tol);
 #else
   (void)fix;
 #endif
