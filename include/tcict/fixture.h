@@ -43,8 +43,9 @@ struct tci_test_fixture {
 };
 
 /// Backward-error categories for numerical comparisons. Tolerances scale with
-/// the operation's expected error growth (Higham, Accuracy and Stability of
-/// Numerical Algorithms, 2nd ed.).
+/// the operation's expected error growth; see the LAPACK Users' Guide,
+/// Chapter 4 "Accuracy and Stability" (https://www.netlib.org/lapack/lug/)
+/// for the standard schedule.
 enum class tol_category {
   /// No floating-point arithmetic (copy, reshape, fill, zeros, eye).
   exact,
