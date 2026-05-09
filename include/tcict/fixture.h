@@ -9,9 +9,7 @@
 namespace tcict {
 
 /// Test fixture that manages a TCI context.
-/// Backends may specialize this for custom context creation (e.g. GPU) or
-/// epsilon. Specializations must declare `epsilon()` as a const member,
-/// because `tcict::tolerance` takes the fixture by `const&`.
+/// Backends may specialize this for custom context creation (e.g. GPU) or epsilon.
 template <typename TenT>
 struct tci_test_fixture {
   tci::context_handle_t<TenT> ctx;
@@ -28,7 +26,7 @@ struct tci_test_fixture {
   /// The known-type branches match values empirically sufficient for the
   /// small test fixtures in this suite; the fallback scales machine epsilon
   /// to absorb O(N) accumulation errors for unfamiliar real_t types.
-  auto epsilon() const -> tci::real_t<TenT> {
+  auto epsilon() -> tci::real_t<TenT> {
     using real_type = tci::real_t<TenT>;
     if constexpr (std::is_same_v<real_type, float>) {
       return 1e-5F;
@@ -71,7 +69,7 @@ enum class tol_category {
 /// this free function template (or specialize the fixture's `epsilon()`,
 /// since the helper composes the result from `fix.epsilon()`).
 template <typename TenT>
-auto tolerance(const tci_test_fixture<TenT>& fix, tol_category cat,
+auto tolerance(tci_test_fixture<TenT>& fix, tol_category cat,
                std::size_t /*N*/ = 1) -> tci::real_t<TenT> {
   using real_type = tci::real_t<TenT>;
   const auto eps = fix.epsilon();
