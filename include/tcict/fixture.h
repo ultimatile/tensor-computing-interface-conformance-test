@@ -26,7 +26,7 @@ struct tci_test_fixture {
   /// The known-type branches match values empirically sufficient for the
   /// small test fixtures in this suite; the fallback scales machine epsilon
   /// to absorb O(N) accumulation errors for unfamiliar real_t types.
-  auto epsilon() -> tci::real_t<TenT> {
+  auto epsilon() const -> tci::real_t<TenT> {
     using real_type = tci::real_t<TenT>;
     if constexpr (std::is_same_v<real_type, float>) {
       return 1e-5F;
@@ -58,14 +58,17 @@ enum class tol_category {
 
 /// Comparison tolerance for an operation in a given backward-error category.
 ///
-/// `N` is reserved for future N-scaling of factorization / iterative
-/// tolerances and is currently ignored; v1 returns category-specific
-/// constants that match the test suite's pre-existing hardcoded multipliers.
-/// Backends that need a different tolerance schedule specialize this free
-/// function template (or specialize the fixture's `epsilon()`, since the
-/// helper composes the result from `fix.epsilon()`).
+/// Currently returns category-specific constants that match the test
+/// suite's pre-existing hardcoded multipliers; the asymptotic scalings
+/// claimed in `tol_category`'s docstrings are the *target* error classes,
+/// not yet realized in this implementation. The `N` parameter is reserved
+/// for future N-scaling of categories whose asymptotic growth is
+/// non-constant (reduction, factorization, iterative) and is currently
+/// ignored. Backends that need a different tolerance schedule specialize
+/// this free function template (or specialize the fixture's `epsilon()`,
+/// since the helper composes the result from `fix.epsilon()`).
 template <typename TenT>
-auto tolerance(tci_test_fixture<TenT>& fix, tol_category cat,
+auto tolerance(const tci_test_fixture<TenT>& fix, tol_category cat,
                std::size_t /*N*/ = 1) -> tci::real_t<TenT> {
   using real_type = tci::real_t<TenT>;
   const auto eps = fix.epsilon();
