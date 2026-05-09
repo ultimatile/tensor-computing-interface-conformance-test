@@ -65,9 +65,9 @@ enum class tol_category {
 /// not yet realized in this implementation. The `N` parameter is reserved
 /// for future N-scaling of categories whose asymptotic growth is
 /// non-constant (reduction, factorization, iterative) and is currently
-/// ignored. Backends that need a different tolerance schedule specialize
-/// this free function template (or specialize the fixture's `epsilon()`,
-/// since the helper composes the result from `fix.epsilon()`).
+/// ignored. Backends that want a different tolerance schedule specialize
+/// the fixture's `epsilon()`; the helper composes its result from
+/// `fix.epsilon()`, so any backend-defined epsilon flows through.
 template <typename TenT>
 auto tolerance(tci_test_fixture<TenT>& fix, tol_category cat,
                std::size_t /*N*/ = 1) -> tci::real_t<TenT> {
@@ -84,8 +84,11 @@ auto tolerance(tci_test_fixture<TenT>& fix, tol_category cat,
       return eps * real_type{100};
     case tol_category::iterative:
       return eps * real_type{100};
+    default:
+      // Defensive fallback for out-of-range `tol_category` values produced by
+      // a `static_cast` from an integer that does not match a named case.
+      return eps;
   }
-  return eps;  // unreachable; switch is exhaustive over all enum values
 }
 
 }  // namespace tcict
