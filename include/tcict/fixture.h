@@ -9,7 +9,9 @@
 namespace tcict {
 
 /// Test fixture that manages a TCI context.
-/// Backends may specialize this for custom context creation (e.g. GPU) or epsilon.
+/// Backends may specialize this for custom context creation (e.g. GPU) or
+/// epsilon. Specializations must declare `epsilon()` as a const member,
+/// because `tcict::tolerance` takes the fixture by `const&`.
 template <typename TenT>
 struct tci_test_fixture {
   tci::context_handle_t<TenT> ctx;
