@@ -345,7 +345,6 @@ void test_contract_outer_product(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_qr(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_QR
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 3; ++j)
@@ -362,7 +361,8 @@ template <typename TenT> void test_qr(tci_test_fixture<TenT> &fix) {
   // Verify Q * R ≈ A (reconstruction)
   TenT reconstructed;
   tci::contract(ctx, q, "ij", r, "jk", reconstructed, "ik");
-  TCICT_ASSERT(tci::close(ctx, reconstructed, matrix, eps * 100));
+  TCICT_ASSERT(tci::close(ctx, reconstructed, matrix,
+                          tolerance(fix, tol_category::factorization)));
 
   // Verify Q†Q ≈ I (orthogonality)
   TenT q_dag;
@@ -373,7 +373,8 @@ template <typename TenT> void test_qr(tci_test_fixture<TenT> &fix) {
   tci::contract(ctx, q_dag_t, "ij", q, "jk", qtq, "ik");
   auto bond_dim = tci::shape(ctx, q)[1];
   auto identity = tci::eye<TenT>(ctx, bond_dim);
-  TCICT_ASSERT(tci::close(ctx, qtq, identity, eps * 100));
+  TCICT_ASSERT(tci::close(ctx, qtq, identity,
+                          tolerance(fix, tol_category::factorization)));
 #else
   (void)fix;
 #endif
@@ -384,7 +385,6 @@ template <typename TenT> void test_qr(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_LQ
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 3; ++j)
@@ -401,7 +401,8 @@ template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
   // Verify L * Q ≈ A (reconstruction)
   TenT reconstructed;
   tci::contract(ctx, l, "ij", q, "jk", reconstructed, "ik");
-  TCICT_ASSERT(tci::close(ctx, reconstructed, matrix, eps * 100));
+  TCICT_ASSERT(tci::close(ctx, reconstructed, matrix,
+                          tolerance(fix, tol_category::factorization)));
 
   // Verify QQ† ≈ I (orthogonality)
   TenT q_dag;
@@ -412,7 +413,8 @@ template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
   tci::contract(ctx, q, "ij", q_dag_t, "jk", qqt, "ik");
   auto bond_dim = tci::shape(ctx, q)[0];
   auto identity = tci::eye<TenT>(ctx, bond_dim);
-  TCICT_ASSERT(tci::close(ctx, qqt, identity, eps * 100));
+  TCICT_ASSERT(tci::close(ctx, qqt, identity,
+                          tolerance(fix, tol_category::factorization)));
 #else
   (void)fix;
 #endif
@@ -660,7 +662,7 @@ template <typename TenT>
 void test_exp_anti_hermitian(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EXP
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::iterative);
   auto anti_herm = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, anti_herm, {0, 1}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, anti_herm, {1, 0}, make_elem<TenT>(-1.0));
@@ -671,14 +673,10 @@ void test_exp_anti_hermitian(tci_test_fixture<TenT> &fix) {
   // exp([[0,1],[-1,0]]) = [[cos(1), sin(1)], [-sin(1), cos(1)]]
   auto c = std::cos(1.0);
   auto s = std::sin(1.0);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), c,
-                     eps * 100);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1})), s,
-                     eps * 100);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0})), -s,
-                     eps * 100);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), c,
-                     eps * 100);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), c, tol);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1})), s, tol);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0})), -s, tol);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), c, tol);
 #else
   (void)fix;
 #endif
@@ -887,7 +885,6 @@ template <typename TenT>
 void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_SVD
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
 
   // [[1,2],[3,4]]
   auto matrix = tci::zeros<TenT>(ctx, {2, 2});
@@ -919,7 +916,8 @@ void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
   TenT reconstructed;
   tci::contract(ctx, u_scaled, "ik", v_dag, "kj", reconstructed, "ij");
 
-  TCICT_ASSERT(tci::close(ctx, reconstructed, matrix, eps * 100));
+  TCICT_ASSERT(tci::close(ctx, reconstructed, matrix,
+                          tolerance(fix, tol_category::factorization)));
 #else
   (void)fix;
 #endif
