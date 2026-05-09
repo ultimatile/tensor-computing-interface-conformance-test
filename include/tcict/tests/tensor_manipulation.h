@@ -15,7 +15,7 @@ namespace tests {
 template <typename TenT> void test_shrink_inplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_SHRINK
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {3, 3});
 
   // Fill with values 1-9
@@ -40,13 +40,13 @@ template <typename TenT> void test_shrink_inplace(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(result_shape[0] == 2);
   TCICT_ASSERT(result_shape[1] == 2);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 1.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 1})), 2.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 0})), 4.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 5.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -58,7 +58,7 @@ template <typename TenT>
 void test_shrink_outofplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_SHRINK
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto input = tci::zeros<TenT>(ctx, {4, 4});
 
   // Set values in center 2x2 region [1:3, 1:3]
@@ -80,13 +80,13 @@ void test_shrink_outofplace(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(result_shape[0] == 2);
   TCICT_ASSERT(result_shape[1] == 2);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, output, {0, 0})), 11.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, output, {0, 1})), 12.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, output, {1, 0})), 21.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, output, {1, 1})), 22.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -98,7 +98,7 @@ template <typename TenT>
 void test_shrink_complex_values(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_SHRINK
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {3, 3});
 
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(1.5, 2.5));
@@ -117,11 +117,11 @@ void test_shrink_complex_values(tci_test_fixture<TenT> &fix) {
 
   auto e00 = tci::get_elem(ctx, output, {0, 0});
   auto e01 = tci::get_elem(ctx, output, {0, 1});
-  TCICT_ASSERT_CLOSE(real_part<TenT>(e00), 1.5, eps);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(e01), 3.5, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(e00), 1.5, tol);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(e01), 3.5, tol);
   if constexpr (is_complex_v<TenT>) {
-    TCICT_ASSERT_CLOSE(imag_part<TenT>(e00), 2.5, eps);
-    TCICT_ASSERT_CLOSE(imag_part<TenT>(e01), 4.5, eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(e00), 2.5, tol);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(e01), 4.5, tol);
   }
 #else
   (void)fix;
@@ -134,7 +134,7 @@ template <typename TenT>
 void test_real_extraction(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_REAL
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.14, 2.71));
   tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-1.59, 0.58));
@@ -144,8 +144,8 @@ void test_real_extraction(tci_test_fixture<TenT> &fix) {
   using RealTenT = tci::real_ten_t<TenT>;
   auto elem00 = tci::get_elem(ctx, real_tensor, {0, 0});
   auto elem11 = tci::get_elem(ctx, real_tensor, {1, 1});
-  TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 3.14, eps);
-  TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), -1.59, eps);
+  TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 3.14, tol);
+  TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), -1.59, tol);
 #else
   (void)fix;
 #endif
@@ -157,7 +157,7 @@ template <typename TenT>
 void test_imag_extraction(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_IMAG
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.14, 2.71));
   tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-1.59, 0.58));
@@ -169,12 +169,12 @@ void test_imag_extraction(tci_test_fixture<TenT> &fix) {
   auto elem11 = tci::get_elem(ctx, imag_tensor, {1, 1});
   if constexpr (is_complex_v<TenT>) {
     // Complex input: imag(tensor) extracts the imaginary parts set above.
-    TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 2.71, eps);
-    TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.58, eps);
+    TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 2.71, tol);
+    TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.58, tol);
   } else {
     // Real input: tci::imag returns a zero tensor per TCI spec.
-    TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 0.0, eps);
-    TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.0, eps);
+    TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 0.0, tol);
+    TCICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.0, tol);
   }
 #else
   (void)fix;
@@ -187,7 +187,7 @@ template <typename TenT>
 void test_real_imag_inplace(tci_test_fixture<TenT> &fix) {
 #if !defined(TCICT_SKIP_REAL) && !defined(TCICT_SKIP_IMAG)
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(5.25, 7.75));
   tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-2.25, -3.75));
@@ -202,21 +202,21 @@ void test_real_imag_inplace(tci_test_fixture<TenT> &fix) {
   // argument so these are the stored values; for complex TenT, tci::real
   // extracts the real components into real_output.
   TCICT_ASSERT_CLOSE(
-      real_part<RealTenT>(tci::get_elem(ctx, real_output, {0, 0})), 5.25, eps);
+      real_part<RealTenT>(tci::get_elem(ctx, real_output, {0, 0})), 5.25, tol);
   TCICT_ASSERT_CLOSE(
-      real_part<RealTenT>(tci::get_elem(ctx, real_output, {1, 1})), -2.25, eps);
+      real_part<RealTenT>(tci::get_elem(ctx, real_output, {1, 1})), -2.25, tol);
   if constexpr (is_complex_v<TenT>) {
     // Complex input: imag_output holds the imaginary parts set above.
     TCICT_ASSERT_CLOSE(
-        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {0, 0})), 7.75, eps);
+        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {0, 0})), 7.75, tol);
     TCICT_ASSERT_CLOSE(
-        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {1, 1})), -3.75, eps);
+        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {1, 1})), -3.75, tol);
   } else {
     // Real input: tci::imag yields a zero tensor per TCI spec.
     TCICT_ASSERT_CLOSE(
-        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {0, 0})), 0.0, eps);
+        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {0, 0})), 0.0, tol);
     TCICT_ASSERT_CLOSE(
-        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {1, 1})), 0.0, eps);
+        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {1, 1})), 0.0, tol);
   }
 #else
   (void)fix;
@@ -229,7 +229,7 @@ template <typename TenT>
 void test_cplx_conj_inplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_CPLX_CONJ
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(1.0, 2.0));
   tci::set_elem(ctx, tensor, {0, 1}, make_elem<TenT>(-3.0, 4.0));
@@ -241,22 +241,22 @@ void test_cplx_conj_inplace(tci_test_fixture<TenT> &fix) {
   // Real parts unchanged for both real and complex (cplx_conj on real tensors
   // is a no-op per TCI spec); imaginary parts only exist for complex.
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 1.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 1})), -3.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 0})), 5.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), -7.0,
-                     eps);
+                     tol);
   if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), -2.0,
-                       eps);
+                       tol);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {0, 1})), -4.0,
-                       eps);
+                       tol);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {1, 0})), 6.0,
-                       eps);
+                       tol);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, tensor, {1, 1})), 8.0,
-                       eps);
+                       tol);
   }
 #else
   (void)fix;
@@ -269,7 +269,7 @@ template <typename TenT>
 void test_cplx_conj_outofplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_CPLX_CONJ
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto input = tci::zeros<TenT>(ctx, {2, 2});
   tci::set_elem(ctx, input, {0, 0}, make_elem<TenT>(3.14, 2.71));
   tci::set_elem(ctx, input, {1, 1}, make_elem<TenT>(-1.41, -1.73));
@@ -281,18 +281,18 @@ void test_cplx_conj_outofplace(tci_test_fixture<TenT> &fix) {
   // deep copy for real tensors per TCI spec); imaginary parts only exist for
   // complex.
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, input, {0, 0})), 3.14,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, output, {0, 0})), 3.14,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, output, {1, 1})), -1.41,
-                     eps);
+                     tol);
   if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, input, {0, 0})), 2.71,
-                       eps);
+                       tol);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, output, {0, 0})), -2.71,
-                       eps);
+                       tol);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(tci::get_elem(ctx, output, {1, 1})), 1.73,
-                       eps);
+                       tol);
   }
 #else
   (void)fix;
@@ -306,7 +306,7 @@ template <typename RealTenT>
 void test_to_cplx_outofplace(tci_test_fixture<RealTenT> &fix) {
 #ifndef TCICT_SKIP_TO_CPLX
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   RealTenT real_tensor;
   real_tensor = tci::zeros<RealTenT>(ctx, {2, 2});
 
@@ -324,10 +324,10 @@ void test_to_cplx_outofplace(tci_test_fixture<RealTenT> &fix) {
   using CplxTenT = tci::cplx_ten_t<RealTenT>;
   auto elem00 = tci::get_elem(ctx, complex_tensor, {0, 0});
   auto elem11 = tci::get_elem(ctx, complex_tensor, {1, 1});
-  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem00), 1.5, eps);
-  TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem00), 0.0, eps);
-  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem11), 4.5, eps);
-  TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem11), 0.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem00), 1.5, tol);
+  TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem00), 0.0, tol);
+  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem11), 4.5, tol);
+  TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem11), 0.0, tol);
 #else
   (void)fix;
 #endif
@@ -339,7 +339,7 @@ template <typename RealTenT>
 void test_to_cplx_inplace(tci_test_fixture<RealTenT> &fix) {
 #ifndef TCICT_SKIP_TO_CPLX
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   RealTenT real_tensor;
   real_tensor = tci::zeros<RealTenT>(ctx, {2, 2});
 
@@ -354,10 +354,10 @@ void test_to_cplx_inplace(tci_test_fixture<RealTenT> &fix) {
   using CplxTenT = tci::cplx_ten_t<RealTenT>;
   auto elem00 = tci::get_elem(ctx, complex_output, {0, 0});
   auto elem11 = tci::get_elem(ctx, complex_output, {1, 1});
-  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem00), 7.25, eps);
-  TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem00), 0.0, eps);
-  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem11), 8.75, eps);
-  TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem11), 0.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem00), 7.25, tol);
+  TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem00), 0.0, tol);
+  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem11), 8.75, tol);
+  TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem11), 0.0, tol);
 #else
   (void)fix;
 #endif
@@ -373,7 +373,7 @@ void test_to_cplx_complex_to_complex(tci_test_fixture<TenT> &fix) {
   // This test therefore only runs when TenT is already complex.
   if constexpr (is_complex_v<TenT>) {
     auto &ctx = fix.context();
-    auto eps = fix.epsilon();
+    auto tol = tolerance(fix, tol_category::elementwise);
     auto tensor = tci::zeros<TenT>(ctx, {2, 2});
     tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(3.14, 2.71));
     tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-1.41, 1.73));
@@ -382,10 +382,10 @@ void test_to_cplx_complex_to_complex(tci_test_fixture<TenT> &fix) {
 
     auto elem00 = tci::get_elem(ctx, result, {0, 0});
     auto elem11 = tci::get_elem(ctx, result, {1, 1});
-    TCICT_ASSERT_CLOSE(real_part<TenT>(elem00), 3.14, eps);
-    TCICT_ASSERT_CLOSE(imag_part<TenT>(elem00), 2.71, eps);
-    TCICT_ASSERT_CLOSE(real_part<TenT>(elem11), -1.41, eps);
-    TCICT_ASSERT_CLOSE(imag_part<TenT>(elem11), 1.73, eps);
+    TCICT_ASSERT_CLOSE(real_part<TenT>(elem00), 3.14, tol);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(elem00), 2.71, tol);
+    TCICT_ASSERT_CLOSE(real_part<TenT>(elem11), -1.41, tol);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(elem11), 1.73, tol);
   }
 #else
   (void)fix;
@@ -398,7 +398,7 @@ template <typename TenT>
 void test_for_each_doubling(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_FOR_EACH
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   using Elem = tci::elem_t<TenT>;
 
   auto tensor = tci::zeros<TenT>(ctx, {2, 3});
@@ -413,11 +413,11 @@ void test_for_each_doubling(tci_test_fixture<TenT> &fix) {
                 [](Elem &elem) { elem = elem * make_elem<TenT>(2.0); });
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 2.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 2})), 6.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 2})), 12.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -429,7 +429,7 @@ template <typename TenT>
 void test_for_each_summation(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_FOR_EACH
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 4);
   using Elem = tci::elem_t<TenT>;
 
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
@@ -446,7 +446,7 @@ void test_for_each_summation(tci_test_fixture<TenT> &fix) {
   });
 
   TCICT_ASSERT(count == 4);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(sum), 10.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(sum), 10.0, tol);
 #else
   (void)fix;
 #endif
@@ -458,7 +458,7 @@ template <typename TenT>
 void test_for_each_capture(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_FOR_EACH
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   using Elem = tci::elem_t<TenT>;
 
   auto tensor = tci::fill<TenT>(ctx, {2, 2}, make_elem<TenT>(3.0, 1.0));
@@ -468,9 +468,9 @@ void test_for_each_capture(tci_test_fixture<TenT> &fix) {
                 [multiplier](Elem &elem) { elem = elem * multiplier; });
 
   auto result = tci::get_elem(ctx, tensor, {0, 0});
-  TCICT_ASSERT_CLOSE(real_part<TenT>(result), 1.5, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(result), 1.5, tol);
   if constexpr (is_complex_v<TenT>) {
-    TCICT_ASSERT_CLOSE(imag_part<TenT>(result), 0.5, eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(result), 0.5, tol);
   }
 #else
   (void)fix;
@@ -482,7 +482,7 @@ void test_for_each_capture(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_for_each_const(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_FOR_EACH
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 3);
   using Elem = tci::elem_t<TenT>;
 
   auto tensor = tci::fill<TenT>(ctx, {3}, make_elem<TenT>(2.0, 3.0));
@@ -491,9 +491,9 @@ template <typename TenT> void test_for_each_const(tci_test_fixture<TenT> &fix) {
   tci::for_each(ctx, static_cast<const TenT &>(tensor),
                 [&sum](const Elem &elem) { sum = sum + elem; });
 
-  TCICT_ASSERT_CLOSE(real_part<TenT>(sum), 6.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(sum), 6.0, tol);
   if constexpr (is_complex_v<TenT>) {
-    TCICT_ASSERT_CLOSE(imag_part<TenT>(sum), 9.0, eps);
+    TCICT_ASSERT_CLOSE(imag_part<TenT>(sum), 9.0, tol);
   }
 #else
   (void)fix;
@@ -506,7 +506,7 @@ template <typename TenT>
 void test_for_each_inversion(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_FOR_EACH
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   using Elem = tci::elem_t<TenT>;
 
   auto tensor = tci::fill<TenT>(ctx, {2, 2}, make_elem<TenT>(0.5));
@@ -518,7 +518,7 @@ void test_for_each_inversion(tci_test_fixture<TenT> &fix) {
   });
 
   auto result = tci::get_elem(ctx, tensor, {0, 0});
-  TCICT_ASSERT_CLOSE(real_part<TenT>(result), 2.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(result), 2.0, tol);
 #else
   (void)fix;
 #endif
@@ -530,7 +530,7 @@ template <typename TenT>
 void test_for_each_with_coors(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_FOR_EACH_WITH_COORS
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   using Elem = tci::elem_t<TenT>;
 
   TenT a = tci::template eye<TenT>(ctx, 2);
@@ -542,7 +542,7 @@ void test_for_each_with_coors(tci_test_fixture<TenT> &fix) {
         }
       });
 
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {0, 0})), 2.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {0, 0})), 2.0, tol);
 #else
   (void)fix;
 #endif
@@ -554,7 +554,7 @@ template <typename TenT>
 void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_FOR_EACH_WITH_COORS
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::reduction, 2);
   using Elem = tci::elem_t<TenT>;
 
   TenT a = tci::template eye<TenT>(ctx, 2);
@@ -569,7 +569,7 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
         }
       });
 
-  TCICT_ASSERT_CLOSE(sum_diagonal, 2.0, eps);
+  TCICT_ASSERT_CLOSE(sum_diagonal, 2.0, tol);
 #else
   (void)fix;
 #endif
@@ -687,7 +687,7 @@ void test_concatenate_errors(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_extract_sub(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EXTRACT_SUB
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto a = tci::zeros<TenT>(ctx, {3, 4, 2});
   tci::set_elem(ctx, a, {1, 0, 0}, make_elem<TenT>(42.0));
   tci::set_elem(ctx, a, {2, 1, 1}, make_elem<TenT>(13.0));
@@ -702,10 +702,10 @@ template <typename TenT> void test_extract_sub(tci_test_fixture<TenT> &fix) {
 
   // (1,0,0) in original maps to (0,0,0) in sub
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, sub, {0, 0, 0})), 42.0,
-                     eps);
+                     tol);
   // (2,1,1) in original maps to (1,1,1) in sub
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, sub, {1, 1, 1})), 13.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -739,7 +739,7 @@ template <typename TenT>
 void test_replace_sub_inplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_REPLACE_SUB
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto a = tci::zeros<TenT>(ctx, {3, 4, 2});
   auto sub = tci::zeros<TenT>(ctx, {2, 2, 2});
   tci::set_elem(ctx, sub, {0, 0, 0}, make_elem<TenT>(42.0));
@@ -749,11 +749,11 @@ void test_replace_sub_inplace(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT_NOTHROW(tci::replace_sub(ctx, a, sub, begin_pt));
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {1, 2, 0})), 42.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {2, 3, 1})), 13.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {0, 0, 0})), 0.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -765,7 +765,7 @@ template <typename TenT>
 void test_replace_sub_outofplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_REPLACE_SUB
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto a = tci::zeros<TenT>(ctx, {4, 4});
   tci::set_elem(ctx, a, {0, 0}, make_elem<TenT>(99.0));
 
@@ -776,11 +776,11 @@ void test_replace_sub_outofplace(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT_NOTHROW(tci::replace_sub(ctx, a, sub, begin_pt, result));
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), 1.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 99.0,
-                     eps);
+                     tol);
   // Original unchanged
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {1, 1})), 0.0, eps);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {1, 1})), 0.0, tol);
 #else
   (void)fix;
 #endif
@@ -811,7 +811,7 @@ void test_replace_sub_errors(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_expand_inplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EXPAND
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto a = tci::zeros<TenT>(ctx, {2, 2, 2});
 
   tci::Map<tci::bond_idx_t<TenT>, tci::bond_dim_t<TenT>> bond_map = {{1, 2},
@@ -822,7 +822,7 @@ template <typename TenT> void test_expand_inplace(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(tci::shape(ctx, a) == expected);
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {2, 3, 0})), 0.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -834,7 +834,7 @@ template <typename TenT>
 void test_expand_outofplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EXPAND
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto a = tci::zeros<TenT>(ctx, {2, 2, 2});
   tci::set_elem(ctx, a, {1, 1, 1}, make_elem<TenT>(5.0));
 
@@ -846,9 +846,9 @@ void test_expand_outofplace(tci_test_fixture<TenT> &fix) {
   tci::shape_t<TenT> expected = {3, 4, 2};
   TCICT_ASSERT(tci::shape(ctx, expanded) == expected);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, expanded, {1, 1, 1})),
-                     5.0, eps);
+                     5.0, tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, expanded, {2, 3, 0})),
-                     0.0, eps);
+                     0.0, tol);
 #else
   (void)fix;
 #endif
@@ -875,7 +875,7 @@ template <typename TenT>
 void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_DIAG
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto vector = tci::zeros<TenT>(ctx, {3});
   tci::set_elem(ctx, vector, {0}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, vector, {1}, make_elem<TenT>(2.0));
@@ -888,12 +888,12 @@ void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(tci::shape(ctx, vector)[1] == 3);
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {0, 0})), 1.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {1, 1})), 2.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {2, 2})), 3.0,
-                     eps);
-  TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, vector, {0, 1})), 0.0, eps);
+                     tol);
+  TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, vector, {0, 1})), 0.0, tol);
 #else
   (void)fix;
 #endif
@@ -905,7 +905,7 @@ template <typename TenT>
 void test_diag_mat_to_vec(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_DIAG
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
   auto identity = tci::eye<TenT>(ctx, 3);
 
   tci::diag(ctx, identity);
@@ -913,11 +913,11 @@ void test_diag_mat_to_vec(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(tci::order(ctx, identity) == 1);
   TCICT_ASSERT(tci::size(ctx, identity) == 3);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, identity, {0})), 1.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, identity, {1})), 1.0,
-                     eps);
+                     tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, identity, {2})), 1.0,
-                     eps);
+                     tol);
 #else
   (void)fix;
 #endif
@@ -928,7 +928,7 @@ void test_diag_mat_to_vec(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_STACK
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
 
   auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
   auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
@@ -945,13 +945,13 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
 
   // First slice filled with 1, second with 2
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 0})),
-                     1.0, eps);
+                     1.0, tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1, 2})),
-                     1.0, eps);
+                     1.0, tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0, 0})),
-                     2.0, eps);
+                     2.0, tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1, 2})),
-                     2.0, eps);
+                     2.0, tol);
 #else
   (void)fix;
 #endif
@@ -963,7 +963,7 @@ template <typename TenT>
 void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_STACK
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::elementwise);
 
   auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
   auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
@@ -980,11 +980,11 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(s[2] == 3); // stacked dimension
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 0})),
-                     1.0, eps);
+                     1.0, tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 1})),
-                     2.0, eps);
+                     2.0, tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 2})),
-                     3.0, eps);
+                     3.0, tol);
 #else
   (void)fix;
 #endif
