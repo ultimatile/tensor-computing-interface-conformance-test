@@ -429,9 +429,6 @@ template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
 // --- truncated SVD ---
 
 #ifndef TCICT_SKIP_TRUNC_SVD
-#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
-  TCICT_RETURN_IF_SINGLE_PRECISION;
-#endif
 // Helper: build 4×4 diagonal matrix with SVs [3, 2, 1, 0.1].
 // Only defined when TRUNC_SVD tests are active so partial backends without
 // tci::zeros / tci::set_elem do not need to declare them.
