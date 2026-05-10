@@ -72,9 +72,10 @@
 
 // Compile-time-evaluated early return when the elem_t of TenT is single
 // precision. Requires `TenT` to be the template parameter of the enclosing
-// function and `tci::real_t<TenT>` to be in scope (via <tci/tci.h>). Used
-// inside test bodies, gated by per-API TCICT_SKIP_*_SINGLE_PRECISION flags.
-// See the Limitation note above on runtime-vs-compile-time skip semantics.
+// function and `tci::real_t<TenT>` to be in scope (brought in by
+// tcict/fixture.h via <tci/tensor_traits.h>). Used inside test bodies,
+// gated by per-API TCICT_SKIP_*_SINGLE_PRECISION flags. See the Limitation
+// note above on runtime-vs-compile-time skip semantics.
 #define TCICT_RETURN_IF_SINGLE_PRECISION                                       \
   do {                                                                         \
     if constexpr (std::is_same_v<tci::real_t<TenT>, float>) {                  \
