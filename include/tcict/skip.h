@@ -47,43 +47,52 @@
 //
 // Precision-conditional skip macros (factorization + iterative APIs):
 //
-// When defined, the corresponding test functions emit an `if constexpr`-
-// guarded early return that fires for single-precision instantiations
-// (real_t<TenT> == float, covering both `float` and `std::complex<float>`).
-// The condition is evaluated at compile time, so the return is compiled
-// out for double-precision instantiations (zero runtime cost); for the
-// matching single-precision instantiations, the return executes at
-// function entry and the assertions below are not reached. See the
-// Limitation note below on body instantiation semantics. Useful when a
-// backend has known precision-specific bugs (e.g., a buggy single-
-// precision LAPACK eig) that are difficult to fix and the goal is to
-// keep the suite green for double precision while flagging single
+// When the corresponding TCICT_SKIP_<API>_SINGLE_PRECISION macro is
+// defined, the matching test function expands TCICT_RETURN_IF_SINGLE_PRECISION
+// at the top of its body. That helper is an `if constexpr`-guarded early
+// return: when the test is instantiated for a TenT whose
+// `tci::real_t<TenT>` is `float` (covering both `float` and
+// `std::complex<float>` element types), the return statement executes
+// before any assertion runs; for other instantiations (`real_t<TenT>` is
+// `double` or `long double`), the `if constexpr`'s discarded-statement
+// rule means the return is compiled out entirely (zero runtime cost).
+//
+// Useful when a backend has known precision-specific bugs (e.g., a buggy
+// single-precision LAPACK eig) that are difficult to fix, and the goal
+// is to keep the suite green for double precision while flagging single
 // precision separately.
 //
+// Available per-API gating macros (10 total, defined by the backend):
 //   TCICT_SKIP_EIG_SINGLE_PRECISION,    TCICT_SKIP_EIGH_SINGLE_PRECISION,
 //   TCICT_SKIP_EIGVALS_SINGLE_PRECISION, TCICT_SKIP_EIGVALSH_SINGLE_PRECISION,
 //   TCICT_SKIP_SVD_SINGLE_PRECISION,    TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION,
 //   TCICT_SKIP_QR_SINGLE_PRECISION,     TCICT_SKIP_LQ_SINGLE_PRECISION,
 //   TCICT_SKIP_EXP_SINGLE_PRECISION,    TCICT_SKIP_INVERSE_SINGLE_PRECISION
 //
-// Limitation: this is a *runtime* skip — the test body is still part of
-// the function template and gets instantiated for the matching precision.
-// API calls inside the body must be valid for that precision at compile
-// time. This pattern handles backends with runtime-buggy APIs (the call
-// compiles but returns wrong values, e.g., cytnx's single-precision eig).
-// For backends that intentionally make a (API × precision) combination
-// compile-time-unavailable (via SFINAE / static_assert / = delete), use
-// the whole-API TCICT_SKIP_<API> macro instead. A compile-time body-
-// discard variant is planned; see issue #50.
+// Limitation: this is a *runtime* skip path. The test body following the
+// helper is always part of the function template and gets instantiated
+// for every TenT, including the matching single-precision ones. API
+// calls inside the body must therefore be valid for that precision at
+// compile time. This pattern handles backends with runtime-buggy APIs
+// (the call compiles but returns wrong values, e.g., cytnx's
+// single-precision eig). For backends that intentionally make a
+// (API × precision) combination compile-time-unavailable (via SFINAE /
+// `static_assert` / `= delete`), use the whole-API TCICT_SKIP_<API>
+// macro instead. A compile-time body-discard variant is planned; see
+// issue #50.
 
-// Compile-time-evaluated early return when `tci::real_t<TenT>` is `float`
-// (i.e., TenT's real precision is single — covering both `float` and
-// `std::complex<float>` element types). Requires `TenT` to be the template
-// parameter of the enclosing function and `tci::real_t<TenT>` to be in
-// scope (brought in by tcict/fixture.h via <tci/tensor_traits.h>). Used
-// inside test bodies, gated by per-API TCICT_SKIP_*_SINGLE_PRECISION
-// flags. See the Limitation note above on runtime-vs-compile-time skip
-// semantics.
+// `if constexpr`-guarded early return that fires when `tci::real_t<TenT>`
+// is `float` (i.e., TenT's real precision is single — covering both
+// `float` and `std::complex<float>` element types). Requires `TenT` to be
+// the template parameter of the enclosing function and `tci::real_t<TenT>`
+// to be in scope (brought in by tcict/fixture.h via
+// <tci/tensor_traits.h>). Used inside test bodies, gated by the per-API
+// TCICT_SKIP_*_SINGLE_PRECISION flags listed above. See the Limitation
+// note for the runtime-vs-compile-time skip caveat.
+//
+// The do-while(false) wrapper is macro hygiene: it lets callers append
+// the usual statement-terminating `;` and prevents dangling-else issues
+// when the helper is used inside an unbraced `if`/`else`.
 #define TCICT_RETURN_IF_SINGLE_PRECISION                                       \
   do {                                                                         \
     if constexpr (std::is_same_v<tci::real_t<TenT>, float>) {                  \
