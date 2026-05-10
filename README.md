@@ -125,7 +125,7 @@ Available flags (10 APIs covered, factorization + iterative classes per `fixture
 - `TCICT_SKIP_QR_SINGLE_PRECISION`, `TCICT_SKIP_LQ_SINGLE_PRECISION`
 - `TCICT_SKIP_EXP_SINGLE_PRECISION`, `TCICT_SKIP_INVERSE_SINGLE_PRECISION`
 
-**Different semantics from `TCICT_SKIP_<API>`.** Whole-API skip in section 4 excludes the test body **at preprocessing time** (`#ifndef`), so the API call disappears from the translation unit entirely. Precision skip is an **`if constexpr`-guarded runtime early return**: the body is still part of the function template and gets instantiated for every TenT, including the single-precision ones. API calls inside the body must therefore be valid for that precision at compile time.
+**Different semantics from `TCICT_SKIP_<API>`.** Whole-API skip in section 4 excludes the test body **at preprocessing time** (`#ifndef`), so the API call disappears from that guarded test's body (other tests that reference the same `tci::*` API as a helper / setup still compile against it; see the per-test caveat in section 4). Precision skip is an **`if constexpr`-guarded runtime early return**: the body is still part of the function template and gets instantiated for every TenT, including the single-precision ones. API calls inside the body must therefore be valid for that precision at compile time.
 
 This handles backends with runtime-buggy APIs (the call compiles but produces wrong values). For backends that intentionally make a (API × precision) combination compile-time-unavailable (via SFINAE / `static_assert` / `= delete`), use the whole-API `TCICT_SKIP_<API>` macro instead. A compile-time body-discard variant is planned (see [#50](https://github.com/ultimatile/tensor-computing-interface-conformance-test/issues/50)).
 

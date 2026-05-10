@@ -53,9 +53,10 @@
 // return: when the test is instantiated for a TenT whose
 // `tci::real_t<TenT>` is `float` (covering both `float` and
 // `std::complex<float>` element types), the return statement executes
-// before any assertion runs; for other instantiations (`real_t<TenT>` is
-// `double` or `long double`), the `if constexpr`'s discarded-statement
-// rule means the return is compiled out entirely (zero runtime cost).
+// before any assertion runs; for any other instantiation (`real_t<TenT>`
+// is anything other than `float`), the `if constexpr`'s discarded-
+// statement rule means the return is compiled out entirely (zero
+// runtime cost).
 //
 // Useful when a backend has known precision-specific bugs (e.g., a buggy
 // single-precision LAPACK eig) that are difficult to fix, and the goal
