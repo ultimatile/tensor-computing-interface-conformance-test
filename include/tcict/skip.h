@@ -59,11 +59,22 @@
 //   TCICT_SKIP_SVD_SINGLE_PRECISION,    TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION,
 //   TCICT_SKIP_QR_SINGLE_PRECISION,     TCICT_SKIP_LQ_SINGLE_PRECISION,
 //   TCICT_SKIP_EXP_SINGLE_PRECISION,    TCICT_SKIP_INVERSE_SINGLE_PRECISION
+//
+// Limitation: this is a *runtime* skip — the test body is still part of
+// the function template and gets instantiated for the matching precision.
+// API calls inside the body must be valid for that precision at compile
+// time. This pattern handles backends with runtime-buggy APIs (the call
+// compiles but returns wrong values, e.g., cytnx's single-precision eig).
+// For backends that intentionally make a (API × precision) combination
+// compile-time-unavailable (via SFINAE / static_assert / = delete), use
+// the whole-API TCICT_SKIP_<API> macro instead. A compile-time body-
+// discard variant is planned; see issue #50.
 
 // Compile-time-evaluated early return when the elem_t of TenT is single
 // precision. Requires `TenT` to be the template parameter of the enclosing
 // function and `tci::real_t<TenT>` to be in scope (via <tci/tci.h>). Used
 // inside test bodies, gated by per-API TCICT_SKIP_*_SINGLE_PRECISION flags.
+// See the Limitation note above on runtime-vs-compile-time skip semantics.
 #define TCICT_RETURN_IF_SINGLE_PRECISION                                       \
   do {                                                                         \
     if constexpr (std::is_same_v<tci::real_t<TenT>, float>) {                  \
