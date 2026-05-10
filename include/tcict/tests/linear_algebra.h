@@ -344,6 +344,9 @@ void test_contract_outer_product(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT> void test_qr(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_QR
+#ifdef TCICT_SKIP_QR_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});
   for (int i = 0; i < 3; ++i)
@@ -384,6 +387,9 @@ template <typename TenT> void test_qr(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_LQ
+#ifdef TCICT_SKIP_LQ_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});
   for (int i = 0; i < 3; ++i)
@@ -423,6 +429,9 @@ template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
 // --- truncated SVD ---
 
 #ifndef TCICT_SKIP_TRUNC_SVD
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
 // Helper: build 4×4 diagonal matrix with SVs [3, 2, 1, 0.1].
 // Only defined when TRUNC_SVD tests are active so partial backends without
 // tci::zeros / tci::set_elem do not need to declare them.
@@ -439,6 +448,9 @@ TenT trunc_svd_test_matrix(typename tci::tensor_traits<TenT>::context_handle_t &
 
 template <typename TenT> void test_trunc_svd(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_TRUNC_SVD
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
 
@@ -466,6 +478,9 @@ template <typename TenT> void test_trunc_svd(tci_test_fixture<TenT> &fix) {
 template <typename TenT>
 void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_TRUNC_SVD
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
@@ -490,6 +505,9 @@ void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
 template <typename TenT>
 void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_TRUNC_SVD
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
@@ -515,6 +533,9 @@ void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
 template <typename TenT>
 void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_TRUNC_SVD
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
@@ -543,6 +564,9 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT> void test_eig_identity(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EIG
+#ifdef TCICT_SKIP_EIG_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = tci::eye<TenT>(ctx, 2);
@@ -568,6 +592,9 @@ template <typename TenT> void test_eig_identity(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT> void test_eigh_identity(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EIGH
+#ifdef TCICT_SKIP_EIGH_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = tci::eye<TenT>(ctx, 2);
@@ -594,6 +621,9 @@ template <typename TenT> void test_eigh_identity(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT> void test_exp_identity(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EXP
+#ifdef TCICT_SKIP_EXP_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto identity = tci::eye<TenT>(ctx, 3);
@@ -615,6 +645,9 @@ template <typename TenT> void test_exp_identity(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT> void test_exp_diagonal(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EXP
+#ifdef TCICT_SKIP_EXP_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto diagonal = tci::zeros<TenT>(ctx, {2, 2});
@@ -639,6 +672,9 @@ template <typename TenT> void test_exp_diagonal(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT> void test_exp_zero(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EXP
+#ifdef TCICT_SKIP_EXP_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto zero_matrix = tci::zeros<TenT>(ctx, {2, 2});
@@ -661,6 +697,9 @@ template <typename TenT> void test_exp_zero(tci_test_fixture<TenT> &fix) {
 template <typename TenT>
 void test_exp_anti_hermitian(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EXP
+#ifdef TCICT_SKIP_EXP_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::iterative);
   auto anti_herm = tci::zeros<TenT>(ctx, {2, 2});
@@ -686,6 +725,9 @@ void test_exp_anti_hermitian(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT> void test_exp_errors(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EXP
+#ifdef TCICT_SKIP_EXP_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   TenT result;
   auto non_square = tci::zeros<TenT>(ctx, {2, 3});
@@ -703,6 +745,9 @@ template <typename TenT> void test_exp_errors(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT> void test_inverse(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_INVERSE
+#ifdef TCICT_SKIP_INVERSE_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
   auto matrix = tci::zeros<TenT>(ctx, {2, 2});
@@ -732,6 +777,9 @@ template <typename TenT> void test_inverse(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT> void test_inverse_errors(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_INVERSE
+#ifdef TCICT_SKIP_INVERSE_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   TenT result;
   auto non_square = tci::zeros<TenT>(ctx, {2, 3});
@@ -843,6 +891,9 @@ template <typename TenT> void test_trace_partial(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT> void test_svd_basic(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_SVD
+#ifdef TCICT_SKIP_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -884,6 +935,9 @@ template <typename TenT> void test_svd_basic(tci_test_fixture<TenT> &fix) {
 template <typename TenT>
 void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_SVD
+#ifdef TCICT_SKIP_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
 
   // [[1,2],[3,4]]
@@ -928,6 +982,9 @@ void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
 template <typename TenT>
 void test_eigvals_diagonal(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EIGVALS
+#ifdef TCICT_SKIP_EIGVALS_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -964,6 +1021,9 @@ void test_eigvals_diagonal(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT> void test_eigvals_errors(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EIGVALS
+#ifdef TCICT_SKIP_EIGVALS_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto non_square = tci::zeros<TenT>(ctx, {2, 3});
   tci::cplx_ten_t<TenT> w;
@@ -979,6 +1039,9 @@ template <typename TenT> void test_eigvals_errors(tci_test_fixture<TenT> &fix) {
 template <typename TenT>
 void test_eigvalsh_diagonal(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EIGVALSH
+#ifdef TCICT_SKIP_EIGVALSH_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto eps = fix.epsilon();
 
@@ -1010,6 +1073,9 @@ void test_eigvalsh_diagonal(tci_test_fixture<TenT> &fix) {
 template <typename TenT>
 void test_eigvalsh_errors(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EIGVALSH
+#ifdef TCICT_SKIP_EIGVALSH_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
   auto &ctx = fix.context();
   auto non_square = tci::zeros<TenT>(ctx, {2, 3});
   tci::real_ten_t<TenT> w;

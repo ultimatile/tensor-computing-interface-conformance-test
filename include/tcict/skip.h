@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 // TCICT skip macros for unimplemented functions.
 //
 // Default: all tests are enabled (no skipping).
@@ -42,3 +44,29 @@
 // Miscellaneous:
 //   TCICT_SKIP_TO_RANGE, TCICT_SKIP_SHOW, TCICT_SKIP_CLOSE, TCICT_SKIP_CONVERT,
 //   TCICT_SKIP_VERSION
+//
+// Precision-conditional skip macros (factorization + iterative APIs):
+//
+// When defined, the corresponding test functions perform a compile-time
+// early return for single-precision instantiations (real_t<TenT> == float,
+// covering both `float` and `std::complex<float>`). Useful when a backend
+// has known precision-specific bugs (e.g., a buggy single-precision LAPACK
+// eig) that are difficult to fix and the goal is to keep the suite green
+// for double precision while flagging single precision separately.
+//
+//   TCICT_SKIP_EIG_SINGLE_PRECISION,    TCICT_SKIP_EIGH_SINGLE_PRECISION,
+//   TCICT_SKIP_EIGVALS_SINGLE_PRECISION, TCICT_SKIP_EIGVALSH_SINGLE_PRECISION,
+//   TCICT_SKIP_SVD_SINGLE_PRECISION,    TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION,
+//   TCICT_SKIP_QR_SINGLE_PRECISION,     TCICT_SKIP_LQ_SINGLE_PRECISION,
+//   TCICT_SKIP_EXP_SINGLE_PRECISION,    TCICT_SKIP_INVERSE_SINGLE_PRECISION
+
+// Compile-time-evaluated early return when the elem_t of TenT is single
+// precision. Requires `TenT` to be the template parameter of the enclosing
+// function and `tci::real_t<TenT>` to be in scope (via <tci/tci.h>). Used
+// inside test bodies, gated by per-API TCICT_SKIP_*_SINGLE_PRECISION flags.
+#define TCICT_RETURN_IF_SINGLE_PRECISION                                       \
+  do {                                                                         \
+    if constexpr (std::is_same_v<tci::real_t<TenT>, float>) {                  \
+      return;                                                                  \
+    }                                                                          \
+  } while (false)
