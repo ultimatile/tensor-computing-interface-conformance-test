@@ -429,16 +429,23 @@ template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
 // --- truncated SVD ---
 
 #ifndef TCICT_SKIP_TRUNC_SVD
-// Helper: build 4×4 diagonal matrix with SVs [3, 2, 1, 0.1].
+// Helper: build 4×4 diagonal matrix with SVs [3, 2, 1, 0.1] * scale.
 // Only defined when TRUNC_SVD tests are active so partial backends without
 // tci::zeros / tci::set_elem do not need to declare them.
+//
+// `scale` multiplies every singular value uniformly. The relative truncation
+// error epsilon is a ratio of sums of squares, so it is invariant under that
+// scaling; a test can therefore vary `scale` to separate an implementation
+// that thresholds on epsilon from one that thresholds on the raw singular
+// values.
 template <typename TenT>
-TenT trunc_svd_test_matrix(typename tci::tensor_traits<TenT>::context_handle_t &ctx) {
+TenT trunc_svd_test_matrix(typename tci::tensor_traits<TenT>::context_handle_t &ctx,
+                           double scale = 1.0) {
   auto matrix = tci::zeros<TenT>(ctx, {4, 4});
-  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(3.0));
-  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(2.0));
-  tci::set_elem(ctx, matrix, {2, 2}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, matrix, {3, 3}, make_elem<TenT>(0.1));
+  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(3.0 * scale));
+  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(2.0 * scale));
+  tci::set_elem(ctx, matrix, {2, 2}, make_elem<TenT>(1.0 * scale));
+  tci::set_elem(ctx, matrix, {3, 3}, make_elem<TenT>(0.1 * scale));
   return matrix;
 }
 #endif
@@ -552,6 +559,255 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
   tci::real_t<TenT> expected =
       (2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1) / (3.0 * 3.0 + 2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1);
   TCICT_ASSERT_CLOSE(trunc_err, expected, eps);
+#else
+  (void)fix;
+#endif
+}
+
+// --- truncated SVD, overload (2): chi_min / chi_max / target_trunc_err / s_min ---
+//
+// V1 defines the retained chi as the smallest chi in [chi_min, chi_max] whose
+// epsilon(chi) = sum_{i>=chi} s_i^2 / sum_{i<kappa} s_i^2 satisfies
+// epsilon <= target_trunc_err, falling back to chi_max when none qualifies:
+//
+//   1. Discard all s_i < s_min.
+//   2. Among the survivors retain at least chi_min when possible; values below
+//      s_min are NOT restored to satisfy chi_min.
+//   3. Grow chi in descending order until epsilon <= target_trunc_err or
+//      chi == chi_max.
+//
+// For the [3, 2, 1, 0.1] fixture, sum s_i^2 = 14.01 and the epsilon ladder is
+// exact: epsilon(4) = 0, epsilon(3) = 0.01/14.01 ≈ 7.138e-4,
+// epsilon(2) = 1.01/14.01 ≈ 0.07209, epsilon(1) = 5.01/14.01 ≈ 0.3576.
+//
+// These tests read the retained chi as shape(sigma)[0] and deliberately assert
+// nothing about sigma's order. V1 defines sigma as a second-order {chi, chi}
+// diagonal tensor while the suite elsewhere still asserts the first-order
+// representation; shape[0] is the retained chi under either, so these tests do
+// not need revisiting when that representation is migrated.
+
+/// Verify target_trunc_err selects an interior chi via the epsilon ladder.
+/// epsilon(2) ≈ 0.07209 <= 0.1 < epsilon(1) ≈ 0.3576, so chi must be 2.
+template <typename TenT>
+void test_trunc_svd_target_err_selects_chi(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_TRUNC_SVD
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::factorization);
+  auto matrix = trunc_svd_test_matrix<TenT>(ctx);
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::real_t<TenT> trunc_err = -1.0;
+
+  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
+                 static_cast<tci::bond_dim_t<TenT>>(1),
+                 static_cast<tci::bond_dim_t<TenT>>(4),
+                 static_cast<tci::real_t<TenT>>(0.1), static_cast<tci::real_t<TenT>>(0.0));
+
+  auto s_shape = tci::shape(ctx, s_diag);
+  TCICT_ASSERT(s_shape[0] == 2);
+  tci::real_t<TenT> expected =
+      (1.0 * 1.0 + 0.1 * 0.1) / (3.0 * 3.0 + 2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1);
+  TCICT_ASSERT_CLOSE(trunc_err, expected, tol);
+#else
+  (void)fix;
+#endif
+}
+
+/// Verify the target_trunc_err decision is invariant under a uniform rescaling
+/// of the input. epsilon is a ratio of sums of squares, so scaling every
+/// singular value by 1e-3 must not move the retained chi. An implementation
+/// that compares raw singular values against target_trunc_err fails here even
+/// when it happens to agree at scale 1.
+template <typename TenT>
+void test_trunc_svd_target_err_scale_invariant(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_TRUNC_SVD
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::factorization);
+  auto matrix = trunc_svd_test_matrix<TenT>(ctx, 1.0e-3);
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::real_t<TenT> trunc_err = -1.0;
+
+  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
+                 static_cast<tci::bond_dim_t<TenT>>(1),
+                 static_cast<tci::bond_dim_t<TenT>>(4),
+                 static_cast<tci::real_t<TenT>>(0.1), static_cast<tci::real_t<TenT>>(0.0));
+
+  auto s_shape = tci::shape(ctx, s_diag);
+  TCICT_ASSERT(s_shape[0] == 2);
+  tci::real_t<TenT> expected =
+      (1.0 * 1.0 + 0.1 * 0.1) / (3.0 * 3.0 + 2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1);
+  TCICT_ASSERT_CLOSE(trunc_err, expected, tol);
+#else
+  (void)fix;
+#endif
+}
+
+/// Verify chi_min floors the selection. epsilon(1) ≈ 0.3576 <= 0.5 would allow
+/// chi = 1, but chi_min = 3 forbids it.
+template <typename TenT>
+void test_trunc_svd_target_err_chi_min_floor(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_TRUNC_SVD
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::factorization);
+  auto matrix = trunc_svd_test_matrix<TenT>(ctx);
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::real_t<TenT> trunc_err = -1.0;
+
+  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
+                 static_cast<tci::bond_dim_t<TenT>>(3),
+                 static_cast<tci::bond_dim_t<TenT>>(4),
+                 static_cast<tci::real_t<TenT>>(0.5), static_cast<tci::real_t<TenT>>(0.0));
+
+  auto s_shape = tci::shape(ctx, s_diag);
+  TCICT_ASSERT(s_shape[0] == 3);
+  tci::real_t<TenT> expected =
+      (0.1 * 0.1) / (3.0 * 3.0 + 2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1);
+  TCICT_ASSERT_CLOSE(trunc_err, expected, tol);
+#else
+  (void)fix;
+#endif
+}
+
+/// Verify chi_max caps the selection. No chi <= 2 reaches epsilon <= 1e-6, so
+/// the growth stops at chi_max rather than continuing to satisfy the target.
+template <typename TenT>
+void test_trunc_svd_target_err_chi_max_cap(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_TRUNC_SVD
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::factorization);
+  auto matrix = trunc_svd_test_matrix<TenT>(ctx);
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::real_t<TenT> trunc_err = -1.0;
+
+  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
+                 static_cast<tci::bond_dim_t<TenT>>(1),
+                 static_cast<tci::bond_dim_t<TenT>>(2),
+                 static_cast<tci::real_t<TenT>>(1.0e-6), static_cast<tci::real_t<TenT>>(0.0));
+
+  auto s_shape = tci::shape(ctx, s_diag);
+  TCICT_ASSERT(s_shape[0] == 2);
+  tci::real_t<TenT> expected =
+      (1.0 * 1.0 + 0.1 * 0.1) / (3.0 * 3.0 + 2.0 * 2.0 + 1.0 * 1.0 + 0.1 * 0.1);
+  TCICT_ASSERT_CLOSE(trunc_err, expected, tol);
+#else
+  (void)fix;
+#endif
+}
+
+/// Verify overload (2) with chi_min = 1 and target_trunc_err = 0 reproduces
+/// overload (1), which V1 defines as exactly that specialization.
+template <typename TenT>
+void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_TRUNC_SVD
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::factorization);
+
+  TenT u_general, v_dag_general;
+  tci::real_ten_t<TenT> s_general;
+  tci::real_t<TenT> err_general = -1.0;
+  auto matrix_general = trunc_svd_test_matrix<TenT>(ctx);
+  tci::trunc_svd(ctx, matrix_general, 1, u_general, s_general, v_dag_general, err_general,
+                 static_cast<tci::bond_dim_t<TenT>>(1),
+                 static_cast<tci::bond_dim_t<TenT>>(2),
+                 static_cast<tci::real_t<TenT>>(0.0), static_cast<tci::real_t<TenT>>(0.0));
+
+  TenT u_simple, v_dag_simple;
+  tci::real_ten_t<TenT> s_simple;
+  tci::real_t<TenT> err_simple = -1.0;
+  auto matrix_simple = trunc_svd_test_matrix<TenT>(ctx);
+  tci::trunc_svd(ctx, matrix_simple, 1, u_simple, s_simple, v_dag_simple, err_simple,
+                 static_cast<tci::bond_dim_t<TenT>>(2), static_cast<tci::real_t<TenT>>(0.0));
+
+  auto shape_general = tci::shape(ctx, s_general);
+  auto shape_simple = tci::shape(ctx, s_simple);
+  TCICT_ASSERT(shape_general[0] == shape_simple[0]);
+  TCICT_ASSERT_CLOSE(err_general, err_simple, tol);
+#else
+  (void)fix;
+#endif
+}
+
+/// Verify step 2's exclusion: singular values discarded by s_min are not
+/// restored to satisfy chi_min. s_min = 0.5 leaves survivors [3, 2, 1], and
+/// chi_min = 4 cannot be met, so chi must be 3 rather than 4.
+template <typename TenT>
+void test_trunc_svd_chi_min_not_restored_below_s_min(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_TRUNC_SVD
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  auto &ctx = fix.context();
+  auto matrix = trunc_svd_test_matrix<TenT>(ctx);
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::real_t<TenT> trunc_err = -1.0;
+
+  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
+                 static_cast<tci::bond_dim_t<TenT>>(4),
+                 static_cast<tci::bond_dim_t<TenT>>(4),
+                 static_cast<tci::real_t<TenT>>(0.0), static_cast<tci::real_t<TenT>>(0.5));
+
+  auto s_shape = tci::shape(ctx, s_diag);
+  TCICT_ASSERT(s_shape[0] == 3);
+#else
+  (void)fix;
+#endif
+}
+
+/// Verify the comparison in step 3 is `epsilon <= target_trunc_err`, not `<`.
+///
+/// Fixture SVs [5, 4, 3] give sum s_i^2 = 50 and, for chi = 1, a discarded
+/// weight of 16 + 9 = 25, so epsilon(1) = 25 / 50 = 0.5 — a tie with the target
+/// below, and one that is exact in binary floating point at every step: the
+/// singular values, their squares, and both sums are integers, and the quotient
+/// is a power of two. An implementation using `<` cannot take chi = 1 and
+/// returns chi = 2 instead.
+template <typename TenT>
+void test_trunc_svd_target_err_boundary_is_inclusive(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_TRUNC_SVD
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  auto &ctx = fix.context();
+  auto matrix = tci::zeros<TenT>(ctx, {3, 3});
+  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(5.0));
+  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(4.0));
+  tci::set_elem(ctx, matrix, {2, 2}, make_elem<TenT>(3.0));
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::real_t<TenT> trunc_err = -1.0;
+
+  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
+                 static_cast<tci::bond_dim_t<TenT>>(1),
+                 static_cast<tci::bond_dim_t<TenT>>(3),
+                 static_cast<tci::real_t<TenT>>(0.5), static_cast<tci::real_t<TenT>>(0.0));
+
+  auto s_shape = tci::shape(ctx, s_diag);
+  TCICT_ASSERT(s_shape[0] == 1);
 #else
   (void)fix;
 #endif
@@ -1106,6 +1362,13 @@ void test_eigvalsh_errors(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_value) \
   X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_no_truncation) \
   X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_bounded) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_target_err_selects_chi) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_target_err_scale_invariant) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_target_err_chi_min_floor) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_target_err_chi_max_cap) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_target_err_zero_matches_chi_max_overload) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_chi_min_not_restored_below_s_min) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_target_err_boundary_is_inclusive) \
   X(__VA_ARGS__, "linear_algebra", test_eig_identity) \
   X(__VA_ARGS__, "linear_algebra", test_eigh_identity) \
   X(__VA_ARGS__, "linear_algebra", test_exp_identity) \
