@@ -449,13 +449,11 @@ inline constexpr int kTruncSvdFixtureRank =
 template <typename TenT>
 TenT trunc_svd_test_matrix(typename tci::tensor_traits<TenT>::context_handle_t &ctx,
                            double scale = 1.0) {
-  // bond_dim_t / elem_coor_t are backend-defined and may be unsigned. A braced
+  // elem_coor_t is backend-defined and may be unsigned, and a braced
   // initializer rejects a narrowing conversion unless the argument is a
-  // constant expression, so the loop counter has to be converted before it is
-  // placed in one — which is why the casts below are not redundant even though
-  // the literal-indexed form this replaced needed none.
-  const auto rank = static_cast<tci::bond_dim_t<TenT>>(kTruncSvdFixtureRank);
-  auto matrix = tci::zeros<TenT>(ctx, {rank, rank});
+  // constant expression. kTruncSvdFixtureRank is one, so the shape needs no
+  // cast; the loop counter is not, so the coordinates below do.
+  auto matrix = tci::zeros<TenT>(ctx, {kTruncSvdFixtureRank, kTruncSvdFixtureRank});
   for (int i = 0; i < kTruncSvdFixtureRank; ++i) {
     const auto coor = static_cast<tci::elem_coor_t<TenT>>(i);
     tci::set_elem(ctx, matrix, {coor, coor},
@@ -485,6 +483,40 @@ template <typename TenT> tci::real_t<TenT> trunc_svd_expected_epsilon(int chi) {
     }
   }
   return static_cast<tci::real_t<TenT>>(discarded / total);
+}
+// Helper: run overload (2) on the fixture spectrum and assert the retained chi
+// and the truncation error against the spec's epsilon for that chi.
+//
+// The strategy tests below differ only in the four strategy arguments, the
+// fixture scale, and the expected chi, so the call and its two assertions live
+// here once. They stay separate test functions: the registration macro expands
+// one consumer test case per function, and merging them would collapse the
+// per-case reporting and skip granularity that buys.
+//
+// Guarded with the tests it serves, and for the same reason the fixture builder
+// above is: it calls both of them, so leaving it outside would break the header
+// for a backend that defines TCICT_SKIP_TRUNC_SVD.
+template <typename TenT>
+void trunc_svd_expect_retained_chi(tci_test_fixture<TenT> &fix, double scale,
+                                   int chi_min, int chi_max, double target_trunc_err,
+                                   double s_min, int expected_chi) {
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::factorization);
+  auto matrix = trunc_svd_test_matrix<TenT>(ctx, scale);
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::real_t<TenT> trunc_err = -1.0;
+
+  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
+                 static_cast<tci::bond_dim_t<TenT>>(chi_min),
+                 static_cast<tci::bond_dim_t<TenT>>(chi_max),
+                 static_cast<tci::real_t<TenT>>(target_trunc_err),
+                 static_cast<tci::real_t<TenT>>(s_min));
+
+  auto s_shape = tci::shape(ctx, s_diag);
+  TCICT_ASSERT(s_shape[0] == expected_chi);
+  TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(expected_chi), tol);
 }
 #endif
 
@@ -627,37 +659,6 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
 // compares singular values elementwise with a single coordinate, which is only
 // valid while s_diag is first-order. That read has to move when sigma does.
 
-// Helper: run overload (2) on the fixture spectrum and assert the retained chi
-// and the truncation error against the spec's epsilon for that chi.
-//
-// Five of the tests below differ only in the four strategy arguments, the
-// fixture scale, and the expected chi, so the call and its two assertions live
-// here once. They stay separate test functions: the registration macro expands
-// one consumer test case per function, and merging them would collapse the
-// per-case reporting and skip granularity that buys.
-template <typename TenT>
-void trunc_svd_expect_retained_chi(tci_test_fixture<TenT> &fix, double scale,
-                                   int chi_min, int chi_max, double target_trunc_err,
-                                   double s_min, int expected_chi) {
-  auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::factorization);
-  auto matrix = trunc_svd_test_matrix<TenT>(ctx, scale);
-
-  TenT u, v_dag;
-  tci::real_ten_t<TenT> s_diag;
-  tci::real_t<TenT> trunc_err = -1.0;
-
-  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
-                 static_cast<tci::bond_dim_t<TenT>>(chi_min),
-                 static_cast<tci::bond_dim_t<TenT>>(chi_max),
-                 static_cast<tci::real_t<TenT>>(target_trunc_err),
-                 static_cast<tci::real_t<TenT>>(s_min));
-
-  auto s_shape = tci::shape(ctx, s_diag);
-  TCICT_ASSERT(s_shape[0] == expected_chi);
-  TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(expected_chi), tol);
-}
-
 /// Verify target_trunc_err selects an interior chi via the epsilon ladder.
 /// epsilon(2) ≈ 0.07209 <= 0.1 < epsilon(1) ≈ 0.3576, so chi must be 2.
 template <typename TenT>
@@ -789,20 +790,9 @@ void test_trunc_svd_chi_min_not_restored_below_s_min(tci_test_fixture<TenT> &fix
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
-  auto &ctx = fix.context();
-  auto matrix = trunc_svd_test_matrix<TenT>(ctx);
-
-  TenT u, v_dag;
-  tci::real_ten_t<TenT> s_diag;
-  tci::real_t<TenT> trunc_err = -1.0;
-
-  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
-                 static_cast<tci::bond_dim_t<TenT>>(4),
-                 static_cast<tci::bond_dim_t<TenT>>(4),
-                 static_cast<tci::real_t<TenT>>(0.0), static_cast<tci::real_t<TenT>>(0.5));
-
-  auto s_shape = tci::shape(ctx, s_diag);
-  TCICT_ASSERT(s_shape[0] == 3);
+  trunc_svd_expect_retained_chi<TenT>(fix, /*scale=*/1.0, /*chi_min=*/4, /*chi_max=*/4,
+                                     /*target_trunc_err=*/0.0, /*s_min=*/0.5,
+                                     /*expected_chi=*/3);
 #else
   (void)fix;
 #endif
