@@ -449,9 +449,11 @@ inline constexpr int kTruncSvdFixtureRank =
 template <typename TenT>
 TenT trunc_svd_test_matrix(typename tci::tensor_traits<TenT>::context_handle_t &ctx,
                            double scale = 1.0) {
-  // bond_dim_t / elem_coor_t are backend-defined and may be unsigned, so the
-  // loop counter cannot be spelled `int` — a narrowing conversion inside a
-  // braced initializer is ill-formed for a non-constant expression.
+  // bond_dim_t / elem_coor_t are backend-defined and may be unsigned. A braced
+  // initializer rejects a narrowing conversion unless the argument is a
+  // constant expression, so the loop counter has to be converted before it is
+  // placed in one — which is why the casts below are not redundant even though
+  // the literal-indexed form this replaced needed none.
   const auto rank = static_cast<tci::bond_dim_t<TenT>>(kTruncSvdFixtureRank);
   auto matrix = tci::zeros<TenT>(ctx, {rank, rank});
   for (int i = 0; i < kTruncSvdFixtureRank; ++i) {
@@ -472,6 +474,7 @@ TenT trunc_svd_test_matrix(typename tci::tensor_traits<TenT>::context_handle_t &
 // specification and not against a second route through the same code. Takes no
 // scale: epsilon is a ratio of sums of squares and so is scale-invariant.
 template <typename TenT> tci::real_t<TenT> trunc_svd_expected_epsilon(int chi) {
+  TCICT_ASSERT(chi >= 0 && chi <= kTruncSvdFixtureRank);
   double total = 0.0;
   double discarded = 0.0;
   for (int i = 0; i < kTruncSvdFixtureRank; ++i) {
@@ -614,11 +617,46 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
 // quotients round; the one test that does need an exact quotient chooses a
 // different spectrum and asserts the exactness it needs.
 //
-// These tests read the retained chi as shape(s_diag)[0] and deliberately assert
-// nothing about s_diag's order. V1 defines it (as sigma) to be a second-order
-// {chi, chi} diagonal tensor while the suite elsewhere still asserts the
-// first-order representation; shape[0] is the retained chi under either, so
-// these tests do not need revisiting when that representation is migrated.
+// These tests read the retained chi as shape(s_diag)[0], which is the retained
+// chi whether s_diag is first-order or the second-order {chi, chi} diagonal
+// tensor V1 defines (as sigma), so that read survives the representation
+// migration the suite has not made yet.
+//
+// One exception, called out because the rest of the block would otherwise imply
+// it does not exist: test_trunc_svd_target_err_zero_matches_chi_max_overload
+// compares singular values elementwise with a single coordinate, which is only
+// valid while s_diag is first-order. That read has to move when sigma does.
+
+// Helper: run overload (2) on the fixture spectrum and assert the retained chi
+// and the truncation error against the spec's epsilon for that chi.
+//
+// Five of the tests below differ only in the four strategy arguments, the
+// fixture scale, and the expected chi, so the call and its two assertions live
+// here once. They stay separate test functions: the registration macro expands
+// one consumer test case per function, and merging them would collapse the
+// per-case reporting and skip granularity that buys.
+template <typename TenT>
+void trunc_svd_expect_retained_chi(tci_test_fixture<TenT> &fix, double scale,
+                                   int chi_min, int chi_max, double target_trunc_err,
+                                   double s_min, int expected_chi) {
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::factorization);
+  auto matrix = trunc_svd_test_matrix<TenT>(ctx, scale);
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::real_t<TenT> trunc_err = -1.0;
+
+  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
+                 static_cast<tci::bond_dim_t<TenT>>(chi_min),
+                 static_cast<tci::bond_dim_t<TenT>>(chi_max),
+                 static_cast<tci::real_t<TenT>>(target_trunc_err),
+                 static_cast<tci::real_t<TenT>>(s_min));
+
+  auto s_shape = tci::shape(ctx, s_diag);
+  TCICT_ASSERT(s_shape[0] == expected_chi);
+  TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(expected_chi), tol);
+}
 
 /// Verify target_trunc_err selects an interior chi via the epsilon ladder.
 /// epsilon(2) ≈ 0.07209 <= 0.1 < epsilon(1) ≈ 0.3576, so chi must be 2.
@@ -628,22 +666,9 @@ void test_trunc_svd_target_err_selects_chi(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
-  auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::factorization);
-  auto matrix = trunc_svd_test_matrix<TenT>(ctx);
-
-  TenT u, v_dag;
-  tci::real_ten_t<TenT> s_diag;
-  tci::real_t<TenT> trunc_err = -1.0;
-
-  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
-                 static_cast<tci::bond_dim_t<TenT>>(1),
-                 static_cast<tci::bond_dim_t<TenT>>(4),
-                 static_cast<tci::real_t<TenT>>(0.1), static_cast<tci::real_t<TenT>>(0.0));
-
-  auto s_shape = tci::shape(ctx, s_diag);
-  TCICT_ASSERT(s_shape[0] == 2);
-  TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(2), tol);
+  trunc_svd_expect_retained_chi<TenT>(fix, /*scale=*/1.0, /*chi_min=*/1, /*chi_max=*/4,
+                                     /*target_trunc_err=*/0.1, /*s_min=*/0.0,
+                                     /*expected_chi=*/2);
 #else
   (void)fix;
 #endif
@@ -660,22 +685,9 @@ void test_trunc_svd_target_err_scale_invariant(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
-  auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::factorization);
-  auto matrix = trunc_svd_test_matrix<TenT>(ctx, 1.0e-3);
-
-  TenT u, v_dag;
-  tci::real_ten_t<TenT> s_diag;
-  tci::real_t<TenT> trunc_err = -1.0;
-
-  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
-                 static_cast<tci::bond_dim_t<TenT>>(1),
-                 static_cast<tci::bond_dim_t<TenT>>(4),
-                 static_cast<tci::real_t<TenT>>(0.1), static_cast<tci::real_t<TenT>>(0.0));
-
-  auto s_shape = tci::shape(ctx, s_diag);
-  TCICT_ASSERT(s_shape[0] == 2);
-  TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(2), tol);
+  trunc_svd_expect_retained_chi<TenT>(fix, /*scale=*/1.0e-3, /*chi_min=*/1, /*chi_max=*/4,
+                                     /*target_trunc_err=*/0.1, /*s_min=*/0.0,
+                                     /*expected_chi=*/2);
 #else
   (void)fix;
 #endif
@@ -689,22 +701,9 @@ void test_trunc_svd_target_err_chi_min_floor(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
-  auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::factorization);
-  auto matrix = trunc_svd_test_matrix<TenT>(ctx);
-
-  TenT u, v_dag;
-  tci::real_ten_t<TenT> s_diag;
-  tci::real_t<TenT> trunc_err = -1.0;
-
-  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
-                 static_cast<tci::bond_dim_t<TenT>>(3),
-                 static_cast<tci::bond_dim_t<TenT>>(4),
-                 static_cast<tci::real_t<TenT>>(0.5), static_cast<tci::real_t<TenT>>(0.0));
-
-  auto s_shape = tci::shape(ctx, s_diag);
-  TCICT_ASSERT(s_shape[0] == 3);
-  TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(3), tol);
+  trunc_svd_expect_retained_chi<TenT>(fix, /*scale=*/1.0, /*chi_min=*/3, /*chi_max=*/4,
+                                     /*target_trunc_err=*/0.5, /*s_min=*/0.0,
+                                     /*expected_chi=*/3);
 #else
   (void)fix;
 #endif
@@ -718,22 +717,9 @@ void test_trunc_svd_target_err_chi_max_cap(tci_test_fixture<TenT> &fix) {
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
-  auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::factorization);
-  auto matrix = trunc_svd_test_matrix<TenT>(ctx);
-
-  TenT u, v_dag;
-  tci::real_ten_t<TenT> s_diag;
-  tci::real_t<TenT> trunc_err = -1.0;
-
-  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
-                 static_cast<tci::bond_dim_t<TenT>>(1),
-                 static_cast<tci::bond_dim_t<TenT>>(2),
-                 static_cast<tci::real_t<TenT>>(1.0e-6), static_cast<tci::real_t<TenT>>(0.0));
-
-  auto s_shape = tci::shape(ctx, s_diag);
-  TCICT_ASSERT(s_shape[0] == 2);
-  TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(2), tol);
+  trunc_svd_expect_retained_chi<TenT>(fix, /*scale=*/1.0, /*chi_min=*/1, /*chi_max=*/2,
+                                     /*target_trunc_err=*/1.0e-6, /*s_min=*/0.0,
+                                     /*expected_chi=*/2);
 #else
   (void)fix;
 #endif
@@ -779,6 +765,10 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
                        tci::get_elem(ctx, s_simple, {coor}), tol);
   }
 
+  // The factors are compared by shape rather than elementwise: for a spectrum
+  // with distinct singular values the columns of u are fixed only up to a
+  // phase, which the two calls are not obliged to choose identically, so an
+  // elementwise comparison would assert more than the equivalence claim.
   auto shape_u_general = tci::shape(ctx, u_general);
   auto shape_u_simple = tci::shape(ctx, u_simple);
   TCICT_ASSERT(shape_u_general == shape_u_simple);
@@ -853,9 +843,12 @@ void test_trunc_svd_target_err_boundary_is_inclusive(tci_test_fixture<TenT> &fix
                  static_cast<tci::bond_dim_t<TenT>>(3),
                  static_cast<tci::real_t<TenT>>(0.5), static_cast<tci::real_t<TenT>>(0.0));
 
+  // Order matters: TCICT_ASSERT throws, so the premise has to be checked
+  // before the conclusion that rests on it. Reversed, a backend that misses the
+  // tie would fail the retained-chi assertion first and say nothing about why.
+  TCICT_ASSERT(trunc_err == static_cast<tci::real_t<TenT>>(0.5));
   auto s_shape = tci::shape(ctx, s_diag);
   TCICT_ASSERT(s_shape[0] == 1);
-  TCICT_ASSERT(trunc_err == static_cast<tci::real_t<TenT>>(0.5));
 #else
   (void)fix;
 #endif
