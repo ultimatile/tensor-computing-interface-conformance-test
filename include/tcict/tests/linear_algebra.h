@@ -451,8 +451,8 @@ TenT trunc_svd_test_matrix(typename tci::tensor_traits<TenT>::context_handle_t &
                            double scale = 1.0) {
   // elem_coor_t is backend-defined and may be unsigned, and a braced
   // initializer rejects a narrowing conversion unless the argument is a
-  // constant expression. kTruncSvdFixtureRank is one, so the shape needs no
-  // cast; the loop counter is not, so the coordinates below do.
+  // constant expression. kTruncSvdFixtureRank is a constant expression, so the
+  // shape below needs no cast; the loop counter is not, so the coordinates do.
   auto matrix = tci::zeros<TenT>(ctx, {kTruncSvdFixtureRank, kTruncSvdFixtureRank});
   for (int i = 0; i < kTruncSvdFixtureRank; ++i) {
     const auto coor = static_cast<tci::elem_coor_t<TenT>>(i);
@@ -641,7 +641,9 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
 
 // --- truncated SVD, overload (2): chi_min / chi_max / target_trunc_err / s_min ---
 //
-// V1's rule, with epsilon(chi) = sum_{i>=chi} s_i^2 / sum_{i<kappa} s_i^2:
+// V1's rule, with epsilon(chi) = sum_{i>=chi} s_i^2 / sum_{i<kappa} s_i^2.
+// V1 states the three clauses as an unnumbered list; they are numbered here
+// only so the paragraph below can point at them.
 //
 //   1. Discard all s_i < s_min.
 //   2. Among the survivors retain at least chi_min when possible; values below
@@ -824,9 +826,9 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
 #endif
 }
 
-/// Verify step 2's exclusion: singular values discarded by s_min are not
-/// restored to satisfy chi_min. s_min = 0.5 leaves survivors [3, 2, 1], and
-/// chi_min = 4 cannot be met, so chi must be 3 rather than 4.
+/// Verify that singular values discarded by s_min are not restored to satisfy
+/// chi_min. s_min = 0.5 leaves survivors [3, 2, 1], and chi_min = 4 cannot be
+/// met, so chi must be 3 rather than 4.
 template <typename TenT>
 void test_trunc_svd_chi_min_not_restored_below_s_min(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_TRUNC_SVD
@@ -841,7 +843,8 @@ void test_trunc_svd_chi_min_not_restored_below_s_min(tci_test_fixture<TenT> &fix
 #endif
 }
 
-/// Verify the comparison in step 3 is `epsilon <= target_trunc_err`, not `<`.
+/// Verify that chi stops growing as soon as epsilon reaches target_trunc_err:
+/// the comparison bounding the growth is `<=`, not `<`.
 ///
 /// Separating the two operators needs a target that lands exactly on an
 /// achievable epsilon: only there do they disagree. `<=` then retains that chi
@@ -862,7 +865,7 @@ void test_trunc_svd_chi_min_not_restored_below_s_min(tci_test_fixture<TenT> &fix
 ///
 /// That reuse assumes the backend does not realize the one epsilon V1 names by
 /// two divergent expressions — the value it reports in trunc_err has to be the
-/// value it compares in step 3. V1 introduces epsilon once and uses that single
+/// value it compares against target_trunc_err. V1 introduces epsilon once and uses that single
 /// symbol for both, so this is the specification's own reading rather than an
 /// extra requirement; but V1 constrains no arithmetic path, so an implementation
 /// that summed the discarded tail for the comparison and took the complement of
