@@ -789,16 +789,36 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
                        tci::get_elem(ctx, s_simple, {coor}), tol);
   }
 
-  // The factors are compared by shape rather than elementwise: for a spectrum
-  // with distinct singular values the columns of u are fixed only up to a
-  // phase, which the two calls are not obliged to choose identically, so an
-  // elementwise comparison would assert more than the equivalence claim.
-  auto shape_u_general = tci::shape(ctx, u_general);
-  auto shape_u_simple = tci::shape(ctx, u_simple);
-  TCICT_ASSERT(shape_u_general == shape_u_simple);
-  auto shape_v_general = tci::shape(ctx, v_dag_general);
-  auto shape_v_simple = tci::shape(ctx, v_dag_simple);
-  TCICT_ASSERT(shape_v_general == shape_v_simple);
+  // The factors are compared through the product they reconstruct rather than
+  // elementwise: for a spectrum with distinct singular values the columns of u
+  // are fixed only up to a phase, which the two calls are not obliged to choose
+  // identically, so an elementwise comparison would assert more than the
+  // equivalence claim. The reconstruction is invariant under that phase, and
+  // unlike a shape comparison it does read the factors' values.
+  using RealTenT = tci::real_ten_t<TenT>;
+  auto reconstruct = [&ctx](const TenT &u_in, const RealTenT &s_in, const TenT &v_in) {
+    const auto u_shape = tci::shape(ctx, u_in);
+    auto scaled = tci::copy(ctx, u_in);
+    for (tci::bond_dim_t<TenT> j = 0; j < u_shape[1]; ++j) {
+      const auto sj = real_part<RealTenT>(
+          tci::get_elem(ctx, s_in, {static_cast<tci::elem_coor_t<RealTenT>>(j)}));
+      for (tci::bond_dim_t<TenT> i = 0; i < u_shape[0]; ++i) {
+        const auto ci = static_cast<tci::elem_coor_t<TenT>>(i);
+        const auto cj = static_cast<tci::elem_coor_t<TenT>>(j);
+        const auto elem = tci::get_elem(ctx, u_in, {ci, cj});
+        tci::set_elem(ctx, scaled, {ci, cj},
+                      make_elem<TenT>(real_part<TenT>(elem) * sj,
+                                      imag_part<TenT>(elem) * sj));
+      }
+    }
+    TenT product;
+    tci::contract(ctx, scaled, "ik", v_in, "kj", product, "ij");
+    return product;
+  };
+
+  auto reconstructed_general = reconstruct(u_general, s_general, v_dag_general);
+  auto reconstructed_simple = reconstruct(u_simple, s_simple, v_dag_simple);
+  TCICT_ASSERT(tci::close(ctx, reconstructed_general, reconstructed_simple, tol));
 #else
   (void)fix;
 #endif
@@ -839,6 +859,15 @@ void test_trunc_svd_chi_min_not_restored_below_s_min(tci_test_fixture<TenT> &fix
 /// target_trunc_err at all, and reports the backend's own epsilon for that set.
 /// Feeding that value back as the target of the second call puts the tie on the
 /// boundary by construction, whatever route the backend computes epsilon by.
+///
+/// That reuse assumes the backend does not realize the one epsilon V1 names by
+/// two divergent expressions — the value it reports in trunc_err has to be the
+/// value it compares in step 3. V1 introduces epsilon once and uses that single
+/// symbol for both, so this is the specification's own reading rather than an
+/// extra requirement; but V1 constrains no arithmetic path, so an implementation
+/// that summed the discarded tail for the comparison and took the complement of
+/// the retained prefix for the report could land the two an ulp apart and fail
+/// here while conforming. A backend in that shape should compute epsilon once.
 ///
 /// SVs [5, 4, 3] give sum s_i^2 = 50 with 16 + 9 = 25 discarded at chi = 1, so
 /// the measured epsilon is 25 / 50 up to the backend's rounding. It stays well
