@@ -641,19 +641,17 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
 
 // --- truncated SVD, overload (2): chi_min / chi_max / target_trunc_err / s_min ---
 //
-// V1's rule, with epsilon(chi) = sum_{i>=chi} s_i^2 / sum_{i<kappa} s_i^2.
-// V1 states the three clauses as an unnumbered list; they are numbered here
-// only so the paragraph below can point at them.
+// V1's rule, with epsilon(chi) = sum_{i>=chi} s_i^2 / sum_{i<kappa} s_i^2:
 //
-//   1. Discard all s_i < s_min.
-//   2. Among the survivors retain at least chi_min when possible; values below
-//      s_min are NOT restored to satisfy chi_min.
-//   3. Grow chi in descending order until epsilon <= target_trunc_err or
-//      chi == chi_max.
+//   - Discard all s_i < s_min.
+//   - Among the survivors retain at least chi_min when possible; values below
+//     s_min are NOT restored to satisfy chi_min.
+//   - Grow chi in descending order until epsilon <= target_trunc_err or
+//     chi == chi_max.
 //
-// Step 2 is what keeps the retained chi from being simply "the smallest chi in
-// [chi_min, chi_max] meeting the target": when fewer than chi_min values
-// survive step 1, the result is below chi_min.
+// That middle clause is what keeps the retained chi from being simply "the
+// smallest chi in [chi_min, chi_max] meeting the target": when fewer than
+// chi_min values clear s_min, the result is below chi_min.
 //
 // For the [3, 2, 1, 0.1] fixture, sum s_i^2 = 14.01 and the ladder runs
 // epsilon(4) = 0, epsilon(3) = 0.01/14.01 ≈ 7.138e-4,
