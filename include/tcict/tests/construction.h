@@ -202,7 +202,7 @@ void test_random_inplace(tci_test_fixture<TenT>& fix) {
 #endif
 }
 
-// --- random (out-of-place, constant generator) ---
+// --- random (constant generator) ---
 
 // The singleton case of the containment oracle above: with a constant
 // generator the emission set has one member, so every element is pinned to a
