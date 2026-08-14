@@ -466,33 +466,32 @@ void test_for_each_with_coors(tci_test_fixture<TenT> &fix) {
 
   TenT a = tci::template eye<TenT>(ctx, 2);
 
-  std::size_t visits = 0;
-  bool seen[2][2] = {{false, false}, {false, false}};
+  // The callback only records. Asserting inside it would throw through the
+  // backend's traversal frames, which a conformance suite cannot assume are
+  // able to carry an exception.
+  std::vector<tci::elem_coors_t<TenT>> visited;
 
   tci::for_each_with_coors(
       ctx, a, [&](Elem &elem, const tci::elem_coors_t<TenT> &coors) {
-        // Validate before indexing `seen`: a backend handing back a malformed
-        // coordinate must fail as a conformance violation, not as an
-        // out-of-bounds write that reads like a defect in the suite.
-        TCICT_ASSERT(coors.size() == 2);
-        const auto row = static_cast<std::size_t>(coors[0]);
-        const auto col = static_cast<std::size_t>(coors[1]);
-        TCICT_ASSERT(row < 2 && col < 2);
-        TCICT_ASSERT(!seen[row][col]);
-        seen[row][col] = true;
-        ++visits;
-        if (row == col) {
+        visited.push_back(coors);
+        if (coors.size() == 2 && coors[0] == coors[1]) {
           elem = static_cast<Elem>(2.0);
         }
       });
 
   // "Visits every element exactly once" over a 2x2 diagonal tensor means 4
   // visits: a backend walking only its 2 stored diagonal entries is excluded.
-  TCICT_ASSERT(visits == 4);
-  for (std::size_t i = 0; i < 2; ++i) {
-    for (std::size_t j = 0; j < 2; ++j) {
-      TCICT_ASSERT(seen[i][j]);
-    }
+  TCICT_ASSERT(visited.size() == 4);
+  bool seen[2][2] = {{false, false}, {false, false}};
+  for (const auto &coors : visited) {
+    // Bound the coordinate before it indexes `seen`, so a malformed one fails
+    // as a conformance violation rather than as an out-of-bounds write.
+    TCICT_ASSERT(coors.size() == 2);
+    const auto row = static_cast<std::size_t>(coors[0]);
+    const auto col = static_cast<std::size_t>(coors[1]);
+    TCICT_ASSERT(row < 2 && col < 2);
+    TCICT_ASSERT(!seen[row][col]);
+    seen[row][col] = true;
   }
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {0, 0})), 2.0, tol);
@@ -518,32 +517,29 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
 
   double sum_diagonal = 0.0;
   double sum_off_diagonal = 0.0;
-  std::size_t visits = 0;
-  bool seen[2][2] = {{false, false}, {false, false}};
+  // Records only, for the reason the mutable overload's test gives: an
+  // assertion here would throw through the backend's traversal frames.
+  std::vector<tci::elem_coors_t<TenT>> visited;
 
   tci::for_each_with_coors(
       ctx, const_a, [&](const Elem &elem, const tci::elem_coors_t<TenT> &coors) {
-        // Validate before indexing `seen`: a malformed coordinate must fail
-        // as a conformance violation, not as an out-of-bounds write.
-        TCICT_ASSERT(coors.size() == 2);
-        const auto row = static_cast<std::size_t>(coors[0]);
-        const auto col = static_cast<std::size_t>(coors[1]);
-        TCICT_ASSERT(row < 2 && col < 2);
-        TCICT_ASSERT(!seen[row][col]);
-        seen[row][col] = true;
-        ++visits;
-        if (row == col) {
+        visited.push_back(coors);
+        if (coors.size() == 2 && coors[0] == coors[1]) {
           sum_diagonal += real_part<TenT>(elem);
         } else {
           sum_off_diagonal += std::abs(elem);
         }
       });
 
-  TCICT_ASSERT(visits == 4);
-  for (std::size_t i = 0; i < 2; ++i) {
-    for (std::size_t j = 0; j < 2; ++j) {
-      TCICT_ASSERT(seen[i][j]);
-    }
+  TCICT_ASSERT(visited.size() == 4);
+  bool seen[2][2] = {{false, false}, {false, false}};
+  for (const auto &coors : visited) {
+    TCICT_ASSERT(coors.size() == 2);
+    const auto row = static_cast<std::size_t>(coors[0]);
+    const auto col = static_cast<std::size_t>(coors[1]);
+    TCICT_ASSERT(row < 2 && col < 2);
+    TCICT_ASSERT(!seen[row][col]);
+    seen[row][col] = true;
   }
 
   TCICT_ASSERT_CLOSE(sum_diagonal, 2.0, tol);
@@ -938,6 +934,12 @@ void expect_diagonal_3x3(tci_test_fixture<TenT> &fix, const TenT &tensor,
                          const double (&expected)[3]) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
+  TCICT_ASSERT(tci::order(ctx, tensor) == 2);
+  auto tensor_shape = tci::shape(ctx, tensor);
+  TCICT_ASSERT(tensor_shape[0] == 3 && tensor_shape[1] == 3);
+  // A diagonal tensor's off-diagonal zeros count as logical elements however
+  // few entries the backend stores, so the count is 3^2.
+  TCICT_ASSERT(tci::size(ctx, tensor) == 9);
   for (std::size_t i = 0; i < 3; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
       if (i == j) {
@@ -963,13 +965,6 @@ void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
   tci::set_elem(ctx, vector, {2}, make_elem<TenT>(3.0));
 
   tci::diag(ctx, vector);
-
-  TCICT_ASSERT(tci::order(ctx, vector) == 2);
-  TCICT_ASSERT(tci::shape(ctx, vector)[0] == 3);
-  TCICT_ASSERT(tci::shape(ctx, vector)[1] == 3);
-  // The promoted tensor is diagonal, and a diagonal tensor's off-diagonal
-  // zeros count as logical elements however few entries the backend stores.
-  TCICT_ASSERT(tci::size(ctx, vector) == 9);
 
   const double expected[3] = {1.0, 2.0, 3.0};
   expect_diagonal_3x3(fix, vector, expected);
@@ -1011,11 +1006,6 @@ void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
   TenT matrix;
   TCICT_ASSERT_NOTHROW(tci::diag(ctx, vector, matrix));
 
-  TCICT_ASSERT(tci::order(ctx, matrix) == 2);
-  TCICT_ASSERT(tci::shape(ctx, matrix)[0] == 3);
-  TCICT_ASSERT(tci::shape(ctx, matrix)[1] == 3);
-  TCICT_ASSERT(tci::size(ctx, matrix) == 9);
-
   expect_diagonal_3x3(fix, matrix, expected);
 
   // V1 declares this overload's input `const`, but TenT is a handle type, so
@@ -1053,9 +1043,8 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
   // V1 declares this overload's input `const`, but TenT is a handle type, so
   // that alone does not forbid `out` aliasing the input's storage. What is
   // asserted here is the reading that "out-of-place" means the input is left
-  // observably unchanged.
-  TCICT_ASSERT(tci::order(ctx, matrix) == 2);
-  TCICT_ASSERT(tci::size(ctx, matrix) == 9);
+  // observably unchanged — values included, not just order and size.
+  expect_diagonal_3x3(fix, matrix, expected);
 #else
   (void)fix;
 #endif
