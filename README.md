@@ -46,7 +46,7 @@ TCICT_DOCTEST_REGISTER_CPLX(cfloat,  MyTen_CF)
 TCICT_DOCTEST_REGISTER_CPLX(cdouble, MyTen_CD)
 ```
 
-`TCICT_DOCTEST_REGISTER_REAL` registers every test that applies to real tensors (the full `ALL_TYPES` set plus `REAL_ONLY` tests such as `test_to_cplx_outofplace` / `test_to_cplx_inplace`).
+`TCICT_DOCTEST_REGISTER_REAL` registers every test that applies to real tensors (the full `ALL_TYPES` set plus `REAL_ONLY` tests such as `test_to_cplx_outofplace`).
 `TCICT_DOCTEST_REGISTER_CPLX` registers every test that applies to complex tensors (`ALL_TYPES` plus `CPLX_ONLY` tests such as `test_to_cplx_complex_to_complex`).
 
 Constraints:
@@ -133,7 +133,7 @@ This handles backends with runtime-buggy APIs (the call compiles but produces wr
 
 | Category | Header | Functions exercised |
 |---|---|---|
-| Construction | `tests/construction.h` | `allocate`, `assign_from_range`, `clear`, `copy`, `eye`, `fill`, `move`, `random`, `zeros` |
+| Construction | `tests/construction.h` | `allocate`, `assign_from_range`, `clear`, `copy`, `eye`, `fill`, `move`, `random`, `to_range`, `zeros` |
 | Read-only getters | `tests/read_only_getters.h` | `get_elem`, `order`, `set_elem`, `shape`, `size`, `size_bytes` |
 | Tensor manipulation | `tests/tensor_manipulation.h` | `concatenate`, `cplx_conj`, `diag`, `expand`, `extract_sub`, `for_each`, `for_each_with_coors`, `imag`, `real`, `replace_sub`, `reshape`, `shrink`, `stack`, `to_cplx`, `transpose` |
 | Linear algebra | `tests/linear_algebra.h` | `contract`, `eig`, `eigh`, `eigvals`, `eigvalsh`, `exp`, `inverse`, `linear_combine`, `lq`, `norm`, `normalize`, `qr`, `scale`, `svd`, `trace`, `trunc_svd` |

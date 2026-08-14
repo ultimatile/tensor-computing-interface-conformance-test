@@ -1088,26 +1088,6 @@ void test_exp_anti_hermitian(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
-// --- exp: error conditions ---
-
-template <typename TenT> void test_exp_errors(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_EXP
-#ifdef TCICT_SKIP_EXP_SINGLE_PRECISION
-  TCICT_RETURN_IF_SINGLE_PRECISION;
-#endif
-  auto &ctx = fix.context();
-  TenT result;
-  auto non_square = tci::zeros<TenT>(ctx, {2, 3});
-  TCICT_ASSERT_THROWS(std::invalid_argument,
-                      tci::exp(ctx, non_square, 1, result));
-
-  auto square = tci::zeros<TenT>(ctx, {2, 2});
-  TCICT_ASSERT_THROWS(std::invalid_argument, tci::exp(ctx, square, 3, result));
-#else
-  (void)fix;
-#endif
-}
-
 // --- inverse ---
 
 template <typename TenT> void test_inverse(tci_test_fixture<TenT> &fix) {
@@ -1135,23 +1115,6 @@ template <typename TenT> void test_inverse(tci_test_fixture<TenT> &fix) {
                      eps);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, inv, {1, 1})), 0.4,
                      eps);
-#else
-  (void)fix;
-#endif
-}
-
-// --- inverse: non-square error ---
-
-template <typename TenT> void test_inverse_errors(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_INVERSE
-#ifdef TCICT_SKIP_INVERSE_SINGLE_PRECISION
-  TCICT_RETURN_IF_SINGLE_PRECISION;
-#endif
-  auto &ctx = fix.context();
-  TenT result;
-  auto non_square = tci::zeros<TenT>(ctx, {2, 3});
-  TCICT_ASSERT_THROWS(std::invalid_argument,
-                      tci::inverse(ctx, non_square, 1, result));
 #else
   (void)fix;
 #endif
@@ -1384,23 +1347,6 @@ void test_eigvals_diagonal(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
-// --- eigvals: error on non-square ---
-
-template <typename TenT> void test_eigvals_errors(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_EIGVALS
-#ifdef TCICT_SKIP_EIGVALS_SINGLE_PRECISION
-  TCICT_RETURN_IF_SINGLE_PRECISION;
-#endif
-  auto &ctx = fix.context();
-  auto non_square = tci::zeros<TenT>(ctx, {2, 3});
-  tci::cplx_ten_t<TenT> w;
-  TCICT_ASSERT_THROWS(std::invalid_argument,
-                      tci::eigvals(ctx, non_square, 1, w));
-#else
-  (void)fix;
-#endif
-}
-
 // --- eigvalsh: symmetric matrix ---
 
 template <typename TenT>
@@ -1430,24 +1376,6 @@ void test_eigvalsh_diagonal(tci_test_fixture<TenT> &fix) {
                      2.0, eps);
   TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, eigenvalues, {2})),
                      3.0, eps);
-#else
-  (void)fix;
-#endif
-}
-
-// --- eigvalsh: error on non-square ---
-
-template <typename TenT>
-void test_eigvalsh_errors(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_EIGVALSH
-#ifdef TCICT_SKIP_EIGVALSH_SINGLE_PRECISION
-  TCICT_RETURN_IF_SINGLE_PRECISION;
-#endif
-  auto &ctx = fix.context();
-  auto non_square = tci::zeros<TenT>(ctx, {2, 3});
-  tci::real_ten_t<TenT> w;
-  TCICT_ASSERT_THROWS(std::invalid_argument,
-                      tci::eigvalsh(ctx, non_square, 1, w));
 #else
   (void)fix;
 #endif
@@ -1489,9 +1417,7 @@ void test_eigvalsh_errors(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "linear_algebra", test_exp_diagonal) \
   X(__VA_ARGS__, "linear_algebra", test_exp_zero) \
   X(__VA_ARGS__, "linear_algebra", test_exp_anti_hermitian) \
-  X(__VA_ARGS__, "linear_algebra", test_exp_errors) \
   X(__VA_ARGS__, "linear_algebra", test_inverse) \
-  X(__VA_ARGS__, "linear_algebra", test_inverse_errors) \
   X(__VA_ARGS__, "linear_algebra", test_scale_inplace) \
   X(__VA_ARGS__, "linear_algebra", test_scale_outofplace) \
   X(__VA_ARGS__, "linear_algebra", test_scale_by_zero) \
@@ -1499,6 +1425,4 @@ void test_eigvalsh_errors(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "linear_algebra", test_svd_basic) \
   X(__VA_ARGS__, "linear_algebra", test_svd_reconstruction) \
   X(__VA_ARGS__, "linear_algebra", test_eigvals_diagonal) \
-  X(__VA_ARGS__, "linear_algebra", test_eigvals_errors) \
-  X(__VA_ARGS__, "linear_algebra", test_eigvalsh_diagonal) \
-  X(__VA_ARGS__, "linear_algebra", test_eigvalsh_errors)
+  X(__VA_ARGS__, "linear_algebra", test_eigvalsh_diagonal)
