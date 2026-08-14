@@ -225,8 +225,9 @@ void test_random_outofplace(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_NOTHROW(tensor = tci::template random<TenT>(ctx, shape, gen));
   TCICT_ASSERT(tci::shape(ctx, tensor) == shape);
   TCICT_ASSERT(tci::size(ctx, tensor) == 4);
-  // Without this, a backend that ignored gen and filled with a hard-coded
-  // constant would satisfy every value check below.
+  // The value checks below compare against `constant`, so on their own they
+  // cannot tell a backend that consulted gen from one that filled with the
+  // same value without consulting it. The counter is what separates the two.
   TCICT_ASSERT(calls > 0);
 
   for (std::size_t i = 0; i < 2; ++i) {

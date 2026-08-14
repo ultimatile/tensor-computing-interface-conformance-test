@@ -662,11 +662,12 @@ template <typename TenT> void test_reshape(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(tci::shape(ctx, tensor) == new_shape);
   TCICT_ASSERT(tci::size(ctx, tensor) == 24);
 
-  // V1 has reshape perform "no reordering, transposition, or value change"
-  // while leaving the linear order of logical elements backend-defined, so
-  // which coordinate a given element lands on is not portably assertable. The
-  // multiset of values is: it holds under any ordering, and still catches a
-  // dropped, duplicated, or corrupted element.
+  // V1 has reshape perform "no reordering, transposition, or value change" and
+  // preserve "the linear order of logical tensor elements" — but it defines
+  // that linear order for no shape, so which coordinate a given element lands
+  // on is not portably assertable. The multiset of values is: it holds under
+  // any ordering, and still catches a dropped, duplicated, or corrupted
+  // element.
   std::vector<double> observed;
   observed.reserve(24);
   for (std::size_t i = 0; i < 6; ++i) {
@@ -719,8 +720,8 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
                       return tci::elem_coors_t<TenT>{k, i, j};
                     });
 
-  // The overload under test writes to a separate output, so the input keeps
-  // its shape and every one of its values.
+  // V1 does not state that an out-of-place overload leaves its input alone;
+  // this asserts the reading that "out-of-place" means exactly that.
   TCICT_ASSERT(tci::shape(ctx, tensor) == original_shape);
   expect_ramp_2x3x4(fix, tensor,
                     [](std::size_t i, std::size_t j, std::size_t k) {
@@ -913,13 +914,33 @@ void test_expand_outofplace(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// Asserts that a {3, 3} tensor holds `expected` on its main diagonal and zero
+// everywhere else. The off-diagonal check goes through the modulus, so it
+// covers both parts of a complex element in one assertion.
+template <typename TenT>
+void expect_diagonal_3x3(tci_test_fixture<TenT> &fix, const TenT &tensor,
+                         const double (&expected)[3]) {
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::elementwise);
+  for (std::size_t i = 0; i < 3; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      if (i == j) {
+        TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {i, j})),
+                           expected[i], tol);
+      } else {
+        TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, tensor, {i, j})), 0.0,
+                           tol);
+      }
+    }
+  }
+}
+
 // --- diag: vector to matrix ---
 
 template <typename TenT>
 void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_DIAG
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
   auto vector = tci::zeros<TenT>(ctx, {3});
   tci::set_elem(ctx, vector, {0}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, vector, {1}, make_elem<TenT>(2.0));
@@ -934,20 +955,8 @@ void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
   // zeros count as logical elements however few entries the backend stores.
   TCICT_ASSERT(tci::size(ctx, vector) == 9);
 
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {0, 0})), 1.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {1, 1})), 2.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {2, 2})), 3.0,
-                     tol);
-  for (std::size_t i = 0; i < 3; ++i) {
-    for (std::size_t j = 0; j < 3; ++j) {
-      if (i == j) {
-        continue;
-      }
-      TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, vector, {i, j})), 0.0, tol);
-    }
-  }
+  const double expected[3] = {1.0, 2.0, 3.0};
+  expect_diagonal_3x3(fix, vector, expected);
 #else
   (void)fix;
 #endif
@@ -999,20 +1008,10 @@ void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(tci::shape(ctx, matrix)[1] == 3);
   TCICT_ASSERT(tci::size(ctx, matrix) == 9);
 
-  for (std::size_t i = 0; i < 3; ++i) {
-    for (std::size_t j = 0; j < 3; ++j) {
-      if (i == j) {
-        TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, matrix, {i, j})),
-                           expected[i], tol);
-      } else {
-        TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, matrix, {i, j})), 0.0,
-                           tol);
-      }
-    }
-  }
+  expect_diagonal_3x3(fix, matrix, expected);
 
-  // The overload under test is the out-of-place one, so the input must still
-  // be the first-order tensor it was, with its values intact.
+  // V1 does not state that an out-of-place overload leaves its input alone;
+  // this asserts the reading that "out-of-place" means exactly that.
   TCICT_ASSERT(tci::order(ctx, vector) == 1);
   TCICT_ASSERT(tci::size(ctx, vector) == 3);
   for (std::size_t i = 0; i < 3; ++i) {
@@ -1052,7 +1051,8 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
                        expected[i], tol);
   }
 
-  // Out-of-place again: the input is still the second-order tensor it was.
+  // V1 does not state that an out-of-place overload leaves its input alone;
+  // this asserts the reading that "out-of-place" means exactly that.
   TCICT_ASSERT(tci::order(ctx, matrix) == 2);
   TCICT_ASSERT(tci::size(ctx, matrix) == 9);
 #else
