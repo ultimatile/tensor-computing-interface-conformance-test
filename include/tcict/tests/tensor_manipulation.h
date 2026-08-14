@@ -720,8 +720,10 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
                       return tci::elem_coors_t<TenT>{k, i, j};
                     });
 
-  // V1 does not state that an out-of-place overload leaves its input alone;
-  // this asserts the reading that "out-of-place" means exactly that.
+  // V1 declares this overload's input `const`, but TenT is a handle type, so
+  // that alone does not forbid `out` aliasing the input's storage. What is
+  // asserted here is the reading that "out-of-place" means the input is left
+  // observably unchanged.
   TCICT_ASSERT(tci::shape(ctx, tensor) == original_shape);
   expect_ramp_2x3x4(fix, tensor,
                     [](std::size_t i, std::size_t j, std::size_t k) {
@@ -914,6 +916,20 @@ void test_expand_outofplace(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// Asserts that a first-order tensor of length 3 holds `expected` in order.
+template <typename TenT>
+void expect_vector_3(tci_test_fixture<TenT> &fix, const TenT &tensor,
+                     const double (&expected)[3]) {
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::elementwise);
+  TCICT_ASSERT(tci::order(ctx, tensor) == 1);
+  TCICT_ASSERT(tci::size(ctx, tensor) == 3);
+  for (std::size_t i = 0; i < 3; ++i) {
+    TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {i})),
+                       expected[i], tol);
+  }
+}
+
 // Asserts that a {3, 3} tensor holds `expected` on its main diagonal and zero
 // everywhere else. The off-diagonal check goes through the modulus, so it
 // covers both parts of a complex element in one assertion.
@@ -968,19 +984,12 @@ template <typename TenT>
 void test_diag_mat_to_vec(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_DIAG
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
   auto identity = tci::eye<TenT>(ctx, 3);
 
   tci::diag(ctx, identity);
 
-  TCICT_ASSERT(tci::order(ctx, identity) == 1);
-  TCICT_ASSERT(tci::size(ctx, identity) == 3);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, identity, {0})), 1.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, identity, {1})), 1.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, identity, {2})), 1.0,
-                     tol);
+  const double expected[3] = {1.0, 1.0, 1.0};
+  expect_vector_3(fix, identity, expected);
 #else
   (void)fix;
 #endif
@@ -992,7 +1001,6 @@ template <typename TenT>
 void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_DIAG
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
   const double expected[3] = {1.5, -2.5, 3.5};
 
   auto vector = tci::zeros<TenT>(ctx, {3});
@@ -1010,14 +1018,11 @@ void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
 
   expect_diagonal_3x3(fix, matrix, expected);
 
-  // V1 does not state that an out-of-place overload leaves its input alone;
-  // this asserts the reading that "out-of-place" means exactly that.
-  TCICT_ASSERT(tci::order(ctx, vector) == 1);
-  TCICT_ASSERT(tci::size(ctx, vector) == 3);
-  for (std::size_t i = 0; i < 3; ++i) {
-    TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {i})),
-                       expected[i], tol);
-  }
+  // V1 declares this overload's input `const`, but TenT is a handle type, so
+  // that alone does not forbid `out` aliasing the input's storage. What is
+  // asserted here is the reading that "out-of-place" means the input is left
+  // observably unchanged.
+  expect_vector_3(fix, vector, expected);
 #else
   (void)fix;
 #endif
@@ -1029,7 +1034,6 @@ template <typename TenT>
 void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_DIAG
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
   // Distinct diagonal values rather than an identity: all-ones cannot tell a
   // correct extraction from a reordered one. Building the input with `zeros`
   // also keeps this test under TCICT_SKIP_DIAG alone, so a backend that
@@ -1044,15 +1048,12 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
   TenT vector;
   TCICT_ASSERT_NOTHROW(tci::diag(ctx, matrix, vector));
 
-  TCICT_ASSERT(tci::order(ctx, vector) == 1);
-  TCICT_ASSERT(tci::size(ctx, vector) == 3);
-  for (std::size_t i = 0; i < 3; ++i) {
-    TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {i})),
-                       expected[i], tol);
-  }
+  expect_vector_3(fix, vector, expected);
 
-  // V1 does not state that an out-of-place overload leaves its input alone;
-  // this asserts the reading that "out-of-place" means exactly that.
+  // V1 declares this overload's input `const`, but TenT is a handle type, so
+  // that alone does not forbid `out` aliasing the input's storage. What is
+  // asserted here is the reading that "out-of-place" means the input is left
+  // observably unchanged.
   TCICT_ASSERT(tci::order(ctx, matrix) == 2);
   TCICT_ASSERT(tci::size(ctx, matrix) == 9);
 #else
