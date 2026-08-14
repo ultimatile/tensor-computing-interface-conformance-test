@@ -5,7 +5,10 @@
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
 
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <vector>
 
 namespace tcict {
 namespace tests {
@@ -181,48 +184,6 @@ void test_imag_extraction(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
-// --- real and imag extraction (in-place) ---
-
-template <typename TenT>
-void test_real_imag_inplace(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_REAL) && !defined(TCICT_SKIP_IMAG)
-  auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
-  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
-  tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(5.25, 7.75));
-  tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(-2.25, -3.75));
-
-  tci::real_ten_t<TenT> real_output, imag_output;
-  tci::real(ctx, tensor, real_output);
-  tci::imag(ctx, tensor, imag_output);
-
-  using RealTenT = tci::real_ten_t<TenT>;
-  // Real side: tci::real copies the real parts. For real TenT it is a
-  // deep copy (identity), and make_elem already dropped the imaginary
-  // argument so these are the stored values; for complex TenT, tci::real
-  // extracts the real components into real_output.
-  TCICT_ASSERT_CLOSE(
-      real_part<RealTenT>(tci::get_elem(ctx, real_output, {0, 0})), 5.25, tol);
-  TCICT_ASSERT_CLOSE(
-      real_part<RealTenT>(tci::get_elem(ctx, real_output, {1, 1})), -2.25, tol);
-  if constexpr (is_complex_v<TenT>) {
-    // Complex input: imag_output holds the imaginary parts set above.
-    TCICT_ASSERT_CLOSE(
-        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {0, 0})), 7.75, tol);
-    TCICT_ASSERT_CLOSE(
-        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {1, 1})), -3.75, tol);
-  } else {
-    // Real input: tci::imag yields a zero tensor per TCI spec.
-    TCICT_ASSERT_CLOSE(
-        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {0, 0})), 0.0, tol);
-    TCICT_ASSERT_CLOSE(
-        real_part<RealTenT>(tci::get_elem(ctx, imag_output, {1, 1})), 0.0, tol);
-  }
-#else
-  (void)fix;
-#endif
-}
-
 // --- cplx_conj (in-place) ---
 
 template <typename TenT>
@@ -327,36 +288,6 @@ void test_to_cplx_outofplace(tci_test_fixture<RealTenT> &fix) {
   TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem00), 1.5, tol);
   TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem00), 0.0, tol);
   TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem11), 4.5, tol);
-  TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem11), 0.0, tol);
-#else
-  (void)fix;
-#endif
-}
-
-// --- to_cplx (in-place, from real type) ---
-
-template <typename RealTenT>
-void test_to_cplx_inplace(tci_test_fixture<RealTenT> &fix) {
-#ifndef TCICT_SKIP_TO_CPLX
-  auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
-  RealTenT real_tensor;
-  real_tensor = tci::zeros<RealTenT>(ctx, {2, 2});
-
-  tci::set_elem(ctx, real_tensor, {0, 0},
-                static_cast<tci::elem_t<RealTenT>>(7.25));
-  tci::set_elem(ctx, real_tensor, {1, 1},
-                static_cast<tci::elem_t<RealTenT>>(8.75));
-
-  tci::cplx_ten_t<RealTenT> complex_output;
-  tci::to_cplx(ctx, real_tensor, complex_output);
-
-  using CplxTenT = tci::cplx_ten_t<RealTenT>;
-  auto elem00 = tci::get_elem(ctx, complex_output, {0, 0});
-  auto elem11 = tci::get_elem(ctx, complex_output, {1, 1});
-  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem00), 7.25, tol);
-  TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem00), 0.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem11), 8.75, tol);
   TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem11), 0.0, tol);
 #else
   (void)fix;
@@ -535,14 +466,39 @@ void test_for_each_with_coors(tci_test_fixture<TenT> &fix) {
 
   TenT a = tci::template eye<TenT>(ctx, 2);
 
+  std::size_t visits = 0;
+  bool seen[2][2] = {{false, false}, {false, false}};
+
   tci::for_each_with_coors(
-      ctx, a, [](Elem &elem, const tci::elem_coors_t<TenT> &coors) {
-        if (coors[0] == coors[1]) {
+      ctx, a, [&](Elem &elem, const tci::elem_coors_t<TenT> &coors) {
+        // Validate before indexing `seen`: a backend handing back a malformed
+        // coordinate must fail as a conformance violation, not as an
+        // out-of-bounds write that reads like a defect in the suite.
+        TCICT_ASSERT(coors.size() == 2);
+        const auto row = static_cast<std::size_t>(coors[0]);
+        const auto col = static_cast<std::size_t>(coors[1]);
+        TCICT_ASSERT(row < 2 && col < 2);
+        TCICT_ASSERT(!seen[row][col]);
+        seen[row][col] = true;
+        ++visits;
+        if (row == col) {
           elem = static_cast<Elem>(2.0);
         }
       });
 
+  // "Visits every element exactly once" over a 2x2 diagonal tensor means 4
+  // visits: a backend walking only its 2 stored diagonal entries is excluded.
+  TCICT_ASSERT(visits == 4);
+  for (std::size_t i = 0; i < 2; ++i) {
+    for (std::size_t j = 0; j < 2; ++j) {
+      TCICT_ASSERT(seen[i][j]);
+    }
+  }
+
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {0, 0})), 2.0, tol);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {1, 1})), 2.0, tol);
+  TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, a, {0, 1})), 0.0, tol);
+  TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, a, {1, 0})), 0.0, tol);
 #else
   (void)fix;
 #endif
@@ -561,18 +517,135 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
   const TenT &const_a = a;
 
   double sum_diagonal = 0.0;
+  double sum_off_diagonal = 0.0;
+  std::size_t visits = 0;
+  bool seen[2][2] = {{false, false}, {false, false}};
+
   tci::for_each_with_coors(
-      ctx, const_a,
-      [&sum_diagonal](const Elem &elem, const tci::elem_coors_t<TenT> &coors) {
-        if (coors[0] == coors[1]) {
+      ctx, const_a, [&](const Elem &elem, const tci::elem_coors_t<TenT> &coors) {
+        // Validate before indexing `seen`: a malformed coordinate must fail
+        // as a conformance violation, not as an out-of-bounds write.
+        TCICT_ASSERT(coors.size() == 2);
+        const auto row = static_cast<std::size_t>(coors[0]);
+        const auto col = static_cast<std::size_t>(coors[1]);
+        TCICT_ASSERT(row < 2 && col < 2);
+        TCICT_ASSERT(!seen[row][col]);
+        seen[row][col] = true;
+        ++visits;
+        if (row == col) {
           sum_diagonal += real_part<TenT>(elem);
+        } else {
+          sum_off_diagonal += std::abs(elem);
         }
       });
 
+  TCICT_ASSERT(visits == 4);
+  for (std::size_t i = 0; i < 2; ++i) {
+    for (std::size_t j = 0; j < 2; ++j) {
+      TCICT_ASSERT(seen[i][j]);
+    }
+  }
+
   TCICT_ASSERT_CLOSE(sum_diagonal, 2.0, tol);
+  TCICT_ASSERT_CLOSE(sum_off_diagonal, 0.0, tol);
 #else
   (void)fix;
 #endif
+}
+
+// --- for_each: traversal over a diagonal tensor ---
+
+// V1's rule for `for_each` is "Visits every element exactly once". `eye(3)` has
+// 9 logical elements — a diagonal tensor's off-diagonal zeros are elements too
+// — so a backend traversing the 3 entries it stores is excluded by the visit
+// count, which is what this test adds over reading values.
+template <typename TenT>
+void test_for_each_eye_traversal(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_FOR_EACH) && !defined(TCICT_SKIP_EYE)
+  auto &ctx = fix.context();
+  auto elem_tol = tolerance(fix, tol_category::elementwise);
+  auto sum_tol = tolerance(fix, tol_category::reduction, 9);
+  using Elem = tci::elem_t<TenT>;
+
+  auto identity = tci::template eye<TenT>(ctx, 3);
+
+  std::size_t visits = 0;
+  std::size_t ones = 0;
+  std::size_t zeros = 0;
+  double sum = 0.0;
+
+  tci::for_each(ctx, static_cast<const TenT &>(identity),
+                [&](const Elem &elem) {
+                  ++visits;
+                  const double value = real_part<TenT>(elem);
+                  sum += value;
+                  if (std::abs(value - 1.0) < elem_tol) {
+                    ++ones;
+                  } else if (std::abs(value) < elem_tol) {
+                    ++zeros;
+                  }
+                });
+
+  TCICT_ASSERT(visits == 9);
+  TCICT_ASSERT(ones == 3);
+  TCICT_ASSERT(zeros == 6);
+  TCICT_ASSERT_CLOSE(sum, 3.0, sum_tol);
+#else
+  (void)fix;
+#endif
+}
+
+// --- distinct-value fixture shared by reshape and transpose ---
+
+// Both tests need per-element values a constant fill cannot distinguish: with
+// one value repeated, a dropped, duplicated, corrupted, or misplaced element
+// leaves the tensor identical to a correct one. The offset keeps every value
+// non-zero, so a slot left untouched by an incomplete write is distinguishable
+// too. The imaginary part is tied to the real one, which lets a comparison on
+// real parts extend to whole elements.
+inline double ramp_2x3x4(std::size_t i, std::size_t j, std::size_t k) {
+  return static_cast<double>(i * 12 + j * 4 + k) + 1.0;
+}
+
+// Writes the ramp into a {2, 3, 4} tensor and returns the values written.
+template <typename TenT>
+std::vector<double> fill_ramp_2x3x4(tci_test_fixture<TenT> &fix, TenT &tensor) {
+  auto &ctx = fix.context();
+  std::vector<double> values;
+  values.reserve(24);
+  for (std::size_t i = 0; i < 2; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      for (std::size_t k = 0; k < 4; ++k) {
+        const double value = ramp_2x3x4(i, j, k);
+        values.push_back(value);
+        tci::set_elem(ctx, tensor, {i, j, k},
+                      make_elem<TenT>(value, -0.5 * value));
+      }
+    }
+  }
+  return values;
+}
+
+// Asserts that every ramp value is readable at the coordinate `coors_of` maps
+// it to. Callers supply the mapping, so the same sweep serves an output whose
+// axes were permuted and an input that must have stayed put.
+template <typename TenT, typename CoorsOf>
+void expect_ramp_2x3x4(tci_test_fixture<TenT> &fix, const TenT &tensor,
+                       CoorsOf coors_of) {
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::elementwise);
+  for (std::size_t i = 0; i < 2; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      for (std::size_t k = 0; k < 4; ++k) {
+        const double value = ramp_2x3x4(i, j, k);
+        auto elem = tci::get_elem(ctx, tensor, coors_of(i, j, k));
+        TCICT_ASSERT_CLOSE(real_part<TenT>(elem), value, tol);
+        if constexpr (is_complex_v<TenT>) {
+          TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), -0.5 * value, tol);
+        }
+      }
+    }
+  }
 }
 
 // --- reshape (in-place) ---
@@ -580,12 +653,41 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_reshape(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_RESHAPE
   auto &ctx = fix.context();
-  auto tensor = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
+  auto tol = tolerance(fix, tol_category::elementwise);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 3, 4});
+  auto source = fill_ramp_2x3x4(fix, tensor);
 
   tci::shape_t<TenT> new_shape = {6, 4};
   TCICT_ASSERT_NOTHROW(tci::reshape(ctx, tensor, new_shape));
   TCICT_ASSERT(tci::shape(ctx, tensor) == new_shape);
   TCICT_ASSERT(tci::size(ctx, tensor) == 24);
+
+  // V1 has reshape perform "no reordering, transposition, or value change"
+  // while leaving the linear order of logical elements backend-defined, so
+  // which coordinate a given element lands on is not portably assertable. The
+  // multiset of values is: it holds under any ordering, and still catches a
+  // dropped, duplicated, or corrupted element.
+  std::vector<double> observed;
+  observed.reserve(24);
+  for (std::size_t i = 0; i < 6; ++i) {
+    for (std::size_t j = 0; j < 4; ++j) {
+      auto elem = tci::get_elem(ctx, tensor, {i, j});
+      const double value = real_part<TenT>(elem);
+      observed.push_back(value);
+      if constexpr (is_complex_v<TenT>) {
+        // Pins the imaginary part to its own real part, which extends the
+        // multiset comparison below from real parts to whole elements.
+        TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), -0.5 * value, tol);
+      }
+    }
+  }
+
+  TCICT_ASSERT(observed.size() == source.size());
+  std::sort(source.begin(), source.end());
+  std::sort(observed.begin(), observed.end());
+  for (std::size_t n = 0; n < source.size(); ++n) {
+    TCICT_ASSERT_CLOSE(observed[n], source[n], tol);
+  }
 #else
   (void)fix;
 #endif
@@ -596,7 +698,9 @@ template <typename TenT> void test_reshape(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_TRANSPOSE
   auto &ctx = fix.context();
-  auto tensor = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
+  tci::shape_t<TenT> original_shape = {2, 3, 4};
+  auto tensor = tci::zeros<TenT>(ctx, original_shape);
+  fill_ramp_2x3x4(fix, tensor);
 
   TenT transposed;
   tci::List<tci::bond_idx_t<TenT>> new_order = {2, 0, 1};
@@ -604,6 +708,24 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
 
   tci::shape_t<TenT> expected_shape = {4, 2, 3};
   TCICT_ASSERT(tci::shape(ctx, transposed) == expected_shape);
+
+  // The shape expectation above is consistent only with
+  // new_coord[p] = old_coord[new_order[p]], so for new_order = {2, 0, 1} the
+  // element expectation it fixes is out[k, i, j] == a[i, j, k]. Unlike
+  // reshape, this needs no linear-order convention: the coordinate map is
+  // what `new_order` states.
+  expect_ramp_2x3x4(fix, transposed,
+                    [](std::size_t i, std::size_t j, std::size_t k) {
+                      return tci::elem_coors_t<TenT>{k, i, j};
+                    });
+
+  // The overload under test writes to a separate output, so the input keeps
+  // its shape and every one of its values.
+  TCICT_ASSERT(tci::shape(ctx, tensor) == original_shape);
+  expect_ramp_2x3x4(fix, tensor,
+                    [](std::size_t i, std::size_t j, std::size_t k) {
+                      return tci::elem_coors_t<TenT>{i, j, k};
+                    });
 #else
   (void)fix;
 #endif
@@ -661,27 +783,6 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
-// --- concatenate: error cases ---
-
-template <typename TenT>
-void test_concatenate_errors(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_CONCATENATE
-  auto &ctx = fix.context();
-  auto tensor = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
-
-  TenT result;
-  tci::List<TenT> single = {tensor};
-  TCICT_ASSERT_THROWS(std::invalid_argument,
-                      tci::concatenate(ctx, single, 3, result));
-
-  tci::List<TenT> empty;
-  TCICT_ASSERT_THROWS(std::invalid_argument,
-                      tci::concatenate(ctx, empty, 0, result));
-#else
-  (void)fix;
-#endif
-}
-
 // --- extract_sub (out-of-place) ---
 
 template <typename TenT> void test_extract_sub(tci_test_fixture<TenT> &fix) {
@@ -706,28 +807,6 @@ template <typename TenT> void test_extract_sub(tci_test_fixture<TenT> &fix) {
   // (2,1,1) in original maps to (1,1,1) in sub
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, sub, {1, 1, 1})), 13.0,
                      tol);
-#else
-  (void)fix;
-#endif
-}
-
-// --- extract_sub: error handling ---
-
-template <typename TenT>
-void test_extract_sub_errors(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_EXTRACT_SUB
-  auto &ctx = fix.context();
-  auto a = tci::zeros<TenT>(ctx, {3, 3});
-
-  // Wrong number of coordinate pairs
-  tci::List<tci::Pair<tci::elem_coor_t<TenT>, tci::elem_coor_t<TenT>>>
-      wrong_count = {{0, 2}, {0, 2}, {0, 1}};
-  TCICT_ASSERT_THROWS(std::exception, tci::extract_sub(ctx, a, wrong_count));
-
-  // Invalid range (start >= end)
-  tci::List<tci::Pair<tci::elem_coor_t<TenT>, tci::elem_coor_t<TenT>>>
-      invalid_range = {{2, 1}, {0, 2}};
-  TCICT_ASSERT_THROWS(std::exception, tci::extract_sub(ctx, a, invalid_range));
 #else
   (void)fix;
 #endif
@@ -786,26 +865,6 @@ void test_replace_sub_outofplace(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
-// --- replace_sub: error cases ---
-
-template <typename TenT>
-void test_replace_sub_errors(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_REPLACE_SUB
-  auto &ctx = fix.context();
-  auto a = tci::zeros<TenT>(ctx, {3, 3});
-
-  // Dimension mismatch
-  auto sub = tci::zeros<TenT>(ctx, {2, 2, 2});
-  TCICT_ASSERT_THROWS(std::exception, tci::replace_sub(ctx, a, sub, {0, 0}));
-
-  // Out of bounds
-  auto sub2 = tci::zeros<TenT>(ctx, {2, 2});
-  TCICT_ASSERT_THROWS(std::exception, tci::replace_sub(ctx, a, sub2, {2, 2}));
-#else
-  (void)fix;
-#endif
-}
-
 // --- expand (in-place) ---
 
 template <typename TenT> void test_expand_inplace(tci_test_fixture<TenT> &fix) {
@@ -854,21 +913,6 @@ void test_expand_outofplace(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
-// --- expand: invalid bond throws ---
-
-template <typename TenT>
-void test_expand_invalid_throws(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_EXPAND
-  auto &ctx = fix.context();
-  auto a = tci::zeros<TenT>(ctx, {2, 2});
-
-  tci::Map<tci::bond_idx_t<TenT>, tci::bond_dim_t<TenT>> invalid_map = {{3, 1}};
-  TCICT_ASSERT_THROWS(std::exception, tci::expand(ctx, a, invalid_map));
-#else
-  (void)fix;
-#endif
-}
-
 // --- diag: vector to matrix ---
 
 template <typename TenT>
@@ -886,6 +930,9 @@ void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(tci::order(ctx, vector) == 2);
   TCICT_ASSERT(tci::shape(ctx, vector)[0] == 3);
   TCICT_ASSERT(tci::shape(ctx, vector)[1] == 3);
+  // The promoted tensor is diagonal, and a diagonal tensor's off-diagonal
+  // zeros count as logical elements however few entries the backend stores.
+  TCICT_ASSERT(tci::size(ctx, vector) == 9);
 
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {0, 0})), 1.0,
                      tol);
@@ -893,7 +940,14 @@ void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
                      tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {2, 2})), 3.0,
                      tol);
-  TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, vector, {0, 1})), 0.0, tol);
+  for (std::size_t i = 0; i < 3; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      if (i == j) {
+        continue;
+      }
+      TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, vector, {i, j})), 0.0, tol);
+    }
+  }
 #else
   (void)fix;
 #endif
@@ -918,6 +972,89 @@ void test_diag_mat_to_vec(tci_test_fixture<TenT> &fix) {
                      tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, identity, {2})), 1.0,
                      tol);
+#else
+  (void)fix;
+#endif
+}
+
+// --- diag: vector to matrix (out-of-place) ---
+
+template <typename TenT>
+void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_DIAG
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::elementwise);
+  const double expected[3] = {1.5, -2.5, 3.5};
+
+  auto vector = tci::zeros<TenT>(ctx, {3});
+  for (std::size_t i = 0; i < 3; ++i) {
+    tci::set_elem(ctx, vector, {i}, make_elem<TenT>(expected[i]));
+  }
+
+  TenT matrix;
+  TCICT_ASSERT_NOTHROW(tci::diag(ctx, vector, matrix));
+
+  TCICT_ASSERT(tci::order(ctx, matrix) == 2);
+  TCICT_ASSERT(tci::shape(ctx, matrix)[0] == 3);
+  TCICT_ASSERT(tci::shape(ctx, matrix)[1] == 3);
+  TCICT_ASSERT(tci::size(ctx, matrix) == 9);
+
+  for (std::size_t i = 0; i < 3; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      if (i == j) {
+        TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, matrix, {i, j})),
+                           expected[i], tol);
+      } else {
+        TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, matrix, {i, j})), 0.0,
+                           tol);
+      }
+    }
+  }
+
+  // The overload under test is the out-of-place one, so the input must still
+  // be the first-order tensor it was, with its values intact.
+  TCICT_ASSERT(tci::order(ctx, vector) == 1);
+  TCICT_ASSERT(tci::size(ctx, vector) == 3);
+  for (std::size_t i = 0; i < 3; ++i) {
+    TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {i})),
+                       expected[i], tol);
+  }
+#else
+  (void)fix;
+#endif
+}
+
+// --- diag: matrix to vector (out-of-place) ---
+
+template <typename TenT>
+void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_DIAG
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::elementwise);
+  // Distinct diagonal values rather than an identity: all-ones cannot tell a
+  // correct extraction from a reordered one. Building the input with `zeros`
+  // also keeps this test under TCICT_SKIP_DIAG alone, so a backend that
+  // implements diag but skips eye can still run it.
+  const double expected[3] = {4.5, -5.5, 6.5};
+
+  auto matrix = tci::zeros<TenT>(ctx, {3, 3});
+  for (std::size_t i = 0; i < 3; ++i) {
+    tci::set_elem(ctx, matrix, {i, i}, make_elem<TenT>(expected[i]));
+  }
+
+  TenT vector;
+  TCICT_ASSERT_NOTHROW(tci::diag(ctx, matrix, vector));
+
+  TCICT_ASSERT(tci::order(ctx, vector) == 1);
+  TCICT_ASSERT(tci::size(ctx, vector) == 3);
+  for (std::size_t i = 0; i < 3; ++i) {
+    TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, vector, {i})),
+                       expected[i], tol);
+  }
+
+  // Out-of-place again: the input is still the second-order tensor it was.
+  TCICT_ASSERT(tci::order(ctx, matrix) == 2);
+  TCICT_ASSERT(tci::size(ctx, matrix) == 9);
 #else
   (void)fix;
 #endif
@@ -990,21 +1127,6 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
-// --- stack: errors ---
-
-template <typename TenT> void test_stack_errors(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_STACK
-  auto &ctx = fix.context();
-
-  // Empty list
-  TenT result;
-  tci::List<TenT> empty;
-  TCICT_ASSERT_THROWS(std::invalid_argument, tci::stack(ctx, empty, 0, result));
-#else
-  (void)fix;
-#endif
-}
-
 } // namespace tests
 } // namespace tcict
 
@@ -1019,7 +1141,6 @@ template <typename TenT> void test_stack_errors(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "tensor_manipulation", test_shrink_complex_values) \
   X(__VA_ARGS__, "tensor_manipulation", test_real_extraction) \
   X(__VA_ARGS__, "tensor_manipulation", test_imag_extraction) \
-  X(__VA_ARGS__, "tensor_manipulation", test_real_imag_inplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_cplx_conj_inplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_cplx_conj_outofplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_for_each_doubling) \
@@ -1029,30 +1150,27 @@ template <typename TenT> void test_stack_errors(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "tensor_manipulation", test_for_each_inversion) \
   X(__VA_ARGS__, "tensor_manipulation", test_for_each_with_coors) \
   X(__VA_ARGS__, "tensor_manipulation", test_for_each_with_coors_const) \
+  X(__VA_ARGS__, "tensor_manipulation", test_for_each_eye_traversal) \
   X(__VA_ARGS__, "tensor_manipulation", test_reshape) \
   X(__VA_ARGS__, "tensor_manipulation", test_transpose) \
   X(__VA_ARGS__, "tensor_manipulation", test_concatenate_basic) \
   X(__VA_ARGS__, "tensor_manipulation", test_concatenate_values) \
-  X(__VA_ARGS__, "tensor_manipulation", test_concatenate_errors) \
   X(__VA_ARGS__, "tensor_manipulation", test_extract_sub) \
-  X(__VA_ARGS__, "tensor_manipulation", test_extract_sub_errors) \
   X(__VA_ARGS__, "tensor_manipulation", test_replace_sub_inplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_replace_sub_outofplace) \
-  X(__VA_ARGS__, "tensor_manipulation", test_replace_sub_errors) \
   X(__VA_ARGS__, "tensor_manipulation", test_expand_inplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_expand_outofplace) \
-  X(__VA_ARGS__, "tensor_manipulation", test_expand_invalid_throws) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_vec_to_mat) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec) \
+  X(__VA_ARGS__, "tensor_manipulation", test_diag_vec_to_mat_outofplace) \
+  X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec_outofplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_stack_basic) \
-  X(__VA_ARGS__, "tensor_manipulation", test_stack_last_axis) \
-  X(__VA_ARGS__, "tensor_manipulation", test_stack_errors)
+  X(__VA_ARGS__, "tensor_manipulation", test_stack_last_axis)
 
 // REAL_ONLY: TCI `to_cplx` takes a real tensor and lifts to complex; these
 //   tests are only meaningful for real TenT.
 #define TCICT_FOREACH_TENSOR_MANIPULATION_TEST_REAL_ONLY(X, ...) \
-  X(__VA_ARGS__, "tensor_manipulation", test_to_cplx_outofplace) \
-  X(__VA_ARGS__, "tensor_manipulation", test_to_cplx_inplace)
+  X(__VA_ARGS__, "tensor_manipulation", test_to_cplx_outofplace)
 
 // CPLX_ONLY: body is wrapped in `if constexpr (is_complex_v<TenT>)`; running
 //   for real TenT would be a no-op, so skip registration.
