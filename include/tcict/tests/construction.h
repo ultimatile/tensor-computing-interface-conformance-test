@@ -127,10 +127,7 @@ void test_eye_to_range(tci_test_fixture<TenT>& fix) {
   auto sentinel = make_elem<TenT>(-999.0);
   std::vector<tci::elem_t<TenT>> container(9, sentinel);
 
-  std::function<std::ptrdiff_t(const tci::elem_coors_t<TenT>&)> row_major_map
-      = [](const tci::elem_coors_t<TenT>& coors) -> std::ptrdiff_t {
-    return coors[0] * 3 + coors[1];
-  };
+  auto row_major_map = row_major_2d<TenT>(3);
 
   TCICT_ASSERT_NOTHROW(
       tci::to_range(ctx, identity, container.begin(), row_major_map));
@@ -392,10 +389,7 @@ void test_assign_from_range_row_major(tci_test_fixture<TenT>& fix) {
       make_elem<TenT>(1.0), make_elem<TenT>(2.0), make_elem<TenT>(3.0),
       make_elem<TenT>(4.0), make_elem<TenT>(5.0), make_elem<TenT>(6.0)};
 
-  std::function<std::ptrdiff_t(const tci::elem_coors_t<TenT>&)> coors2idx
-      = [](const tci::elem_coors_t<TenT>& coors) -> std::ptrdiff_t {
-    return coors[0] * 3 + coors[1];
-  };
+  auto coors2idx = row_major_2d<TenT>(3);
 
   tci::shape_t<TenT> shape = {2, 3};
   TenT tensor;

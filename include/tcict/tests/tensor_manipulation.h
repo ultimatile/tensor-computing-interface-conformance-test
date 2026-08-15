@@ -517,8 +517,8 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
 
   double sum_diagonal = 0.0;
   double sum_off_diagonal = 0.0;
-  // Records only, for the reason the mutable overload's test gives: an
-  // assertion here would throw through the backend's traversal frames.
+  // Records only: an assertion here would throw through the backend's
+  // traversal frames, which a conformance suite cannot assume carry one.
   std::vector<tci::elem_coors_t<TenT>> visited;
 
   tci::for_each_with_coors(
@@ -708,9 +708,9 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
 
   // The shape expectation above is consistent only with
   // new_coord[p] = old_coord[new_order[p]], so for new_order = {2, 0, 1} the
-  // element expectation it fixes is out[k, i, j] == a[i, j, k]. Unlike
-  // reshape, this needs no linear-order convention: the coordinate map is
-  // what `new_order` states.
+  // element expectation it fixes is out[k, i, j] == a[i, j, k]. The
+  // coordinate map is what `new_order` states, so no convention for the
+  // linear order of elements enters into it.
   expect_ramp_2x3x4(fix, transposed,
                     [](std::size_t i, std::size_t j, std::size_t k) {
                       return tci::elem_coors_t<TenT>{k, i, j};
