@@ -466,9 +466,10 @@ void test_for_each_with_coors(tci_test_fixture<TenT> &fix) {
 
   TenT a = tci::template eye<TenT>(ctx, 2);
 
-  // The callback only records. Asserting inside it would throw through the
-  // backend's traversal frames, which a conformance suite cannot assume are
-  // able to carry an exception.
+  // The callback records and mutates, but does not assert: an assertion here
+  // would throw through the backend's traversal frames, which a conformance
+  // suite cannot assume are able to carry an exception. Every check runs
+  // below, after the call returns.
   std::vector<tci::elem_coors_t<TenT>> visited;
 
   tci::for_each_with_coors(
