@@ -720,10 +720,12 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
                       return tci::elem_coors_t<TenT>{k, i, j};
                     });
 
-  // V1 declares this overload's input `const`, but TenT is a handle type, so
-  // that alone does not forbid `out` aliasing the input's storage. What is
-  // asserted here is the reading that "out-of-place" means the input is left
-  // observably unchanged.
+  // V1 declares this overload's input `const`, but leaves TenT's storage
+  // semantics open — portable code must "not assume `TenT` is
+  // copy-constructible or copy-assignable" — so a const reference does not by
+  // itself forbid `out` sharing storage with the input. What is asserted here
+  // is the reading that "out-of-place" means the input is left observably
+  // unchanged.
   TCICT_ASSERT(tci::shape(ctx, tensor) == original_shape);
   expect_ramp_2x3x4(fix, tensor,
                     [](std::size_t i, std::size_t j, std::size_t k) {
@@ -1012,10 +1014,12 @@ void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
 
   expect_diagonal_3x3(fix, matrix, expected);
 
-  // V1 declares this overload's input `const`, but TenT is a handle type, so
-  // that alone does not forbid `out` aliasing the input's storage. What is
-  // asserted here is the reading that "out-of-place" means the input is left
-  // observably unchanged.
+  // V1 declares this overload's input `const`, but leaves TenT's storage
+  // semantics open — portable code must "not assume `TenT` is
+  // copy-constructible or copy-assignable" — so a const reference does not by
+  // itself forbid `out` sharing storage with the input. What is asserted here
+  // is the reading that "out-of-place" means the input is left observably
+  // unchanged.
   expect_vector_3(fix, vector, expected);
 #else
   (void)fix;
@@ -1044,10 +1048,12 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
 
   expect_vector_3(fix, vector, expected);
 
-  // V1 declares this overload's input `const`, but TenT is a handle type, so
-  // that alone does not forbid `out` aliasing the input's storage. What is
-  // asserted here is the reading that "out-of-place" means the input is left
-  // observably unchanged — values included, not just order and size.
+  // V1 declares this overload's input `const`, but leaves TenT's storage
+  // semantics open — portable code must "not assume `TenT` is
+  // copy-constructible or copy-assignable" — so a const reference does not by
+  // itself forbid `out` sharing storage with the input. What is asserted here
+  // is the reading that "out-of-place" means the input is left observably
+  // unchanged, values included and not just order and size.
   expect_diagonal_3x3(fix, matrix, expected);
 #else
   (void)fix;
