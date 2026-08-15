@@ -1167,8 +1167,8 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "tensor_manipulation", test_stack_basic) \
   X(__VA_ARGS__, "tensor_manipulation", test_stack_last_axis)
 
-// REAL_ONLY: TCI `to_cplx` takes a real tensor and lifts to complex; these
-//   tests are only meaningful for real TenT.
+// REAL_ONLY: TCI `to_cplx` takes a real tensor and lifts to complex, so the
+//   test below is only meaningful for real TenT.
 #define TCICT_FOREACH_TENSOR_MANIPULATION_TEST_REAL_ONLY(X, ...) \
   X(__VA_ARGS__, "tensor_manipulation", test_to_cplx_outofplace)
 
