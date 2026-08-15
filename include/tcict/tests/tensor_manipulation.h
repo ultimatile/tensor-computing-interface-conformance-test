@@ -13,6 +13,16 @@
 namespace tcict {
 namespace tests {
 
+// Note on out-of-place inputs, referred to by the tests that assert it.
+//
+// V1 says nothing about whether an out-of-place overload's output may share
+// storage with its input. It has the vocabulary and uses it elsewhere —
+// `contract`'s output "may alias `a` or `b`", `copy` yields a result "without
+// sharing storage" — so the silence leaves `const` on the input short of
+// settling whether the input's observable values can change. The tests that
+// read their input back after the call are asserting the reading that
+// "out-of-place" means they cannot.
+
 // --- shrink (in-place) ---
 
 template <typename TenT> void test_shrink_inplace(tci_test_fixture<TenT> &fix) {
@@ -752,12 +762,8 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
                       return tci::elem_coors_t<TenT>{k, i, j};
                     });
 
-  // V1 says nothing about whether this overload's output may share storage
-  // with its input. It has the vocabulary and uses it elsewhere — `contract`'s
-  // output "may alias `a` or `b`", `copy` yields a result "without sharing
-  // storage" — so the silence here leaves `const` on the input short of
-  // settling whether the input's observable values can change. What is
-  // asserted below is the reading that "out-of-place" means they cannot.
+  // Input unchanged, per the note on out-of-place inputs at the top of this
+  // header.
   TCICT_ASSERT(tci::shape(ctx, tensor) == original_shape);
   expect_ramp_2x3x4(fix, tensor,
                     [](std::size_t i, std::size_t j, std::size_t k) {
@@ -1056,12 +1062,8 @@ void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
 
   expect_diagonal_3x3(fix, matrix, expected);
 
-  // V1 says nothing about whether this overload's output may share storage
-  // with its input. It has the vocabulary and uses it elsewhere — `contract`'s
-  // output "may alias `a` or `b`", `copy` yields a result "without sharing
-  // storage" — so the silence here leaves `const` on the input short of
-  // settling whether the input's observable values can change. What is
-  // asserted below is the reading that "out-of-place" means they cannot.
+  // Input unchanged, per the note on out-of-place inputs at the top of this
+  // header.
   expect_vector_3(fix, vector, expected);
 #else
   (void)fix;
@@ -1090,13 +1092,8 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
 
   expect_vector_3(fix, vector, expected);
 
-  // V1 says nothing about whether this overload's output may share storage
-  // with its input. It has the vocabulary and uses it elsewhere — `contract`'s
-  // output "may alias `a` or `b`", `copy` yields a result "without sharing
-  // storage" — so the silence here leaves `const` on the input short of
-  // settling whether the input's observable values can change. What is
-  // asserted below is the reading that "out-of-place" means they cannot,
-  // values included and not just order and size.
+  // Input unchanged, per the note on out-of-place inputs at the top of this
+  // header — values included, not just order and size.
   expect_diagonal_3x3(fix, matrix, expected);
 #else
   (void)fix;
