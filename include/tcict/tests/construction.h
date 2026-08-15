@@ -89,7 +89,7 @@ void test_eye(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(result_shape[0] == 3);
   TCICT_ASSERT(result_shape[1] == 3);
   // A diagonal tensor's off-diagonal zeros are logical elements too, so an
-  // {N, N} identity has N^2 of them however few the backend stores.
+  // {N, N} identity has N^2 logical elements however few the backend stores.
   TCICT_ASSERT(tci::size(ctx, identity) == 9);
 
   // Verify diagonal elements are 1 and off-diagonal elements are 0
