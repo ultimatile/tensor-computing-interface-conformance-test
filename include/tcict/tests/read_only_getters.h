@@ -61,7 +61,8 @@ void test_size_bytes(tci_test_fixture<TenT>& fix) {
   auto tensor = tci::zeros<TenT>(ctx, {2, 3, 4});
   // V1's entry for it is "Reports memory consumption in bytes": no formula, no
   // lower bound. Callable-and-returns is the whole of what is portably
-  // assertable.
+  // assertable, so what this test and its second-order counterpart below give
+  // between them is that neither rank makes the call fail.
   TCICT_ASSERT_NOTHROW(tci::size_bytes(ctx, tensor));
 #else
   (void)fix;
@@ -97,6 +98,8 @@ template <typename TenT>
 void test_size_bytes_2x2(tci_test_fixture<TenT>& fix) {
 #ifndef TCICT_SKIP_SIZE_BYTES
   auto& ctx = fix.context();
+  // The second-order half of the pair; see the third-order test above for what
+  // V1 leaves assertable.
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   TCICT_ASSERT_NOTHROW(tci::size_bytes(ctx, tensor));
 #else
