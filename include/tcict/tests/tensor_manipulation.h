@@ -480,8 +480,10 @@ void test_for_each_with_coors(tci_test_fixture<TenT> &fix) {
         }
       });
 
-  // "Visits every element exactly once" over a 2x2 diagonal tensor means 4
-  // visits: a backend walking only its 2 stored diagonal entries is excluded.
+  // V1 gives `for_each_with_coors` as "Like `for_each` but passes coordinates
+  // alongside each element", so `for_each`'s "Visits every element exactly
+  // once" carries over: 4 visits for a 2x2 diagonal tensor, which excludes a
+  // backend walking only its 2 stored diagonal entries.
   TCICT_ASSERT(visited.size() == 4);
   bool seen[2][2] = {{false, false}, {false, false}};
   for (const auto &coors : visited) {
@@ -518,8 +520,9 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
 
   double sum_diagonal = 0.0;
   double sum_off_diagonal = 0.0;
-  // Records only: an assertion here would throw through the backend's
-  // traversal frames, which a conformance suite cannot assume carry one.
+  // The callback records and accumulates, but does not assert: an assertion
+  // here would throw through the backend's traversal frames, which a
+  // conformance suite cannot assume are able to carry an exception.
   std::vector<tci::elem_coors_t<TenT>> visited;
 
   tci::for_each_with_coors(

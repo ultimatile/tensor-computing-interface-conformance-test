@@ -113,10 +113,10 @@ void test_eye(tci_test_fixture<TenT>& fix) {
 
 // --- eye: to_range writes every logical element ---
 
-// V1 fixes the logical-element view of a diagonal tensor: the off-diagonal
-// zeros "define its behavior regardless of storage", and `to_range` writes all
-// N^2 of them. A backend that walked only its N stored entries would leave the
-// sentinel standing in the slots it skipped.
+// V1: "A diagonal tensor's logical elements — including off-diagonal zeros —
+// define its behavior regardless of storage. Thus ... `to_range` writes all
+// `N^2` elements". A backend that walked only its N stored entries would leave
+// the sentinel standing in the slots it skipped.
 template <typename TenT>
 void test_eye_to_range(tci_test_fixture<TenT>& fix) {
 #if !defined(TCICT_SKIP_EYE) && !defined(TCICT_SKIP_TO_RANGE)
@@ -176,8 +176,8 @@ void test_random_inplace(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(tci::shape(ctx, tensor) == shape);
   TCICT_ASSERT(tci::size(ctx, tensor) == 6);
   // Separates "gen was never invoked" from "an element does not match": with
-  // an empty record the containment loop below fails for every coordinate and
-  // reports the mismatch rather than the cause.
+  // an empty record the containment check below throws at the first
+  // coordinate, reporting the mismatch rather than the cause.
   TCICT_ASSERT(!emitted.empty());
 
   for (std::size_t i = 0; i < 2; ++i) {

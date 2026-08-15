@@ -25,9 +25,9 @@ tci::elem_t<TenT> make_elem(double real, double imag = 0.0) {
 
 /// Row-major coordinate-to-index map for a second-order tensor of `ncols`
 /// columns, in the form `to_range` and `assign_from_range` accept.
-/// These APIs take the map from the caller precisely so no convention is
-/// privileged; this is a convenience for the tests that want row-major, and a
-/// test wanting another convention passes its own lambda instead.
+/// Both APIs take the map as a parameter, so this fixes no convention for
+/// them: it is shared by the tests that want row-major, and a test wanting
+/// another convention passes its own lambda instead.
 template <typename TenT>
 std::function<std::ptrdiff_t(const tci::elem_coors_t<TenT>&)> row_major_2d(
     std::ptrdiff_t ncols) {
