@@ -5,7 +5,6 @@
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
 
-#include <functional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -63,10 +62,7 @@ template <typename TenT> void test_to_range(tci_test_fixture<TenT> &fix) {
 
   std::vector<tci::elem_t<TenT>> container(6);
 
-  std::function<std::ptrdiff_t(const tci::elem_coors_t<TenT> &)> row_major_map =
-      [](const tci::elem_coors_t<TenT> &coors) -> std::ptrdiff_t {
-    return coors[0] * 3 + coors[1];
-  };
+  auto row_major_map = row_major_2d<TenT>(3);
 
   tci::to_range(ctx, a, container.begin(), row_major_map);
 

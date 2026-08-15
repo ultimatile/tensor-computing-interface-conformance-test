@@ -2,6 +2,8 @@
 
 #include <tci/tensor_traits.h>
 #include <complex>
+#include <cstddef>
+#include <functional>
 #include <type_traits>
 
 namespace tcict {
@@ -19,6 +21,20 @@ tci::elem_t<TenT> make_elem(double real, double imag = 0.0) {
     // NOLINTNEXTLINE(bugprone-narrowing-conversions) -- elem_t is always floating-point in TCI
     return static_cast<elem_type>(real);
   }
+}
+
+/// Row-major coordinate-to-index map for a second-order tensor of `ncols`
+/// columns, in the form `to_range` and `assign_from_range` accept.
+/// Both APIs take the map as a parameter, so this fixes no convention for
+/// them: it is shared by the tests that want row-major, and a test wanting
+/// another convention passes its own lambda instead.
+template <typename TenT>
+std::function<std::ptrdiff_t(const tci::elem_coors_t<TenT>&)> row_major_2d(
+    std::ptrdiff_t ncols) {
+  return [ncols](const tci::elem_coors_t<TenT>& coors) -> std::ptrdiff_t {
+    return static_cast<std::ptrdiff_t>(coors[0]) * ncols
+           + static_cast<std::ptrdiff_t>(coors[1]);
+  };
 }
 
 /// Extract the real part of an element as double.
