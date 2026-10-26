@@ -38,14 +38,16 @@ auto map_2d(std::ptrdiff_t rows, std::ptrdiff_t cols, layout_2d layout,
 
 }  // namespace detail
 
-// Each wrapper is compiled only when none of the APIs it calls is skipped.
-// Skipping every test that uses an API then removes every reference to it, as
-// README section 4 describes.
+// Each wrapper is guarded by the skip macro of the API it wraps, and every test
+// that calls it is guarded by that macro too. Skipping those tests therefore
+// removes the reference to the API, while skipping any other test leaves the
+// wrapper available to its callers.
 
 #ifndef TCICT_SKIP_TO_RANGE
 /// `to_range` of `a`, a tensor of second-order `shape`, under `layout`.
-/// Asserts that the call does not throw and that the backend passed only
-/// valid coordinates, so a test cannot leave the coordinate check unasserted.
+/// Asserts that the call throws no std::exception and that the backend passed
+/// only valid coordinates, so a test cannot leave the coordinate check
+/// unasserted.
 template <typename TenT, typename RandomIt>
 void to_range_2d(tci::context_handle_t<TenT>& ctx, const TenT& a,
                  const tci::shape_t<TenT>& shape, RandomIt first,
@@ -57,7 +59,9 @@ void to_range_2d(tci::context_handle_t<TenT>& ctx, const TenT& a,
       detail::map_2d<TenT>(static_cast<std::ptrdiff_t>(shape[0]),
                            static_cast<std::ptrdiff_t>(shape[1]), layout,
                            malformed)));
-  TCICT_ASSERT(!malformed);
+  TCICT_ASSERT_MSG(!malformed,
+                   "to_range_2d: the backend passed a coordinate outside the "
+                   "given shape, or the shape does not match the tensor");
 }
 #endif
 
@@ -78,7 +82,9 @@ void assign_from_range_2d(tci::context_handle_t<TenT>& ctx,
           detail::map_2d<TenT>(static_cast<std::ptrdiff_t>(shape[0]),
                                static_cast<std::ptrdiff_t>(shape[1]), layout,
                                malformed)));
-  TCICT_ASSERT(!malformed);
+  TCICT_ASSERT_MSG(!malformed,
+                   "assign_from_range_2d: the backend passed a coordinate "
+                   "outside the given shape");
 }
 #endif
 

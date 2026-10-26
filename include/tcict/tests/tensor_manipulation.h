@@ -19,7 +19,7 @@ namespace tests {
 // V1: "Most mutating functions provide two overloads: (1) in-place and (2)
 // out-of-place writing to a separate output." The tests that read their input
 // back after an out-of-place call assert a reading of that sentence: that the
-// input's values are unchanged.
+// input is unchanged.
 
 // --- shrink (in-place) ---
 
@@ -554,6 +554,7 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
   const TenT &const_a = a;
 
   double sum_diagonal = 0.0;
+  double sum_diagonal_imag = 0.0;
   double sum_off_diagonal = 0.0;
   visit_record_2x2 visited;
   tci::for_each_with_coors(
@@ -565,6 +566,7 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
         }
         if (row == col) {
           sum_diagonal += real_part<TenT>(elem);
+          sum_diagonal_imag += std::abs(imag_part<TenT>(elem));
         } else {
           sum_off_diagonal += std::abs(elem);
         }
@@ -572,6 +574,7 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
   visited.check();
 
   TCICT_ASSERT_CLOSE(sum_diagonal, 2.0, tol);
+  TCICT_ASSERT_CLOSE(sum_diagonal_imag, 0.0, tol);
   TCICT_ASSERT_CLOSE(sum_off_diagonal, 0.0, tol);
 #else
   (void)fix;
@@ -638,11 +641,6 @@ inline double ramp_2x3x4(std::size_t i, std::size_t j, std::size_t k) {
   return static_cast<double>(i * 12 + j * 4 + k) + 1.0;
 }
 
-// The helpers below that call a tci:: API are compiled only when none of those
-// APIs is skipped. Skipping every test that uses an API then removes every
-// reference to it, as README section 4 describes.
-
-#ifndef TCICT_SKIP_SET_ELEM
 // Writes the ramp into a {2, 3, 4} tensor and returns the values written.
 template <typename TenT>
 std::vector<double> fill_ramp_2x3x4(tci_test_fixture<TenT> &fix, TenT &tensor) {
@@ -661,9 +659,7 @@ std::vector<double> fill_ramp_2x3x4(tci_test_fixture<TenT> &fix, TenT &tensor) {
   }
   return values;
 }
-#endif
 
-#ifndef TCICT_SKIP_GET_ELEM
 // Asserts that every ramp value is readable at the coordinate `coors_at` maps
 // it to. Callers supply the mapping, so the same sweep serves an output whose
 // axes were permuted and an input that must have stayed put.
@@ -685,7 +681,6 @@ void expect_ramp_2x3x4(tci_test_fixture<TenT> &fix, const TenT &tensor,
     }
   }
 }
-#endif
 
 // --- reshape (in-place) ---
 
@@ -722,7 +717,6 @@ template <typename TenT> void test_reshape(tci_test_fixture<TenT> &fix) {
     }
   }
 
-  TCICT_ASSERT(observed.size() == source.size());
   std::sort(source.begin(), source.end());
   std::sort(observed.begin(), observed.end());
   for (std::size_t n = 0; n < source.size(); ++n) {
@@ -954,8 +948,6 @@ void test_expand_outofplace(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
-#if !defined(TCICT_SKIP_ORDER) && !defined(TCICT_SKIP_SIZE) \
-    && !defined(TCICT_SKIP_GET_ELEM)
 // Asserts that a first-order tensor of length 3 holds `expected` in order.
 // `expected` is real, so for a complex element type the imaginary part is
 // expected to be zero and is checked as such.
@@ -974,10 +966,7 @@ void expect_vector_3(tci_test_fixture<TenT> &fix, const TenT &tensor,
     }
   }
 }
-#endif
 
-#if !defined(TCICT_SKIP_ORDER) && !defined(TCICT_SKIP_SHAPE) \
-    && !defined(TCICT_SKIP_SIZE) && !defined(TCICT_SKIP_GET_ELEM)
 // Asserts that a {3, 3} tensor holds `expected` on its main diagonal and zero
 // everywhere else. The off-diagonal check goes through the modulus, so it
 // covers both parts of a complex element in one assertion; `expected` is real,
@@ -1010,7 +999,6 @@ void expect_diagonal_3x3(tci_test_fixture<TenT> &fix, const TenT &tensor,
     }
   }
 }
-#endif
 
 // --- diag: vector to matrix ---
 
