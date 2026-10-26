@@ -519,8 +519,13 @@ void test_for_each_with_coors(tci_test_fixture<TenT> &fix) {
     }
   }
 
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {0, 0})), 2.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {1, 1})), 2.0, tol);
+  for (std::size_t i = 0; i < 2; ++i) {
+    const auto elem = tci::get_elem(ctx, a, {i, i});
+    TCICT_ASSERT_CLOSE(real_part<TenT>(elem), 2.0, tol);
+    if constexpr (is_complex_v<TenT>) {
+      TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, tol);
+    }
+  }
   TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, a, {0, 1})), 0.0, tol);
   TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, a, {1, 0})), 0.0, tol);
 #else

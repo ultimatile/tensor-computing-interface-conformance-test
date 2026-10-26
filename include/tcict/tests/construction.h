@@ -163,28 +163,32 @@ void test_random_inplace(tci_test_fixture<TenT>& fix) {
   auto tol = tolerance(fix, tol_category::elementwise);
   tci::shape_t<TenT> shape = {2, 3};
 
-  std::vector<tci::elem_t<TenT>> emitted;
-  auto gen = [&]() -> tci::elem_t<TenT> {
-    double val = static_cast<double>(emitted.size());
-    auto elem = make_elem<TenT>(val, val + 0.5);
-    emitted.push_back(elem);
-    return elem;
+  // gen's k-th invocation (counting from 0) returns emission(k), so the call
+  // count alone determines the emitted set. gen keeps no record of its values:
+  // recording can allocate inside the backend's frames, which the traversal
+  // callbacks in tensor_manipulation.h are written to avoid.
+  auto emission = [](std::size_t k) {
+    const double val = static_cast<double>(k);
+    return make_elem<TenT>(val, val + 0.5);
   };
+  std::size_t calls = 0;
+  auto gen = [&]() -> tci::elem_t<TenT> { return emission(calls++); };
 
   TenT tensor;
   TCICT_ASSERT_NOTHROW(tensor = tci::template random<TenT>(ctx, shape, gen));
   TCICT_ASSERT(tci::shape(ctx, tensor) == shape);
   TCICT_ASSERT(tci::size(ctx, tensor) == 6);
   // Separates "gen was never invoked" from "an element does not match": with
-  // an empty record the containment check below throws at the first
-  // coordinate, reporting the mismatch rather than the cause.
-  TCICT_ASSERT(!emitted.empty());
+  // no calls the containment check below throws at the first coordinate,
+  // reporting the mismatch rather than the cause.
+  TCICT_ASSERT(calls > 0);
 
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
       auto elem = tci::get_elem(ctx, tensor, {i, j});
       bool contained = false;
-      for (const auto& candidate : emitted) {
+      for (std::size_t k = 0; k < calls; ++k) {
+        const auto candidate = emission(k);
         if (std::abs(real_part<TenT>(elem) - real_part<TenT>(candidate)) < tol
             && std::abs(imag_part<TenT>(elem) - imag_part<TenT>(candidate)) < tol) {
           contained = true;
