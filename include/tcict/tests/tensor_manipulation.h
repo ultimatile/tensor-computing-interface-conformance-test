@@ -463,7 +463,6 @@ void test_for_each_inversion(tci_test_fixture<TenT> &fix) {
 // callback under "Callbacks the backend invokes" in CONTRIBUTING.md, and
 // check() runs after the call returns.
 struct visit_record_2x2 {
-  std::size_t visits = 0;
   bool seen[2][2] = {{false, false}, {false, false}};
   bool malformed_coordinate = false;
   bool revisited = false;
@@ -472,7 +471,6 @@ struct visit_record_2x2 {
   // the element alone.
   template <typename Coors>
   bool record(const Coors &coors, std::ptrdiff_t &row, std::ptrdiff_t &col) {
-    ++visits;
     if (!coors_2d(coors, 2, 2, row, col)) {
       malformed_coordinate = true;
       return false;
@@ -482,14 +480,14 @@ struct visit_record_2x2 {
     return true;
   }
 
+  // V1 gives `for_each_with_coors` as "Like `for_each` but passes coordinates
+  // alongside each element", so `for_each`'s "Visits every element exactly
+  // once" carries over. No malformed coordinate, no revisit and every one of
+  // the 4 coordinates seen is that, and it excludes a backend walking only the
+  // 2 entries a diagonal tensor stores.
   void check() const {
     TCICT_ASSERT(!malformed_coordinate);
     TCICT_ASSERT(!revisited);
-    // V1 gives `for_each_with_coors` as "Like `for_each` but passes
-    // coordinates alongside each element", so `for_each`'s "Visits every
-    // element exactly once" carries over: 4 visits for a 2x2 diagonal tensor,
-    // which excludes a backend walking only its 2 stored diagonal entries.
-    TCICT_ASSERT(visits == 4);
     for (std::size_t i = 0; i < 2; ++i) {
       for (std::size_t j = 0; j < 2; ++j) {
         TCICT_ASSERT(seen[i][j]);
