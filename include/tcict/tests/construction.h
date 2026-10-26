@@ -438,7 +438,6 @@ void test_assign_from_range_column_major(tci_test_fixture<TenT>& fix) {
   tci::shape_t<TenT> shape = {2, 3};
   TenT tensor;
   assign_from_range_2d(ctx, shape, container.begin(), layout_2d::column_major, tensor);
-  TCICT_ASSERT(tci::shape(ctx, tensor) == shape);
 
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {

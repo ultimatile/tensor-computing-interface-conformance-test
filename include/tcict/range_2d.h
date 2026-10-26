@@ -69,9 +69,10 @@ void to_range_2d(tci::context_handle_t<TenT>& ctx, const TenT& a,
 
 #ifndef TCICT_SKIP_ASSIGN_FROM_RANGE
 /// `assign_from_range` of a second-order `shape` under `layout`, into `out`.
-/// Asserts as to_range_2d does. The result goes to an output parameter so
-/// that this wrapper asks no more of TenT than a test calling
-/// assign_from_range directly does: assignment from its result.
+/// Asserts that the call throws no std::exception, that the backend passed
+/// only valid coordinates, and that `out` has `shape`. The result goes to an
+/// output parameter so that this wrapper asks no more of TenT than a test
+/// calling assign_from_range directly does: assignment from its result.
 template <typename TenT, typename RandomIt>
 void assign_from_range_2d(tci::context_handle_t<TenT>& ctx,
                           const tci::shape_t<TenT>& shape, RandomIt first,
@@ -87,6 +88,7 @@ void assign_from_range_2d(tci::context_handle_t<TenT>& ctx,
   TCICT_ASSERT_MSG(!malformed,
                    "assign_from_range_2d: the backend passed a coordinate "
                    "outside the given shape");
+  TCICT_ASSERT(tci::shape(ctx, out) == shape);
 }
 #endif
 
