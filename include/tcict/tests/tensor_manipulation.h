@@ -744,11 +744,12 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
   tci::List<tci::bond_idx_t<TenT>> new_order = {2, 0, 1};
   TCICT_ASSERT_NOTHROW(tci::transpose(ctx, tensor, new_order, transposed));
 
-  // The expected shape {4, 2, 3} is consistent only with
-  // new_coord[p] = old_coord[new_order[p]], so for new_order = {2, 0, 1} the
-  // element expectation it fixes is out[k, i, j] == a[i, j, k]. The
-  // coordinate map is what `new_order` states, so no convention for the
-  // linear order of elements enters into it.
+  // V1 says only "Permutes bonds according to `new_order`", and its one
+  // example uses an order that is its own inverse, so which way the
+  // permutation runs is a reading. The suite reads new bond p as old bond
+  // new_order[p]: the {2, 3, 4} input becomes {4, 2, 3}, and
+  // out[k, i, j] == a[i, j, k]. The coordinate map follows from that reading,
+  // so no convention for the linear order of elements enters into it.
   const tci::shape_t<TenT> expected_shape = {4, 2, 3};
   expect_ramp_2x3x4(fix, transposed, expected_shape,
                     [](std::size_t i, std::size_t j, std::size_t k) {

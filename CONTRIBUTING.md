@@ -87,7 +87,7 @@ The tests that read their input back after an out-of-place call assert a reading
 
 Coordinate maps, generators and traversal callbacks run inside the backend's frames, which a conformance suite cannot assume are able to carry an exception.
 The suite reads V1 as invoking them one at a time: V1's own `for_each` example accumulates into a plain variable, `[&tot](const float el) { tot += el; }`, and gives the result as `tot == 3.0`.
-So they neither assert, nor allocate, nor read a coordinate's components before checking the coordinate.
+So they neither assert, nor allocate, nor read a coordinate's components before checking the coordinate: that it has as many components as the tensor has bonds, and that each is less than its bond's dimension.
 Whatever a callback observes for the test, such as a flag for a malformed coordinate, a visit count or a running sum, it keeps in variables the test reads after the call returns, and the test asserts on those.
-A callback that receives a second-order coordinate checks it by passing it through `coors_2d` in `include/tcict/elem_helper.h` before reading its components, and records a coordinate `coors_2d` rejects in a flag the test asserts is clear.
+A callback that receives a second-order coordinate makes that check with `coors_2d` in `include/tcict/elem_helper.h` before reading its components, and records a coordinate `coors_2d` rejects in a flag the test asserts is clear.
 Tests call `to_range` and `assign_from_range` on second-order tensors through `to_range_2d` and `assign_from_range_2d` in `include/tcict/range_2d.h`.
