@@ -400,6 +400,7 @@ void test_assign_from_range_row_major(tci_test_fixture<TenT>& fix) {
 
   TCICT_ASSERT(tci::order(ctx, tensor) == 2);
   auto result_shape = tci::shape(ctx, tensor);
+  TCICT_ASSERT(result_shape.size() == 2);
   TCICT_ASSERT(result_shape[0] == 2);
   TCICT_ASSERT(result_shape[1] == 3);
 

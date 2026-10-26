@@ -971,6 +971,7 @@ void expect_diagonal_3x3(tci_test_fixture<TenT> &fix, const TenT &tensor,
   auto tol = tolerance(fix, tol_category::elementwise);
   TCICT_ASSERT(tci::order(ctx, tensor) == 2);
   auto tensor_shape = tci::shape(ctx, tensor);
+  TCICT_ASSERT(tensor_shape.size() == 2);
   TCICT_ASSERT(tensor_shape[0] == 3 && tensor_shape[1] == 3);
   // A diagonal tensor's off-diagonal zeros count as logical elements however
   // few entries the backend stores, so the count is 3^2.
