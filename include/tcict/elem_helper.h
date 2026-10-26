@@ -3,7 +3,6 @@
 #include <tci/tensor_traits.h>
 #include <complex>
 #include <cstddef>
-#include <functional>
 #include <type_traits>
 
 namespace tcict {
@@ -23,17 +22,59 @@ tci::elem_t<TenT> make_elem(double real, double imag = 0.0) {
   }
 }
 
-/// Row-major coordinate-to-index map for a second-order tensor of `ncols`
-/// columns, in the form `to_range` and `assign_from_range` accept.
-/// Both APIs take the map as a parameter, so this fixes no convention for
-/// them: it is shared by the tests that want row-major, and a test wanting
-/// another convention passes its own lambda instead.
+/// Reads `coors` as a {row, col} coordinate of a `rows` x `cols` tensor.
+/// Returns false, leaving `row` and `col` unspecified, when it is not one.
+///
+/// Callbacks the backend invokes (coordinate maps, generators, traversal
+/// callbacks) run inside the backend's frames, which a conformance suite
+/// cannot assume are able to carry an exception. So they neither assert, nor
+/// allocate, nor index with a coordinate they have not checked: they record
+/// into flags and counters, and the test asserts after the call returns. A
+/// callback that receives a coordinate passes it through this first.
+template <typename Coors>
+bool coors_2d(const Coors& coors, std::ptrdiff_t rows, std::ptrdiff_t cols,
+              std::ptrdiff_t& row, std::ptrdiff_t& col) {
+  if (coors.size() != 2) {
+    return false;
+  }
+  row = static_cast<std::ptrdiff_t>(coors[0]);
+  col = static_cast<std::ptrdiff_t>(coors[1]);
+  return row >= 0 && row < rows && col >= 0 && col < cols;
+}
+
+/// Coordinate-to-index maps for a `rows` x `cols` tensor, in the form
+/// `to_range` and `assign_from_range` accept. Both APIs take the map as a
+/// parameter, so these fix no convention for them; a test picks the one it
+/// wants.
+///
+/// A coordinate `coors_2d` rejects sets `malformed` and maps to index 0, so
+/// the backend's access stays inside the range; what it reads or writes there
+/// does not matter, since the test fails on `malformed`.
 template <typename TenT>
-std::function<std::ptrdiff_t(const tci::elem_coors_t<TenT>&)> row_major_2d(
-    std::ptrdiff_t ncols) {
-  return [ncols](const tci::elem_coors_t<TenT>& coors) -> std::ptrdiff_t {
-    return static_cast<std::ptrdiff_t>(coors[0]) * ncols
-           + static_cast<std::ptrdiff_t>(coors[1]);
+auto row_major_2d(std::ptrdiff_t rows, std::ptrdiff_t cols, bool& malformed) {
+  return [rows, cols, &malformed](
+             const tci::elem_coors_t<TenT>& coors) -> std::ptrdiff_t {
+    std::ptrdiff_t row = 0;
+    std::ptrdiff_t col = 0;
+    if (!coors_2d(coors, rows, cols, row, col)) {
+      malformed = true;
+      return 0;
+    }
+    return row * cols + col;
+  };
+}
+
+template <typename TenT>
+auto column_major_2d(std::ptrdiff_t rows, std::ptrdiff_t cols, bool& malformed) {
+  return [rows, cols, &malformed](
+             const tci::elem_coors_t<TenT>& coors) -> std::ptrdiff_t {
+    std::ptrdiff_t row = 0;
+    std::ptrdiff_t col = 0;
+    if (!coors_2d(coors, rows, cols, row, col)) {
+      malformed = true;
+      return 0;
+    }
+    return col * rows + row;
   };
 }
 

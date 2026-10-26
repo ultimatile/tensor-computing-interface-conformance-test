@@ -5,6 +5,7 @@
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
 
+#include <cstddef>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -54,17 +55,26 @@ template <typename TenT> void test_to_range(tci_test_fixture<TenT> &fix) {
   auto eps = fix.epsilon();
 
   TenT a = tci::template zeros<TenT>(ctx, {2, 3});
+  bool malformed_traversal = false;
   tci::for_each_with_coors(
       ctx, a,
-      [](tci::elem_t<TenT> &elem, const tci::elem_coors_t<TenT> &coors) {
-        elem = static_cast<tci::elem_t<TenT>>(coors[0] * 3 + coors[1]);
+      [&](tci::elem_t<TenT> &elem, const tci::elem_coors_t<TenT> &coors) {
+        std::ptrdiff_t row = 0;
+        std::ptrdiff_t col = 0;
+        if (!coors_2d(coors, 2, 3, row, col)) {
+          malformed_traversal = true;
+          return;
+        }
+        elem = static_cast<tci::elem_t<TenT>>(row * 3 + col);
       });
+  TCICT_ASSERT(!malformed_traversal);
 
   std::vector<tci::elem_t<TenT>> container(6);
 
-  auto row_major_map = row_major_2d<TenT>(3);
-
-  tci::to_range(ctx, a, container.begin(), row_major_map);
+  bool malformed_map = false;
+  tci::to_range(ctx, a, container.begin(),
+                row_major_2d<TenT>(2, 3, malformed_map));
+  TCICT_ASSERT(!malformed_map);
 
   for (int i = 0; i < 6; ++i) {
     TCICT_ASSERT_CLOSE(real_part<TenT>(container[i]), static_cast<double>(i),

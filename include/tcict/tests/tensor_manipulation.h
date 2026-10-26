@@ -7,13 +7,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <complex>
 #include <cstddef>
 #include <vector>
 
 namespace tcict {
 namespace tests {
 
-// Note on out-of-place inputs, referred to by the tests that assert it.
+// Note on out-of-place inputs.
 //
 // V1: "Most mutating functions provide two overloads: (1) in-place and (2)
 // out-of-place writing to a separate output." The tests that read their input
@@ -247,7 +248,8 @@ void test_cplx_conj_outofplace(tci_test_fixture<TenT> &fix) {
 
   // Real parts hold for both real and complex (cplx_conj out-of-place is a
   // deep copy for real tensors per TCI spec); imaginary parts only exist for
-  // complex.
+  // complex. The reads of `input` assert it unchanged, per the note on
+  // out-of-place inputs at the top of this header.
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, input, {0, 0})), 3.14,
                      tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, output, {0, 0})), 3.14,
@@ -462,6 +464,47 @@ void test_for_each_inversion(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// --- for_each_with_coors ---
+
+// The coordinates a traversal of a 2x2 tensor visits: record() runs in the
+// callback under the rules coors_2d in elem_helper.h states, and check() runs
+// after the call returns.
+struct visit_record_2x2 {
+  std::size_t visits = 0;
+  bool seen[2][2] = {{false, false}, {false, false}};
+  bool malformed_coordinate = false;
+  bool revisited = false;
+
+  // Returns false for a coordinate coors_2d rejects; the callback then leaves
+  // the element alone.
+  template <typename Coors>
+  bool record(const Coors &coors, std::ptrdiff_t &row, std::ptrdiff_t &col) {
+    ++visits;
+    if (!coors_2d(coors, 2, 2, row, col)) {
+      malformed_coordinate = true;
+      return false;
+    }
+    revisited = revisited || seen[row][col];
+    seen[row][col] = true;
+    return true;
+  }
+
+  void check() const {
+    TCICT_ASSERT(!malformed_coordinate);
+    TCICT_ASSERT(!revisited);
+    // V1 gives `for_each_with_coors` as "Like `for_each` but passes
+    // coordinates alongside each element", so `for_each`'s "Visits every
+    // element exactly once" carries over: 4 visits for a 2x2 diagonal tensor,
+    // which excludes a backend walking only its 2 stored diagonal entries.
+    TCICT_ASSERT(visits == 4);
+    for (std::size_t i = 0; i < 2; ++i) {
+      for (std::size_t j = 0; j < 2; ++j) {
+        TCICT_ASSERT(seen[i][j]);
+      }
+    }
+  }
+};
+
 // --- for_each_with_coors: mutable ---
 
 template <typename TenT>
@@ -473,48 +516,16 @@ void test_for_each_with_coors(tci_test_fixture<TenT> &fix) {
 
   TenT a = tci::template eye<TenT>(ctx, 2);
 
-  // The callback records and mutates, but neither asserts nor allocates:
-  // either would run inside the backend's traversal frames, which a
-  // conformance suite cannot assume are able to carry an exception. It bounds
-  // each coordinate before indexing `seen` and reports a bad one by flag;
-  // every check runs below, after the call returns.
-  std::size_t visits = 0;
-  bool seen[2][2] = {{false, false}, {false, false}};
-  bool malformed_coordinate = false;
-  bool revisited = false;
-
+  visit_record_2x2 visited;
   tci::for_each_with_coors(
       ctx, a, [&](Elem &elem, const tci::elem_coors_t<TenT> &coors) {
-        ++visits;
-        if (coors.size() != 2) {
-          malformed_coordinate = true;
-          return;
-        }
-        const auto row = static_cast<std::size_t>(coors[0]);
-        const auto col = static_cast<std::size_t>(coors[1]);
-        if (row >= 2 || col >= 2) {
-          malformed_coordinate = true;
-          return;
-        }
-        revisited = revisited || seen[row][col];
-        seen[row][col] = true;
-        if (row == col) {
+        std::ptrdiff_t row = 0;
+        std::ptrdiff_t col = 0;
+        if (visited.record(coors, row, col) && row == col) {
           elem = static_cast<Elem>(2.0);
         }
       });
-
-  TCICT_ASSERT(!malformed_coordinate);
-  TCICT_ASSERT(!revisited);
-  // V1 gives `for_each_with_coors` as "Like `for_each` but passes coordinates
-  // alongside each element", so `for_each`'s "Visits every element exactly
-  // once" carries over: 4 visits for a 2x2 diagonal tensor, which excludes a
-  // backend walking only its 2 stored diagonal entries.
-  TCICT_ASSERT(visits == 4);
-  for (std::size_t i = 0; i < 2; ++i) {
-    for (std::size_t j = 0; j < 2; ++j) {
-      TCICT_ASSERT(seen[i][j]);
-    }
-  }
+  visited.check();
 
   for (std::size_t i = 0; i < 2; ++i) {
     const auto elem = tci::get_elem(ctx, a, {i, i});
@@ -544,45 +555,21 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
 
   double sum_diagonal = 0.0;
   double sum_off_diagonal = 0.0;
-  // The callback records and accumulates, but neither asserts nor allocates:
-  // either would run inside the backend's traversal frames, which a
-  // conformance suite cannot assume are able to carry an exception. Every
-  // check runs below, after the call returns.
-  std::size_t visits = 0;
-  bool seen[2][2] = {{false, false}, {false, false}};
-  bool malformed_coordinate = false;
-  bool revisited = false;
-
+  visit_record_2x2 visited;
   tci::for_each_with_coors(
       ctx, const_a, [&](const Elem &elem, const tci::elem_coors_t<TenT> &coors) {
-        ++visits;
-        if (coors.size() != 2) {
-          malformed_coordinate = true;
+        std::ptrdiff_t row = 0;
+        std::ptrdiff_t col = 0;
+        if (!visited.record(coors, row, col)) {
           return;
         }
-        const auto row = static_cast<std::size_t>(coors[0]);
-        const auto col = static_cast<std::size_t>(coors[1]);
-        if (row >= 2 || col >= 2) {
-          malformed_coordinate = true;
-          return;
-        }
-        revisited = revisited || seen[row][col];
-        seen[row][col] = true;
         if (row == col) {
           sum_diagonal += real_part<TenT>(elem);
         } else {
           sum_off_diagonal += std::abs(elem);
         }
       });
-
-  TCICT_ASSERT(!malformed_coordinate);
-  TCICT_ASSERT(!revisited);
-  TCICT_ASSERT(visits == 4);
-  for (std::size_t i = 0; i < 2; ++i) {
-    for (std::size_t j = 0; j < 2; ++j) {
-      TCICT_ASSERT(seen[i][j]);
-    }
-  }
+  visited.check();
 
   TCICT_ASSERT_CLOSE(sum_diagonal, 2.0, tol);
   TCICT_ASSERT_CLOSE(sum_off_diagonal, 0.0, tol);
@@ -903,7 +890,8 @@ void test_replace_sub_outofplace(tci_test_fixture<TenT> &fix) {
                      tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 99.0,
                      tol);
-  // Original unchanged
+  // Input unchanged, per the note on out-of-place inputs at the top of this
+  // header.
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {1, 1})), 0.0, tol);
 #else
   (void)fix;
