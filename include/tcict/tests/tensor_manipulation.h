@@ -625,8 +625,8 @@ void test_for_each_eye_traversal(tci_test_fixture<TenT> &fix) {
 // --- distinct-value fixture shared by reshape and transpose ---
 
 // Both tests need per-element values a constant fill cannot distinguish: with
-// one value repeated, a dropped, duplicated, corrupted, or misplaced element
-// leaves the tensor identical to a correct one. The offset keeps every value
+// one value repeated, a dropped, duplicated, or misplaced element leaves the
+// tensor identical to a correct one. The offset keeps every value
 // non-zero, so a slot left untouched by an incomplete write is distinguishable
 // too. The imaginary part is tied to the real one, which lets a comparison on
 // real parts extend to whole elements.

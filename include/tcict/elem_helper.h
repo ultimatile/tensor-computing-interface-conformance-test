@@ -33,9 +33,8 @@ tci::elem_coors_t<TenT> coors_of(Ix... ix) {
 
 /// Reads `coors` as a {row, col} coordinate of a `rows` x `cols` tensor.
 /// Returns false, leaving `row` and `col` unspecified, when it is not one.
-/// A callback the backend invokes with a coordinate passes it through this
-/// before indexing with it; see "Callbacks the backend invokes" in
-/// CONTRIBUTING.md.
+/// "Callbacks the backend invokes" in CONTRIBUTING.md says which callbacks
+/// call this.
 template <typename Coors>
 bool coors_2d(const Coors& coors, std::ptrdiff_t rows, std::ptrdiff_t cols,
               std::ptrdiff_t& row, std::ptrdiff_t& col) {

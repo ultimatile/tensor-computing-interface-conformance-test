@@ -127,7 +127,7 @@ void test_eye_to_range(tci_test_fixture<TenT>& fix) {
   auto sentinel = make_elem<TenT>(-999.0);
   std::vector<tci::elem_t<TenT>> container(9, sentinel);
 
-  to_range_2d(ctx, identity, {3, 3}, container.begin(), layout_2d::row_major);
+  to_range_2d(ctx, identity, container.begin(), layout_2d::row_major);
 
   for (std::size_t i = 0; i < 3; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {

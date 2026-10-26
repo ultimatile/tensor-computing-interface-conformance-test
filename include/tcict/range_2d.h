@@ -44,14 +44,13 @@ auto map_2d(std::ptrdiff_t rows, std::ptrdiff_t cols, layout_2d layout,
 // wrapper available to its callers.
 
 #ifndef TCICT_SKIP_TO_RANGE
-/// `to_range` of `a`, a tensor of second-order `shape`, under `layout`.
-/// Asserts that the call throws no std::exception and that the backend passed
-/// only valid coordinates, so a test cannot leave the coordinate check
-/// unasserted.
+/// `to_range` of the second-order tensor `a` under `layout`. Asserts that the
+/// call throws no std::exception and that the backend passed only valid
+/// coordinates, so a test cannot leave the coordinate check unasserted.
 template <typename TenT, typename RandomIt>
 void to_range_2d(tci::context_handle_t<TenT>& ctx, const TenT& a,
-                 const tci::shape_t<TenT>& shape, RandomIt first,
-                 layout_2d layout) {
+                 RandomIt first, layout_2d layout) {
+  const auto shape = tci::shape(ctx, a);
   TCICT_ASSERT(shape.size() == 2);
   bool malformed = false;
   TCICT_ASSERT_NOTHROW(tci::to_range(
@@ -61,7 +60,7 @@ void to_range_2d(tci::context_handle_t<TenT>& ctx, const TenT& a,
                            malformed)));
   TCICT_ASSERT_MSG(!malformed,
                    "to_range_2d: the backend passed a coordinate outside the "
-                   "given shape, or the shape does not match the tensor");
+                   "tensor's shape");
 }
 #endif
 

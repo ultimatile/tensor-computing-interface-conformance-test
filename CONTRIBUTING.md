@@ -76,7 +76,7 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 
 ## Conventions for writing tests
 
-These apply to every test header; comments in the code refer to them by section name.
+These apply to every header under `include/tcict/`; comments in the code refer to them by section name.
 
 ### Out-of-place inputs
 
@@ -87,6 +87,6 @@ The tests that read their input back after an out-of-place call assert a reading
 
 Coordinate maps, generators and traversal callbacks run inside the backend's frames, which a conformance suite cannot assume are able to carry an exception.
 So they neither assert, nor allocate, nor index with a coordinate they have not checked.
-They record into flags and counters instead, and the test asserts on those after the call returns.
+Whatever a callback observes for the test, such as a flag for a malformed coordinate, a visit count or a running sum, it keeps in variables the test reads after the call returns, and the test asserts on those.
 A callback that receives a second-order coordinate passes it through `coors_2d` in `include/tcict/elem_helper.h` before indexing with it.
-`to_range_2d` and `assign_from_range_2d` in `include/tcict/range_2d.h` make the call and assert the coordinate flag together, so a test that uses them cannot leave the flag unasserted.
+Tests call `to_range` and `assign_from_range` on second-order tensors through `to_range_2d` and `assign_from_range_2d` in `include/tcict/range_2d.h`.
