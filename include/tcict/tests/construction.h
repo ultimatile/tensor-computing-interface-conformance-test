@@ -163,9 +163,10 @@ void test_random_inplace(tci_test_fixture<TenT>& fix) {
   // gen's k-th invocation (counting from 0) returns emission(k), so the call
   // count alone determines the emitted set. gen keeps no record of its values,
   // since recording can allocate; see "Callbacks the backend invokes" in
-  // CONTRIBUTING.md.
+  // CONTRIBUTING.md. The values start at 1, so no emission equals the zero a
+  // tensor left unwritten would hold.
   auto emission = [](std::size_t k) {
-    const double val = static_cast<double>(k);
+    const double val = static_cast<double>(k) + 1.0;
     return make_elem<TenT>(val, val + 0.5);
   };
   std::size_t calls = 0;
