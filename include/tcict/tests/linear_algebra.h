@@ -1334,6 +1334,9 @@ void test_eigvals_diagonal(tci_test_fixture<TenT> &fix) {
   std::vector<double> ev_real(3);
   for (tci::elem_coor_t<CplxTenT> i = 0; i < 3; ++i) {
     ev_real[i] = real_part<CplxTenT>(tci::get_elem(ctx, eigenvalues, {i}));
+    // A NaN breaks the strict weak ordering std::sort requires; fail here
+    // instead of sorting with one.
+    TCICT_ASSERT(!std::isnan(ev_real[i]));
     // Imaginary parts should be ~0 for real diagonal matrix
     TCICT_ASSERT_CLOSE(
         imag_part<CplxTenT>(tci::get_elem(ctx, eigenvalues, {i})), 0.0, eps);

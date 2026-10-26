@@ -711,6 +711,9 @@ template <typename TenT> void test_reshape(tci_test_fixture<TenT> &fix) {
     for (std::size_t j = 0; j < 4; ++j) {
       auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i, j));
       const double value = real_part<TenT>(elem);
+      // A NaN breaks the strict weak ordering std::sort requires; fail here
+      // instead of sorting with one.
+      TCICT_ASSERT(!std::isnan(value));
       observed.push_back(value);
       if constexpr (is_complex_v<TenT>) {
         // Pins the imaginary part to its own real part, which extends the
