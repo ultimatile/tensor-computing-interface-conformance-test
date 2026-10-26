@@ -15,13 +15,10 @@ namespace tests {
 
 // Note on out-of-place inputs, referred to by the tests that assert it.
 //
-// V1 says nothing about whether an out-of-place overload's output may share
-// storage with its input. It has the vocabulary and uses it elsewhere —
-// `contract`'s output "may alias `a` or `b`", `copy` yields a result "without
-// sharing storage" — so the silence leaves `const` on the input short of
-// settling whether the input's observable values can change. The tests that
-// read their input back after the call are asserting the reading that
-// "out-of-place" means they cannot.
+// V1: "Most mutating functions provide two overloads: (1) in-place and (2)
+// out-of-place writing to a separate output." The tests that read their input
+// back after an out-of-place call assert a reading of that sentence: that the
+// input's values are unchanged.
 
 // --- shrink (in-place) ---
 
