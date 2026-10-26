@@ -544,8 +544,7 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
   TenT a = tci::template eye<TenT>(ctx, 2);
   const TenT &const_a = a;
 
-  // Each element as passed to the callback, checked one by one below, so that
-  // wrong values cannot hide behind a correct sum.
+  // Each element as passed to the callback, checked one by one below.
   Elem passed[2][2] = {};
   visit_record_2x2 visited;
   tci::for_each_with_coors(
@@ -630,8 +629,8 @@ void test_for_each_eye_traversal(tci_test_fixture<TenT> &fix) {
 // one value repeated, a dropped, duplicated, or misplaced element leaves the
 // tensor identical to a correct one. The offset keeps every value
 // non-zero, so a slot left untouched by an incomplete write is distinguishable
-// too. The imaginary part is tied to the real one, which lets a comparison on
-// real parts extend to whole elements.
+// too. fill_ramp_2x3x4 writes -0.5 times each value as the element's imaginary
+// part, which lets a comparison on real parts extend to whole elements.
 inline double ramp_2x3x4(std::size_t i, std::size_t j, std::size_t k) {
   return static_cast<double>(i * 12 + j * 4 + k) + 1.0;
 }
@@ -641,11 +640,13 @@ inline double ramp_2x3x4(std::size_t i, std::size_t j, std::size_t k) {
 // references to those APIs.
 
 #if !defined(TCICT_SKIP_RESHAPE) || !defined(TCICT_SKIP_TRANSPOSE)
-// Writes the ramp into a {2, 3, 4} tensor. Called by test_reshape and
-// test_transpose.
+// Writes the ramp into a {2, 3, 4} tensor, after asserting it has that shape.
+// Called by test_reshape and test_transpose.
 template <typename TenT>
 void fill_ramp_2x3x4(tci_test_fixture<TenT> &fix, TenT &tensor) {
   auto &ctx = fix.context();
+  const tci::shape_t<TenT> ramp_shape = {2, 3, 4};
+  TCICT_ASSERT(tci::shape(ctx, tensor) == ramp_shape);
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
       for (std::size_t k = 0; k < 4; ++k) {
@@ -659,14 +660,16 @@ void fill_ramp_2x3x4(tci_test_fixture<TenT> &fix, TenT &tensor) {
 #endif
 
 #ifndef TCICT_SKIP_TRANSPOSE
-// Called by test_transpose. Asserts that every ramp value is readable at the coordinate `coors_at` maps
-// it to. Callers supply the mapping, so the same sweep serves an output whose
+// Called by test_transpose. Asserts that `tensor` has `shape`, then that every
+// ramp value is readable at the coordinate `coors_at` maps it to. Callers
+// supply the shape and the mapping, so the same sweep serves an output whose
 // axes were permuted and an input that must have stayed put.
 template <typename TenT, typename CoorsAt>
 void expect_ramp_2x3x4(tci_test_fixture<TenT> &fix, const TenT &tensor,
-                       CoorsAt coors_at) {
+                       const tci::shape_t<TenT> &shape, CoorsAt coors_at) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
+  TCICT_ASSERT(tci::shape(ctx, tensor) == shape);
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
       for (std::size_t k = 0; k < 4; ++k) {
@@ -741,22 +744,19 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
   tci::List<tci::bond_idx_t<TenT>> new_order = {2, 0, 1};
   TCICT_ASSERT_NOTHROW(tci::transpose(ctx, tensor, new_order, transposed));
 
-  tci::shape_t<TenT> expected_shape = {4, 2, 3};
-  TCICT_ASSERT(tci::shape(ctx, transposed) == expected_shape);
-
-  // The shape expectation above is consistent only with
+  // The expected shape {4, 2, 3} is consistent only with
   // new_coord[p] = old_coord[new_order[p]], so for new_order = {2, 0, 1} the
   // element expectation it fixes is out[k, i, j] == a[i, j, k]. The
   // coordinate map is what `new_order` states, so no convention for the
   // linear order of elements enters into it.
-  expect_ramp_2x3x4(fix, transposed,
+  const tci::shape_t<TenT> expected_shape = {4, 2, 3};
+  expect_ramp_2x3x4(fix, transposed, expected_shape,
                     [](std::size_t i, std::size_t j, std::size_t k) {
                       return coors_of<TenT>(k, i, j);
                     });
 
   // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
-  TCICT_ASSERT(tci::shape(ctx, tensor) == original_shape);
-  expect_ramp_2x3x4(fix, tensor,
+  expect_ramp_2x3x4(fix, tensor, original_shape,
                     [](std::size_t i, std::size_t j, std::size_t k) {
                       return coors_of<TenT>(i, j, k);
                     });
