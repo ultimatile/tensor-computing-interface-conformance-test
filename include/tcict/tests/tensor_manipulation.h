@@ -540,15 +540,15 @@ template <typename TenT>
 void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_FOR_EACH_WITH_COORS
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::reduction, 2);
+  auto tol = tolerance(fix, tol_category::elementwise);
   using Elem = tci::elem_t<TenT>;
 
   TenT a = tci::template eye<TenT>(ctx, 2);
   const TenT &const_a = a;
 
-  double sum_diagonal = 0.0;
-  double sum_diagonal_imag = 0.0;
-  double sum_off_diagonal = 0.0;
+  // Each element as passed to the callback, checked one by one below, so that
+  // wrong values cannot hide behind a correct sum.
+  Elem passed[2][2] = {};
   visit_record_2x2 visited;
   tci::for_each_with_coors(
       ctx, const_a, [&](const Elem &elem, const tci::elem_coors_t<TenT> &coors) {
@@ -557,18 +557,22 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
         if (!visited.record(coors, row, col)) {
           return;
         }
-        if (row == col) {
-          sum_diagonal += real_part<TenT>(elem);
-          sum_diagonal_imag += std::abs(imag_part<TenT>(elem));
-        } else {
-          sum_off_diagonal += std::abs(elem);
-        }
+        passed[row][col] = elem;
       });
   visited.check();
 
-  TCICT_ASSERT_CLOSE(sum_diagonal, 2.0, tol);
-  TCICT_ASSERT_CLOSE(sum_diagonal_imag, 0.0, tol);
-  TCICT_ASSERT_CLOSE(sum_off_diagonal, 0.0, tol);
+  for (std::size_t i = 0; i < 2; ++i) {
+    for (std::size_t j = 0; j < 2; ++j) {
+      if (i == j) {
+        TCICT_ASSERT_CLOSE(real_part<TenT>(passed[i][j]), 1.0, tol);
+        if constexpr (is_complex_v<TenT>) {
+          TCICT_ASSERT_CLOSE(imag_part<TenT>(passed[i][j]), 0.0, tol);
+        }
+      } else {
+        TCICT_ASSERT_CLOSE(std::abs(passed[i][j]), 0.0, tol);
+      }
+    }
+  }
 #else
   (void)fix;
 #endif

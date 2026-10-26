@@ -86,6 +86,7 @@ The tests that read their input back after an out-of-place call assert a reading
 ### Callbacks the backend invokes
 
 Coordinate maps, generators and traversal callbacks run inside the backend's frames, which a conformance suite cannot assume are able to carry an exception.
+The suite reads V1 as invoking them one at a time: V1's own `for_each` example accumulates into a plain variable, `[&tot](const float el) { tot += el; }`, and gives the result as `tot == 3.0`.
 So they neither assert, nor allocate, nor index with a coordinate they have not checked.
 Whatever a callback observes for the test, such as a flag for a malformed coordinate, a visit count or a running sum, it keeps in variables the test reads after the call returns, and the test asserts on those.
 A callback that receives a second-order coordinate passes it through `coors_2d` in `include/tcict/elem_helper.h` before indexing with it.
