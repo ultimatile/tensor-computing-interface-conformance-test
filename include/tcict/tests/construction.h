@@ -162,8 +162,8 @@ void test_random_inplace(tci_test_fixture<TenT>& fix) {
 
   // gen's k-th invocation (counting from 0) returns emission(k), so the call
   // count alone determines the emitted set. gen keeps no record of its values,
-  // since recording can allocate; coors_2d in elem_helper.h says why a
-  // callback the backend invokes must not.
+  // since recording can allocate; see "Callbacks the backend invokes" in
+  // CONTRIBUTING.md.
   auto emission = [](std::size_t k) {
     const double val = static_cast<double>(k);
     return make_elem<TenT>(val, val + 0.5);
@@ -386,9 +386,13 @@ void test_assign_from_range_row_major(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
 
-  std::vector<tci::elem_t<TenT>> container = {
-      make_elem<TenT>(1.0), make_elem<TenT>(2.0), make_elem<TenT>(3.0),
-      make_elem<TenT>(4.0), make_elem<TenT>(5.0), make_elem<TenT>(6.0)};
+  // {{1, 2, 3}, {4, 5, 6}} in row-major order. Each element's imaginary part is
+  // -0.5 times its real part, so the complex instantiations check where the
+  // imaginary part lands as well.
+  std::vector<tci::elem_t<TenT>> container;
+  for (double v : {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}) {
+    container.push_back(make_elem<TenT>(v, -0.5 * v));
+  }
 
   tci::shape_t<TenT> shape = {2, 3};
   TenT tensor;
@@ -401,8 +405,12 @@ void test_assign_from_range_row_major(tci_test_fixture<TenT>& fix) {
 
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
-      TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, coors_of<TenT>(i, j))),
-                         static_cast<double>(i * 3 + j + 1), tol);
+      const auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i, j));
+      const auto value = static_cast<double>(i * 3 + j + 1);
+      TCICT_ASSERT_CLOSE(real_part<TenT>(elem), value, tol);
+      if constexpr (is_complex_v<TenT>) {
+        TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), -0.5 * value, tol);
+      }
     }
   }
 #else
@@ -418,11 +426,13 @@ void test_assign_from_range_column_major(tci_test_fixture<TenT>& fix) {
   auto& ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
 
-  // {{1, 2, 3}, {4, 5, 6}} in column-major order. Non-square, so a map that
-  // confused the row count with the column count would misplace elements.
-  std::vector<tci::elem_t<TenT>> container = {
-      make_elem<TenT>(1.0), make_elem<TenT>(4.0), make_elem<TenT>(2.0),
-      make_elem<TenT>(5.0), make_elem<TenT>(3.0), make_elem<TenT>(6.0)};
+  // {{1, 2, 3}, {4, 5, 6}} in column-major order, imaginary parts as in the
+  // row-major test. Non-square, so a map that confused the row count with the
+  // column count would misplace elements.
+  std::vector<tci::elem_t<TenT>> container;
+  for (double v : {1.0, 4.0, 2.0, 5.0, 3.0, 6.0}) {
+    container.push_back(make_elem<TenT>(v, -0.5 * v));
+  }
 
   tci::shape_t<TenT> shape = {2, 3};
   TenT tensor;
@@ -430,8 +440,12 @@ void test_assign_from_range_column_major(tci_test_fixture<TenT>& fix) {
 
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
-      TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, coors_of<TenT>(i, j))),
-                         static_cast<double>(i * 3 + j + 1), tol);
+      const auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i, j));
+      const auto value = static_cast<double>(i * 3 + j + 1);
+      TCICT_ASSERT_CLOSE(real_part<TenT>(elem), value, tol);
+      if constexpr (is_complex_v<TenT>) {
+        TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), -0.5 * value, tol);
+      }
     }
   }
 #else

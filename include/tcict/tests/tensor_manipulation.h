@@ -14,13 +14,6 @@
 namespace tcict {
 namespace tests {
 
-// Note on out-of-place inputs.
-//
-// V1: "Most mutating functions provide two overloads: (1) in-place and (2)
-// out-of-place writing to a separate output." The tests that read their input
-// back after an out-of-place call assert a reading of that sentence: that the
-// input is unchanged.
-
 // --- shrink (in-place) ---
 
 template <typename TenT> void test_shrink_inplace(tci_test_fixture<TenT> &fix) {
@@ -248,8 +241,8 @@ void test_cplx_conj_outofplace(tci_test_fixture<TenT> &fix) {
 
   // Real parts hold for both real and complex (cplx_conj out-of-place is a
   // deep copy for real tensors per TCI spec); imaginary parts only exist for
-  // complex. The reads of `input` assert it unchanged, per the note on
-  // out-of-place inputs at the top of this header.
+  // complex. The reads of `input` assert it unchanged; see "Out-of-place
+  // inputs" in CONTRIBUTING.md.
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, input, {0, 0})), 3.14,
                      tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, output, {0, 0})), 3.14,
@@ -467,8 +460,8 @@ void test_for_each_inversion(tci_test_fixture<TenT> &fix) {
 // --- for_each_with_coors ---
 
 // The coordinates a traversal of a 2x2 tensor visits: record() runs in the
-// callback under the rules coors_2d in elem_helper.h states, and check() runs
-// after the call returns.
+// callback under "Callbacks the backend invokes" in CONTRIBUTING.md, and
+// check() runs after the call returns.
 struct visit_record_2x2 {
   std::size_t visits = 0;
   bool seen[2][2] = {{false, false}, {false, false}};
@@ -641,23 +634,19 @@ inline double ramp_2x3x4(std::size_t i, std::size_t j, std::size_t k) {
   return static_cast<double>(i * 12 + j * 4 + k) + 1.0;
 }
 
-// Writes the ramp into a {2, 3, 4} tensor and returns the values written.
+// Writes the ramp into a {2, 3, 4} tensor.
 template <typename TenT>
-std::vector<double> fill_ramp_2x3x4(tci_test_fixture<TenT> &fix, TenT &tensor) {
+void fill_ramp_2x3x4(tci_test_fixture<TenT> &fix, TenT &tensor) {
   auto &ctx = fix.context();
-  std::vector<double> values;
-  values.reserve(24);
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
       for (std::size_t k = 0; k < 4; ++k) {
         const double value = ramp_2x3x4(i, j, k);
-        values.push_back(value);
         tci::set_elem(ctx, tensor, coors_of<TenT>(i, j, k),
                       make_elem<TenT>(value, -0.5 * value));
       }
     }
   }
-  return values;
 }
 
 // Asserts that every ramp value is readable at the coordinate `coors_at` maps
@@ -689,7 +678,7 @@ template <typename TenT> void test_reshape(tci_test_fixture<TenT> &fix) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {2, 3, 4});
-  auto source = fill_ramp_2x3x4(fix, tensor);
+  fill_ramp_2x3x4(fix, tensor);
 
   tci::shape_t<TenT> new_shape = {6, 4};
   TCICT_ASSERT_NOTHROW(tci::reshape(ctx, tensor, new_shape));
@@ -717,10 +706,11 @@ template <typename TenT> void test_reshape(tci_test_fixture<TenT> &fix) {
     }
   }
 
-  std::sort(source.begin(), source.end());
+  // The ramp yields 1, 2, ..., 24, so the sorted observed values must be
+  // exactly that sequence.
   std::sort(observed.begin(), observed.end());
-  for (std::size_t n = 0; n < source.size(); ++n) {
-    TCICT_ASSERT_CLOSE(observed[n], source[n], tol);
+  for (std::size_t n = 0; n < observed.size(); ++n) {
+    TCICT_ASSERT_CLOSE(observed[n], static_cast<double>(n + 1), tol);
   }
 #else
   (void)fix;
@@ -753,8 +743,7 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
                       return coors_of<TenT>(k, i, j);
                     });
 
-  // Input unchanged, per the note on out-of-place inputs at the top of this
-  // header.
+  // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
   TCICT_ASSERT(tci::shape(ctx, tensor) == original_shape);
   expect_ramp_2x3x4(fix, tensor,
                     [](std::size_t i, std::size_t j, std::size_t k) {
@@ -892,8 +881,7 @@ void test_replace_sub_outofplace(tci_test_fixture<TenT> &fix) {
                      tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 99.0,
                      tol);
-  // Input unchanged, per the note on out-of-place inputs at the top of this
-  // header.
+  // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, a, {1, 1})), 0.0, tol);
 #else
   (void)fix;
@@ -1055,8 +1043,7 @@ void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
 
   expect_diagonal_3x3(fix, matrix, expected);
 
-  // Input unchanged, per the note on out-of-place inputs at the top of this
-  // header.
+  // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
   expect_vector_3(fix, vector, expected);
 #else
   (void)fix;
@@ -1086,8 +1073,8 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
 
   expect_vector_3(fix, vector, expected);
 
-  // Input unchanged, per the note on out-of-place inputs at the top of this
-  // header — values included, not just order and size.
+  // Input unchanged, values included, not just order and size; see
+  // "Out-of-place inputs" in CONTRIBUTING.md.
   expect_diagonal_3x3(fix, matrix, expected);
 #else
   (void)fix;

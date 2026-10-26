@@ -33,13 +33,9 @@ tci::elem_coors_t<TenT> coors_of(Ix... ix) {
 
 /// Reads `coors` as a {row, col} coordinate of a `rows` x `cols` tensor.
 /// Returns false, leaving `row` and `col` unspecified, when it is not one.
-///
-/// Callbacks the backend invokes (coordinate maps, generators, traversal
-/// callbacks) run inside the backend's frames, which a conformance suite
-/// cannot assume are able to carry an exception. So they neither assert, nor
-/// allocate, nor index with a coordinate they have not checked: they record
-/// into flags and counters, and the test asserts after the call returns. A
-/// callback that receives a coordinate passes it through this first.
+/// A callback the backend invokes with a coordinate passes it through this
+/// before indexing with it; see "Callbacks the backend invokes" in
+/// CONTRIBUTING.md.
 template <typename Coors>
 bool coors_2d(const Coors& coors, std::ptrdiff_t rows, std::ptrdiff_t cols,
               std::ptrdiff_t& row, std::ptrdiff_t& col) {

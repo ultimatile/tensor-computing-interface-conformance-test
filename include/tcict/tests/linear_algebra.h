@@ -190,8 +190,7 @@ void test_normalize_outofplace(tci_test_fixture<TenT> &fix) {
   auto original_norm = tci::normalize(ctx, original, normalized);
   TCICT_ASSERT_CLOSE(std::abs(original_norm), 3.0, tol);
 
-  // Input unchanged, per the note on out-of-place inputs at the top of
-  // tensor_manipulation.h.
+  // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, original, {0, 0})), 2.0,
                      tol);
 
@@ -1168,8 +1167,7 @@ void test_scale_outofplace(tci_test_fixture<TenT> &fix) {
                      tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), -12.0,
                      tol);
-  // Input unchanged, per the note on out-of-place inputs at the top of
-  // tensor_manipulation.h.
+  // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 3.0,
                      tol);
 #else

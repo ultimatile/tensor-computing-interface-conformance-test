@@ -73,3 +73,20 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 | `CYTNX_REPO_URL` | `https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx.git` | URL used only when auto-cloning the default path |
 | `CYTNX_REF` | `origin/main` | ref the default-path checkout is reset to on every run |
 | `INTEGRATION_CMAKE_ARGS` | (empty) | extra args appended to the cmake configure command |
+
+## Conventions for writing tests
+
+These apply to every test header; comments in the code refer to them by section name.
+
+### Out-of-place inputs
+
+TCAPI V1: "Most mutating functions provide two overloads: (1) in-place and (2) out-of-place writing to a separate output."
+The tests that read their input back after an out-of-place call assert a reading of that sentence: that the input is unchanged.
+
+### Callbacks the backend invokes
+
+Coordinate maps, generators and traversal callbacks run inside the backend's frames, which a conformance suite cannot assume are able to carry an exception.
+So they neither assert, nor allocate, nor index with a coordinate they have not checked.
+They record into flags and counters instead, and the test asserts on those after the call returns.
+A callback that receives a second-order coordinate passes it through `coors_2d` in `include/tcict/elem_helper.h` before indexing with it.
+`to_range_2d` and `assign_from_range_2d` in `include/tcict/range_2d.h` make the call and assert the coordinate flag together, so a test that uses them cannot leave the flag unasserted.
