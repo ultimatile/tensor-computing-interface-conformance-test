@@ -3,6 +3,7 @@
 #include <tcict/assertion.h>
 #include <tcict/elem_helper.h>
 #include <tcict/fixture.h>
+#include <tcict/range_2d.h>
 #include <tcict/skip.h>
 
 #include <cmath>
@@ -31,7 +32,7 @@ void test_zeros(tci_test_fixture<TenT>& fix) {
   // Verify all elements are zero
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
-      auto elem = tci::get_elem(ctx, tensor, {i, j});
+      auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i, j));
       TCICT_ASSERT_CLOSE(real_part<TenT>(elem), 0.0, tol);
       if constexpr (is_complex_v<TenT>) {
         TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, tol);
@@ -61,7 +62,7 @@ void test_fill(tci_test_fixture<TenT>& fix) {
   // Verify every element equals the fill value
   for (std::size_t i = 0; i < 3; ++i) {
     for (std::size_t j = 0; j < 4; ++j) {
-      auto elem = tci::get_elem(ctx, tensor, {i, j});
+      auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i, j));
       TCICT_ASSERT_CLOSE(real_part<TenT>(elem), real_part<TenT>(val), tol);
       if constexpr (is_complex_v<TenT>) {
         TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), imag_part<TenT>(val), tol);
@@ -94,7 +95,7 @@ void test_eye(tci_test_fixture<TenT>& fix) {
   // Verify diagonal elements are 1 and off-diagonal elements are 0
   for (std::size_t i = 0; i < 3; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
-      auto elem = tci::get_elem(ctx, identity, {i, j});
+      auto elem = tci::get_elem(ctx, identity, coors_of<TenT>(i, j));
       if (i == j) {
         TCICT_ASSERT_CLOSE(real_part<TenT>(elem), 1.0, tol);
       } else {
@@ -126,10 +127,7 @@ void test_eye_to_range(tci_test_fixture<TenT>& fix) {
   auto sentinel = make_elem<TenT>(-999.0);
   std::vector<tci::elem_t<TenT>> container(9, sentinel);
 
-  bool malformed = false;
-  TCICT_ASSERT_NOTHROW(tci::to_range(ctx, identity, container.begin(),
-                                     row_major_2d<TenT>(3, 3, malformed)));
-  TCICT_ASSERT(!malformed);
+  to_range_2d(ctx, identity, {3, 3}, container.begin(), layout_2d::row_major);
 
   for (std::size_t i = 0; i < 3; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
@@ -184,7 +182,7 @@ void test_random_inplace(tci_test_fixture<TenT>& fix) {
 
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
-      auto elem = tci::get_elem(ctx, tensor, {i, j});
+      auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i, j));
       bool contained = false;
       for (std::size_t k = 0; k < calls; ++k) {
         const auto candidate = emission(k);
@@ -232,7 +230,7 @@ void test_random_outofplace(tci_test_fixture<TenT>& fix) {
 
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 2; ++j) {
-      auto elem = tci::get_elem(ctx, tensor, {i, j});
+      auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i, j));
       TCICT_ASSERT_CLOSE(real_part<TenT>(elem), real_part<TenT>(constant), tol);
       if constexpr (is_complex_v<TenT>) {
         TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), imag_part<TenT>(constant), tol);
@@ -392,13 +390,9 @@ void test_assign_from_range_row_major(tci_test_fixture<TenT>& fix) {
       make_elem<TenT>(1.0), make_elem<TenT>(2.0), make_elem<TenT>(3.0),
       make_elem<TenT>(4.0), make_elem<TenT>(5.0), make_elem<TenT>(6.0)};
 
-  bool malformed = false;
   tci::shape_t<TenT> shape = {2, 3};
   TenT tensor;
-  TCICT_ASSERT_NOTHROW(
-      tensor = tci::template assign_from_range<TenT>(
-          ctx, shape, container.begin(), row_major_2d<TenT>(2, 3, malformed)));
-  TCICT_ASSERT(!malformed);
+  assign_from_range_2d(ctx, shape, container.begin(), layout_2d::row_major, tensor);
 
   TCICT_ASSERT(tci::order(ctx, tensor) == 2);
   auto result_shape = tci::shape(ctx, tensor);
@@ -407,7 +401,7 @@ void test_assign_from_range_row_major(tci_test_fixture<TenT>& fix) {
 
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
-      TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {i, j})),
+      TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, coors_of<TenT>(i, j))),
                          static_cast<double>(i * 3 + j + 1), tol);
     }
   }
@@ -430,17 +424,13 @@ void test_assign_from_range_column_major(tci_test_fixture<TenT>& fix) {
       make_elem<TenT>(1.0), make_elem<TenT>(4.0), make_elem<TenT>(2.0),
       make_elem<TenT>(5.0), make_elem<TenT>(3.0), make_elem<TenT>(6.0)};
 
-  bool malformed = false;
   tci::shape_t<TenT> shape = {2, 3};
   TenT tensor;
-  TCICT_ASSERT_NOTHROW(
-      tensor = tci::template assign_from_range<TenT>(
-          ctx, shape, container.begin(), column_major_2d<TenT>(2, 3, malformed)));
-  TCICT_ASSERT(!malformed);
+  assign_from_range_2d(ctx, shape, container.begin(), layout_2d::column_major, tensor);
 
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
-      TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {i, j})),
+      TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, coors_of<TenT>(i, j))),
                          static_cast<double>(i * 3 + j + 1), tol);
     }
   }

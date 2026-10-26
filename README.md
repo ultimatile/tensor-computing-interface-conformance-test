@@ -46,7 +46,7 @@ TCICT_DOCTEST_REGISTER_CPLX(cfloat,  MyTen_CF)
 TCICT_DOCTEST_REGISTER_CPLX(cdouble, MyTen_CD)
 ```
 
-`TCICT_DOCTEST_REGISTER_REAL` registers every test that applies to real tensors (the full `ALL_TYPES` set plus `REAL_ONLY` tests such as `test_to_cplx_outofplace`).
+`TCICT_DOCTEST_REGISTER_REAL` registers every test that applies to real tensors (the full `ALL_TYPES` set plus the `REAL_ONLY` set, which holds `test_to_cplx_outofplace`).
 `TCICT_DOCTEST_REGISTER_CPLX` registers every test that applies to complex tensors (`ALL_TYPES` plus `CPLX_ONLY` tests such as `test_to_cplx_complex_to_complex`).
 
 Constraints:

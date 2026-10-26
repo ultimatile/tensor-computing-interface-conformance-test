@@ -3,6 +3,7 @@
 #include <tcict/assertion.h>
 #include <tcict/elem_helper.h>
 #include <tcict/fixture.h>
+#include <tcict/range_2d.h>
 #include <tcict/skip.h>
 
 #include <cstddef>
@@ -73,10 +74,7 @@ template <typename TenT> void test_to_range(tci_test_fixture<TenT> &fix) {
   // zero-filled slot that to_range never wrote would pass for it.
   std::vector<tci::elem_t<TenT>> container(6, make_elem<TenT>(-999.0));
 
-  bool malformed_map = false;
-  tci::to_range(ctx, a, container.begin(),
-                row_major_2d<TenT>(2, 3, malformed_map));
-  TCICT_ASSERT(!malformed_map);
+  to_range_2d(ctx, a, {2, 3}, container.begin(), layout_2d::row_major);
 
   for (int i = 0; i < 6; ++i) {
     TCICT_ASSERT_CLOSE(real_part<TenT>(container[i]), static_cast<double>(i),

@@ -22,6 +22,15 @@ tci::elem_t<TenT> make_elem(double real, double imag = 0.0) {
   }
 }
 
+/// Builds a coordinate from loop indices, converting each to the backend's
+/// `elem_coor_t`. A braced list of `std::size_t` indices is a narrowing
+/// conversion, which list-initialization rejects, whenever `elem_coor_t`
+/// cannot represent every `std::size_t` value.
+template <typename TenT, typename... Ix>
+tci::elem_coors_t<TenT> coors_of(Ix... ix) {
+  return {static_cast<tci::elem_coor_t<TenT>>(ix)...};
+}
+
 /// Reads `coors` as a {row, col} coordinate of a `rows` x `cols` tensor.
 /// Returns false, leaving `row` and `col` unspecified, when it is not one.
 ///
@@ -40,42 +49,6 @@ bool coors_2d(const Coors& coors, std::ptrdiff_t rows, std::ptrdiff_t cols,
   row = static_cast<std::ptrdiff_t>(coors[0]);
   col = static_cast<std::ptrdiff_t>(coors[1]);
   return row >= 0 && row < rows && col >= 0 && col < cols;
-}
-
-/// Coordinate-to-index maps for a `rows` x `cols` tensor, in the form
-/// `to_range` and `assign_from_range` accept. Both APIs take the map as a
-/// parameter, so these fix no convention for them; a test picks the one it
-/// wants.
-///
-/// strided_2d sends {row, col} to `row * row_stride + col * col_stride`, and
-/// row_major_2d and column_major_2d fix the two strides. A coordinate
-/// `coors_2d` rejects sets `malformed` and maps to index 0, so the backend's
-/// access stays inside the range; what it reads or writes there does not
-/// matter, since the test fails on `malformed`.
-template <typename TenT>
-auto strided_2d(std::ptrdiff_t rows, std::ptrdiff_t cols,
-                std::ptrdiff_t row_stride, std::ptrdiff_t col_stride,
-                bool& malformed) {
-  return [rows, cols, row_stride, col_stride, &malformed](
-             const tci::elem_coors_t<TenT>& coors) -> std::ptrdiff_t {
-    std::ptrdiff_t row = 0;
-    std::ptrdiff_t col = 0;
-    if (!coors_2d(coors, rows, cols, row, col)) {
-      malformed = true;
-      return 0;
-    }
-    return row * row_stride + col * col_stride;
-  };
-}
-
-template <typename TenT>
-auto row_major_2d(std::ptrdiff_t rows, std::ptrdiff_t cols, bool& malformed) {
-  return strided_2d<TenT>(rows, cols, cols, 1, malformed);
-}
-
-template <typename TenT>
-auto column_major_2d(std::ptrdiff_t rows, std::ptrdiff_t cols, bool& malformed) {
-  return strided_2d<TenT>(rows, cols, 1, rows, malformed);
 }
 
 /// Extract the real part of an element as double.

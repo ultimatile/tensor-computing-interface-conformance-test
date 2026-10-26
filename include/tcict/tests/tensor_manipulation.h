@@ -528,7 +528,7 @@ void test_for_each_with_coors(tci_test_fixture<TenT> &fix) {
   visited.check();
 
   for (std::size_t i = 0; i < 2; ++i) {
-    const auto elem = tci::get_elem(ctx, a, {i, i});
+    const auto elem = tci::get_elem(ctx, a, coors_of<TenT>(i, i));
     TCICT_ASSERT_CLOSE(real_part<TenT>(elem), 2.0, tol);
     if constexpr (is_complex_v<TenT>) {
       TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, tol);
@@ -638,6 +638,11 @@ inline double ramp_2x3x4(std::size_t i, std::size_t j, std::size_t k) {
   return static_cast<double>(i * 12 + j * 4 + k) + 1.0;
 }
 
+// The helpers below that call a tci:: API are compiled only when none of those
+// APIs is skipped. Skipping every test that uses an API then removes every
+// reference to it, as README section 4 describes.
+
+#ifndef TCICT_SKIP_SET_ELEM
 // Writes the ramp into a {2, 3, 4} tensor and returns the values written.
 template <typename TenT>
 std::vector<double> fill_ramp_2x3x4(tci_test_fixture<TenT> &fix, TenT &tensor) {
@@ -649,27 +654,29 @@ std::vector<double> fill_ramp_2x3x4(tci_test_fixture<TenT> &fix, TenT &tensor) {
       for (std::size_t k = 0; k < 4; ++k) {
         const double value = ramp_2x3x4(i, j, k);
         values.push_back(value);
-        tci::set_elem(ctx, tensor, {i, j, k},
+        tci::set_elem(ctx, tensor, coors_of<TenT>(i, j, k),
                       make_elem<TenT>(value, -0.5 * value));
       }
     }
   }
   return values;
 }
+#endif
 
-// Asserts that every ramp value is readable at the coordinate `coors_of` maps
+#ifndef TCICT_SKIP_GET_ELEM
+// Asserts that every ramp value is readable at the coordinate `coors_at` maps
 // it to. Callers supply the mapping, so the same sweep serves an output whose
 // axes were permuted and an input that must have stayed put.
-template <typename TenT, typename CoorsOf>
+template <typename TenT, typename CoorsAt>
 void expect_ramp_2x3x4(tci_test_fixture<TenT> &fix, const TenT &tensor,
-                       CoorsOf coors_of) {
+                       CoorsAt coors_at) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
       for (std::size_t k = 0; k < 4; ++k) {
         const double value = ramp_2x3x4(i, j, k);
-        auto elem = tci::get_elem(ctx, tensor, coors_of(i, j, k));
+        auto elem = tci::get_elem(ctx, tensor, coors_at(i, j, k));
         TCICT_ASSERT_CLOSE(real_part<TenT>(elem), value, tol);
         if constexpr (is_complex_v<TenT>) {
           TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), -0.5 * value, tol);
@@ -678,6 +685,7 @@ void expect_ramp_2x3x4(tci_test_fixture<TenT> &fix, const TenT &tensor,
     }
   }
 }
+#endif
 
 // --- reshape (in-place) ---
 
@@ -703,7 +711,7 @@ template <typename TenT> void test_reshape(tci_test_fixture<TenT> &fix) {
   observed.reserve(24);
   for (std::size_t i = 0; i < 6; ++i) {
     for (std::size_t j = 0; j < 4; ++j) {
-      auto elem = tci::get_elem(ctx, tensor, {i, j});
+      auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i, j));
       const double value = real_part<TenT>(elem);
       observed.push_back(value);
       if constexpr (is_complex_v<TenT>) {
@@ -748,7 +756,7 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
   // linear order of elements enters into it.
   expect_ramp_2x3x4(fix, transposed,
                     [](std::size_t i, std::size_t j, std::size_t k) {
-                      return tci::elem_coors_t<TenT>{k, i, j};
+                      return coors_of<TenT>(k, i, j);
                     });
 
   // Input unchanged, per the note on out-of-place inputs at the top of this
@@ -756,7 +764,7 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(tci::shape(ctx, tensor) == original_shape);
   expect_ramp_2x3x4(fix, tensor,
                     [](std::size_t i, std::size_t j, std::size_t k) {
-                      return tci::elem_coors_t<TenT>{i, j, k};
+                      return coors_of<TenT>(i, j, k);
                     });
 #else
   (void)fix;
@@ -946,6 +954,8 @@ void test_expand_outofplace(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+#if !defined(TCICT_SKIP_ORDER) && !defined(TCICT_SKIP_SIZE) \
+    && !defined(TCICT_SKIP_GET_ELEM)
 // Asserts that a first-order tensor of length 3 holds `expected` in order.
 // `expected` is real, so for a complex element type the imaginary part is
 // expected to be zero and is checked as such.
@@ -957,14 +967,17 @@ void expect_vector_3(tci_test_fixture<TenT> &fix, const TenT &tensor,
   TCICT_ASSERT(tci::order(ctx, tensor) == 1);
   TCICT_ASSERT(tci::size(ctx, tensor) == 3);
   for (std::size_t i = 0; i < 3; ++i) {
-    auto elem = tci::get_elem(ctx, tensor, {i});
+    auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i));
     TCICT_ASSERT_CLOSE(real_part<TenT>(elem), expected[i], tol);
     if constexpr (is_complex_v<TenT>) {
       TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, tol);
     }
   }
 }
+#endif
 
+#if !defined(TCICT_SKIP_ORDER) && !defined(TCICT_SKIP_SHAPE) \
+    && !defined(TCICT_SKIP_SIZE) && !defined(TCICT_SKIP_GET_ELEM)
 // Asserts that a {3, 3} tensor holds `expected` on its main diagonal and zero
 // everywhere else. The off-diagonal check goes through the modulus, so it
 // covers both parts of a complex element in one assertion; `expected` is real,
@@ -984,18 +997,20 @@ void expect_diagonal_3x3(tci_test_fixture<TenT> &fix, const TenT &tensor,
   for (std::size_t i = 0; i < 3; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
       if (i == j) {
-        auto elem = tci::get_elem(ctx, tensor, {i, j});
+        auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i, j));
         TCICT_ASSERT_CLOSE(real_part<TenT>(elem), expected[i], tol);
         if constexpr (is_complex_v<TenT>) {
           TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, tol);
         }
       } else {
-        TCICT_ASSERT_CLOSE(std::abs(tci::get_elem(ctx, tensor, {i, j})), 0.0,
-                           tol);
+        TCICT_ASSERT_CLOSE(
+            std::abs(tci::get_elem(ctx, tensor, coors_of<TenT>(i, j))), 0.0,
+            tol);
       }
     }
   }
 }
+#endif
 
 // --- diag: vector to matrix ---
 
@@ -1044,7 +1059,7 @@ void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
 
   auto vector = tci::zeros<TenT>(ctx, {3});
   for (std::size_t i = 0; i < 3; ++i) {
-    tci::set_elem(ctx, vector, {i}, make_elem<TenT>(expected[i]));
+    tci::set_elem(ctx, vector, coors_of<TenT>(i), make_elem<TenT>(expected[i]));
   }
 
   TenT matrix;
@@ -1074,7 +1089,8 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
 
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});
   for (std::size_t i = 0; i < 3; ++i) {
-    tci::set_elem(ctx, matrix, {i, i}, make_elem<TenT>(expected[i]));
+    tci::set_elem(ctx, matrix, coors_of<TenT>(i, i),
+                  make_elem<TenT>(expected[i]));
   }
 
   TenT vector;
