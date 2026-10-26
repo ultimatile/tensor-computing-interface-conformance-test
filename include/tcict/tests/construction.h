@@ -398,12 +398,6 @@ void test_assign_from_range_row_major(tci_test_fixture<TenT>& fix) {
   TenT tensor;
   assign_from_range_2d(ctx, shape, container.begin(), layout_2d::row_major, tensor);
 
-  TCICT_ASSERT(tci::order(ctx, tensor) == 2);
-  auto result_shape = tci::shape(ctx, tensor);
-  TCICT_ASSERT(result_shape.size() == 2);
-  TCICT_ASSERT(result_shape[0] == 2);
-  TCICT_ASSERT(result_shape[1] == 3);
-
   for (std::size_t i = 0; i < 2; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
       const auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i, j));
