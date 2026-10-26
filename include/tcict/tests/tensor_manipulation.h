@@ -638,7 +638,13 @@ inline double ramp_2x3x4(std::size_t i, std::size_t j, std::size_t k) {
   return static_cast<double>(i * 12 + j * 4 + k) + 1.0;
 }
 
-// Writes the ramp into a {2, 3, 4} tensor.
+// Each helper below that calls a tci:: API is compiled exactly when at least
+// one of its callers is, so skipping all of its callers also removes its
+// references to those APIs.
+
+#if !defined(TCICT_SKIP_RESHAPE) || !defined(TCICT_SKIP_TRANSPOSE)
+// Writes the ramp into a {2, 3, 4} tensor. Called by test_reshape and
+// test_transpose.
 template <typename TenT>
 void fill_ramp_2x3x4(tci_test_fixture<TenT> &fix, TenT &tensor) {
   auto &ctx = fix.context();
@@ -652,8 +658,10 @@ void fill_ramp_2x3x4(tci_test_fixture<TenT> &fix, TenT &tensor) {
     }
   }
 }
+#endif
 
-// Asserts that every ramp value is readable at the coordinate `coors_at` maps
+#ifndef TCICT_SKIP_TRANSPOSE
+// Called by test_transpose. Asserts that every ramp value is readable at the coordinate `coors_at` maps
 // it to. Callers supply the mapping, so the same sweep serves an output whose
 // axes were permuted and an input that must have stayed put.
 template <typename TenT, typename CoorsAt>
@@ -674,6 +682,7 @@ void expect_ramp_2x3x4(tci_test_fixture<TenT> &fix, const TenT &tensor,
     }
   }
 }
+#endif
 
 // --- reshape (in-place) ---
 
@@ -940,6 +949,9 @@ void test_expand_outofplace(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+#ifndef TCICT_SKIP_DIAG
+// expect_vector_3 and expect_diagonal_3x3 are called by the diag tests only.
+
 // Asserts that a first-order tensor of length 3 holds `expected` in order.
 // `expected` is real, so for a complex element type the imaginary part is
 // expected to be zero and is checked as such.
@@ -992,6 +1004,7 @@ void expect_diagonal_3x3(tci_test_fixture<TenT> &fix, const TenT &tensor,
     }
   }
 }
+#endif
 
 // --- diag: vector to matrix ---
 
