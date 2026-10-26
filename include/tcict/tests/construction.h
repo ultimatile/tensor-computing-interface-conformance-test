@@ -152,8 +152,8 @@ void test_eye_to_range(tci_test_fixture<TenT>& fix) {
 
 // V1's entry for `random` is "Constructs a tensor filled by repeatedly invoking
 // `gen()`". It fixes neither how many times gen is invoked nor which invocation
-// fills which coordinate, so neither the call count nor a coordinate-to-value
-// expectation is portably assertable. What survives is containment: every
+// fills which coordinate, so neither an exact call count nor a
+// coordinate-to-value expectation is portably assertable. What survives is containment: every
 // logical element must equal one of the values gen actually emitted.
 template <typename TenT>
 void test_random_inplace(tci_test_fixture<TenT>& fix) {
@@ -206,7 +206,7 @@ void test_random_inplace(tci_test_fixture<TenT>& fix) {
 
 // The singleton case of the containment oracle above: with a constant
 // generator the emission set has one member, so every element is pinned to a
-// known value without assuming anything about invocation order or count.
+// known value without assuming an invocation order or an exact count.
 template <typename TenT>
 void test_random_outofplace(tci_test_fixture<TenT>& fix) {
 #ifndef TCICT_SKIP_RANDOM
@@ -405,10 +405,12 @@ void test_assign_from_range_row_major(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT(result_shape[0] == 2);
   TCICT_ASSERT(result_shape[1] == 3);
 
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 0})), 1.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {0, 1})), 2.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 0})), 4.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {1, 2})), 6.0, tol);
+  for (std::size_t i = 0; i < 2; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, tensor, {i, j})),
+                         static_cast<double>(i * 3 + j + 1), tol);
+    }
+  }
 #else
   (void)fix;
 #endif

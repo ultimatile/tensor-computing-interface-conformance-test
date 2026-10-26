@@ -47,12 +47,16 @@ bool coors_2d(const Coors& coors, std::ptrdiff_t rows, std::ptrdiff_t cols,
 /// parameter, so these fix no convention for them; a test picks the one it
 /// wants.
 ///
-/// A coordinate `coors_2d` rejects sets `malformed` and maps to index 0, so
-/// the backend's access stays inside the range; what it reads or writes there
-/// does not matter, since the test fails on `malformed`.
+/// strided_2d sends {row, col} to `row * row_stride + col * col_stride`, and
+/// row_major_2d and column_major_2d fix the two strides. A coordinate
+/// `coors_2d` rejects sets `malformed` and maps to index 0, so the backend's
+/// access stays inside the range; what it reads or writes there does not
+/// matter, since the test fails on `malformed`.
 template <typename TenT>
-auto row_major_2d(std::ptrdiff_t rows, std::ptrdiff_t cols, bool& malformed) {
-  return [rows, cols, &malformed](
+auto strided_2d(std::ptrdiff_t rows, std::ptrdiff_t cols,
+                std::ptrdiff_t row_stride, std::ptrdiff_t col_stride,
+                bool& malformed) {
+  return [rows, cols, row_stride, col_stride, &malformed](
              const tci::elem_coors_t<TenT>& coors) -> std::ptrdiff_t {
     std::ptrdiff_t row = 0;
     std::ptrdiff_t col = 0;
@@ -60,22 +64,18 @@ auto row_major_2d(std::ptrdiff_t rows, std::ptrdiff_t cols, bool& malformed) {
       malformed = true;
       return 0;
     }
-    return row * cols + col;
+    return row * row_stride + col * col_stride;
   };
 }
 
 template <typename TenT>
+auto row_major_2d(std::ptrdiff_t rows, std::ptrdiff_t cols, bool& malformed) {
+  return strided_2d<TenT>(rows, cols, cols, 1, malformed);
+}
+
+template <typename TenT>
 auto column_major_2d(std::ptrdiff_t rows, std::ptrdiff_t cols, bool& malformed) {
-  return [rows, cols, &malformed](
-             const tci::elem_coors_t<TenT>& coors) -> std::ptrdiff_t {
-    std::ptrdiff_t row = 0;
-    std::ptrdiff_t col = 0;
-    if (!coors_2d(coors, rows, cols, row, col)) {
-      malformed = true;
-      return 0;
-    }
-    return col * rows + row;
-  };
+  return strided_2d<TenT>(rows, cols, 1, rows, malformed);
 }
 
 /// Extract the real part of an element as double.

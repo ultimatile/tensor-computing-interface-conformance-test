@@ -69,7 +69,9 @@ template <typename TenT> void test_to_range(tci_test_fixture<TenT> &fix) {
       });
   TCICT_ASSERT(!malformed_traversal);
 
-  std::vector<tci::elem_t<TenT>> container(6);
+  // Filled with a sentinel rather than zeros: element {0, 0} is 0, so a
+  // zero-filled slot that to_range never wrote would pass for it.
+  std::vector<tci::elem_t<TenT>> container(6, make_elem<TenT>(-999.0));
 
   bool malformed_map = false;
   tci::to_range(ctx, a, container.begin(),
@@ -79,6 +81,9 @@ template <typename TenT> void test_to_range(tci_test_fixture<TenT> &fix) {
   for (int i = 0; i < 6; ++i) {
     TCICT_ASSERT_CLOSE(real_part<TenT>(container[i]), static_cast<double>(i),
                        eps);
+    if constexpr (is_complex_v<TenT>) {
+      TCICT_ASSERT_CLOSE(imag_part<TenT>(container[i]), 0.0, eps);
+    }
   }
 #else
   (void)fix;
