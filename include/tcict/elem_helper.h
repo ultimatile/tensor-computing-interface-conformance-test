@@ -2,6 +2,7 @@
 
 #include <tci/tensor_traits.h>
 #include <complex>
+#include <cstddef>
 #include <type_traits>
 
 namespace tcict {
@@ -19,6 +20,30 @@ tci::elem_t<TenT> make_elem(double real, double imag = 0.0) {
     // NOLINTNEXTLINE(bugprone-narrowing-conversions) -- elem_t is always floating-point in TCI
     return static_cast<elem_type>(real);
   }
+}
+
+/// Builds a coordinate from loop indices, converting each to the backend's
+/// `elem_coor_t`. A braced list of `std::size_t` indices is a narrowing
+/// conversion, which list-initialization rejects, whenever `elem_coor_t`
+/// cannot represent every `std::size_t` value.
+template <typename TenT, typename... Ix>
+tci::elem_coors_t<TenT> coors_of(Ix... ix) {
+  return {static_cast<tci::elem_coor_t<TenT>>(ix)...};
+}
+
+/// Reads `coors` as a {row, col} coordinate of a `rows` x `cols` tensor.
+/// Returns false, leaving `row` and `col` unspecified, when it is not one.
+/// "Callbacks the backend invokes" in CONTRIBUTING.md says which callbacks
+/// call this.
+template <typename Coors>
+bool coors_2d(const Coors& coors, std::ptrdiff_t rows, std::ptrdiff_t cols,
+              std::ptrdiff_t& row, std::ptrdiff_t& col) {
+  if (coors.size() != 2) {
+    return false;
+  }
+  row = static_cast<std::ptrdiff_t>(coors[0]);
+  col = static_cast<std::ptrdiff_t>(coors[1]);
+  return row >= 0 && row < rows && col >= 0 && col < cols;
 }
 
 /// Extract the real part of an element as double.
