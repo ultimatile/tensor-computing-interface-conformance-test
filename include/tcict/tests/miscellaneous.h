@@ -3,9 +3,10 @@
 #include <tcict/assertion.h>
 #include <tcict/elem_helper.h>
 #include <tcict/fixture.h>
+#include <tcict/range_2d.h>
 #include <tcict/skip.h>
 
-#include <functional>
+#include <cstddef>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -55,24 +56,32 @@ template <typename TenT> void test_to_range(tci_test_fixture<TenT> &fix) {
   auto eps = fix.epsilon();
 
   TenT a = tci::template zeros<TenT>(ctx, {2, 3});
+  bool malformed_traversal = false;
   tci::for_each_with_coors(
       ctx, a,
-      [](tci::elem_t<TenT> &elem, const tci::elem_coors_t<TenT> &coors) {
-        elem = static_cast<tci::elem_t<TenT>>(coors[0] * 3 + coors[1]);
+      [&](tci::elem_t<TenT> &elem, const tci::elem_coors_t<TenT> &coors) {
+        std::ptrdiff_t row = 0;
+        std::ptrdiff_t col = 0;
+        if (!coors_2d(coors, 2, 3, row, col)) {
+          malformed_traversal = true;
+          return;
+        }
+        elem = static_cast<tci::elem_t<TenT>>(row * 3 + col);
       });
+  TCICT_ASSERT(!malformed_traversal);
 
-  std::vector<tci::elem_t<TenT>> container(6);
+  // Filled with a sentinel rather than zeros: element {0, 0} is 0, so a
+  // zero-filled slot that to_range never wrote would pass for it.
+  std::vector<tci::elem_t<TenT>> container(6, make_elem<TenT>(-999.0));
 
-  std::function<std::ptrdiff_t(const tci::elem_coors_t<TenT> &)> row_major_map =
-      [](const tci::elem_coors_t<TenT> &coors) -> std::ptrdiff_t {
-    return coors[0] * 3 + coors[1];
-  };
-
-  tci::to_range(ctx, a, container.begin(), row_major_map);
+  to_range_2d(ctx, a, {2, 3}, container.begin(), layout_2d::row_major);
 
   for (int i = 0; i < 6; ++i) {
     TCICT_ASSERT_CLOSE(real_part<TenT>(container[i]), static_cast<double>(i),
                        eps);
+    if constexpr (is_complex_v<TenT>) {
+      TCICT_ASSERT_CLOSE(imag_part<TenT>(container[i]), 0.0, eps);
+    }
   }
 #else
   (void)fix;

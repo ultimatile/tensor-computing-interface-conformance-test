@@ -73,3 +73,21 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 | `CYTNX_REPO_URL` | `https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx.git` | URL used only when auto-cloning the default path |
 | `CYTNX_REF` | `origin/main` | ref the default-path checkout is reset to on every run |
 | `INTEGRATION_CMAKE_ARGS` | (empty) | extra args appended to the cmake configure command |
+
+## Conventions for writing tests
+
+These apply to every header under `include/tcict/`; comments in the code refer to them by section name.
+
+### Out-of-place inputs
+
+TCAPI V1: "Most mutating functions provide two overloads: (1) in-place and (2) out-of-place writing to a separate output."
+The tests that read their input back after an out-of-place call assert a reading of that sentence: that the input is unchanged.
+
+### Callbacks the backend invokes
+
+Coordinate maps, generators and traversal callbacks run inside the backend's frames, which a conformance suite cannot assume are able to carry an exception.
+The suite reads V1 as invoking them one at a time: V1's own `for_each` example accumulates into a plain variable, `[&tot](const float el) { tot += el; }`, and gives the result as `tot == 3.0`.
+So they neither assert, nor allocate, nor read a coordinate's components before checking the coordinate: that it has as many components as the tensor has bonds, and that each is less than its bond's dimension.
+Whatever a callback observes for the test, such as a flag for a malformed coordinate, a visit count or a running sum, it keeps in variables the test reads after the call returns, and the test asserts on those.
+A callback that receives a second-order coordinate makes that check with `coors_2d` in `include/tcict/elem_helper.h` before reading its components, and records a coordinate `coors_2d` rejects in a flag the test asserts is clear.
+Tests call `to_range` and `assign_from_range` on second-order tensors through `to_range_2d` and `assign_from_range_2d` in `include/tcict/range_2d.h`.
