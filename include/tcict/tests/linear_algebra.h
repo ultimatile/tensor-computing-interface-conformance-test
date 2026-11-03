@@ -56,16 +56,16 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
       ctx, {std::cref(tensor_a), std::cref(tensor_b), std::cref(tensor_c)}));
 
   // Expected real parts: a + b + c = [[15,18],[21,24]]
-  expect_elems(
+  TCICT_EXPECT_ELEMS(
       fix, result, {2, 2},
       [&](const auto &x) { return a_at(x) + b_at(x) + c_at(x); },
       tol_category::reduction, 3);
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, tensor_a, {2, 2}, a_at, tol_category::exact);
-  expect_elems(fix, tensor_b, {2, 2}, b_at, tol_category::exact);
-  expect_elems(fix, tensor_c, {2, 2}, c_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, tensor_a, {2, 2}, a_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, tensor_b, {2, 2}, b_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, tensor_c, {2, 2}, c_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -103,7 +103,7 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 
   // Expected: s_a*a + s_b*b; for a real element type, real parts
   // [[10.5,13],[15.5,18]]
-  expect_elems(
+  TCICT_EXPECT_ELEMS(
       fix, result, {2, 2},
       [&](const auto &x) {
         return s_a * written<TenT>(a_at(x)) + s_b * written<TenT>(b_at(x));
@@ -112,8 +112,8 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, tensor_a, {2, 2}, a_at, tol_category::exact);
-  expect_elems(fix, tensor_b, {2, 2}, b_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, tensor_a, {2, 2}, a_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, tensor_b, {2, 2}, b_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -135,7 +135,7 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
   tci::List<tci::CRef<TenT>> single_list = {std::cref(single_tensor)};
   auto summed =
       TCICT_NOTHROW_VALUE(tci::linear_combine<TenT>(ctx, single_list));
-  expect_elems(fix, summed, {1, 1}, single_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, summed, {1, 1}, single_at, tol_category::exact);
 
   // For a complex element type the coefficient has an imaginary part too.
   // An input element is v(1 - 0.5i), and (3 - 1.5i) v (1 - 0.5i) =
@@ -145,13 +145,13 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
                                                               s.imag())};
   auto scaled = TCICT_NOTHROW_VALUE(
       tci::linear_combine<TenT>(ctx, single_list, single_coef));
-  expect_elems(fix, scaled, {1, 1}, [&](const auto &x) {
+  TCICT_EXPECT_ELEMS(fix, scaled, {1, 1}, [&](const auto &x) {
     return s * written<TenT>(single_at(x));
   });
 
   // Input unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, single_tensor, {1, 1}, single_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, single_tensor, {1, 1}, single_at, tol_category::exact);
 #else
   (void)fix;
 #endif

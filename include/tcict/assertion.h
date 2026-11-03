@@ -4,6 +4,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 
 namespace tcict {
 
@@ -11,6 +12,25 @@ namespace tcict {
 struct assertion_error : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
+
+namespace detail {
+
+/// Throws the assertion_error reporting `what` at `file`:`line`.
+[[noreturn]] inline void fail_at(const char* file, int line, const std::string& what) {
+  std::ostringstream oss;
+  oss << file << ":" << line << ": " << what;
+  throw assertion_error(oss.str());
+}
+
+/// Rejects, at compile time, an expression whose decltype is a reference: its
+/// result could refer to a temporary that dies inside TCICT_NOTHROW_VALUE.
+template <typename T> constexpr bool require_prvalue() {
+  static_assert(!std::is_reference_v<T>,
+                "TCICT_NOTHROW_VALUE takes a prvalue, such as a call returning by value");
+  return true;
+}
+
+}  // namespace detail
 
 }  // namespace tcict
 
@@ -48,26 +68,33 @@ struct assertion_error : std::runtime_error {
     }                                                                                              \
   } while (false)
 
-/// Evaluate an expression and yield what it yields, turning a std::exception
-/// from it into an assertion_error that names the file and line where the macro
-/// is used. The lambda returns `decltype(auto)`, so a prvalue result, such as a
-/// call returning by value, reaches the caller without a copy or move:
-/// `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of the result type that
-/// `auto r = f();` does not. Variadic so that the expression may contain
-/// commas.
-#define TCICT_NOTHROW_VALUE(...)                                                                   \
+// Evaluates the expression in a lambda and yields its result, turning a
+// std::exception from it into an assertion_error at the file and line where the
+// macro is used. CHECK runs first and is discarded.
+#define TCICT_DETAIL_NOTHROW_CALL(CHECK, ...)                                                      \
   ([&]() -> decltype(auto) {                                                                       \
+    (void)(CHECK);                                                                                 \
     try {                                                                                          \
       return __VA_ARGS__;                                                                          \
     } catch (const std::exception& e_) {                                                           \
-      std::ostringstream oss_;                                                                     \
-      oss_ << __FILE__ << ":" << __LINE__ << ": unexpected exception: " << e_.what();              \
-      throw ::tcict::assertion_error(oss_.str());                                                  \
+      ::tcict::detail::fail_at(__FILE__, __LINE__,                                                 \
+                               std::string("unexpected exception: ") + e_.what());                 \
     }                                                                                              \
   }())
+
+/// Evaluate a prvalue expression, such as a call returning by value, and yield
+/// its value, turning a std::exception from it into an assertion_error that names
+/// the file and line where the macro is used. The value reaches the caller
+/// without a copy or move: `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of
+/// the result type that `auto r = f();` does not. An expression of reference
+/// type does not compile, since its result could refer to a temporary. Variadic
+/// so that the expression may contain commas.
+#define TCICT_NOTHROW_VALUE(...)                                                                   \
+  TCICT_DETAIL_NOTHROW_CALL(::tcict::detail::require_prvalue<decltype((__VA_ARGS__))>(),           \
+                            __VA_ARGS__)
 
 /// Assert that an expression does not throw.
 #define TCICT_ASSERT_NOTHROW(expr)                                                                 \
   do {                                                                                             \
-    (void)TCICT_NOTHROW_VALUE(expr);                                                               \
+    (void)TCICT_DETAIL_NOTHROW_CALL(true, expr);                                                   \
   } while (false)

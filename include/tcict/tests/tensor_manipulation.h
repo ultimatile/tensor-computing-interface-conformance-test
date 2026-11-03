@@ -792,20 +792,20 @@ void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
 
   // Vertical concatenation: rows 0-1 from t1, rows 2-3 from t2
   auto vertical = TCICT_NOTHROW_VALUE(tci::concatenate<TenT>(ctx, ins, 0));
-  expect_elems(fix, vertical, {4, 3}, [&](const auto &x) {
+  TCICT_EXPECT_ELEMS(fix, vertical, {4, 3}, [&](const auto &x) {
     return x[0] < 2 ? t1_at(x) : t2_at(shifted(x, 0, 2));
   }, tol_category::exact);
 
   // Horizontal concatenation: columns 0-2 from t1, columns 3-5 from t2
   auto horizontal = TCICT_NOTHROW_VALUE(tci::concatenate<TenT>(ctx, ins, 1));
-  expect_elems(fix, horizontal, {2, 6}, [&](const auto &x) {
+  TCICT_EXPECT_ELEMS(fix, horizontal, {2, 6}, [&](const auto &x) {
     return x[1] < 3 ? t1_at(x) : t2_at(shifted(x, 1, 3));
   }, tol_category::exact);
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, t1, {2, 3}, t1_at, tol_category::exact);
-  expect_elems(fix, t2, {2, 3}, t2_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, t1, {2, 3}, t1_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, t2, {2, 3}, t2_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -836,7 +836,7 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
       ctx, {std::cref(a), std::cref(b), std::cref(c)}, 1));
 
   // Bond 1 of d: 0-2 from a, 3 from b, 4-5 from c
-  expect_elems(fix, d, {2, 6, 4}, [&](const auto &x) {
+  TCICT_EXPECT_ELEMS(fix, d, {2, 6, 4}, [&](const auto &x) {
     if (x[1] < 3) {
       return a_at(x);
     }
@@ -848,9 +848,9 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, a, {2, 3, 4}, a_at, tol_category::exact);
-  expect_elems(fix, b, {2, 1, 4}, b_at, tol_category::exact);
-  expect_elems(fix, c, {2, 2, 4}, c_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, a, {2, 3, 4}, a_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, b, {2, 1, 4}, b_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, c, {2, 2, 4}, c_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -1156,22 +1156,22 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
   auto result = TCICT_NOTHROW_VALUE(tci::stack<TenT>(ctx, ins, 0));
 
   // The new bond 0 selects the input: slice 0 is t1, slice 1 is t2
-  expect_elems(fix, result, {2, 2, 3}, [&](const auto &x) {
+  TCICT_EXPECT_ELEMS(fix, result, {2, 2, 3}, [&](const auto &x) {
     const auto y = without_bond(x, 0);
     return x[0] == 0 ? t1_at(y) : t2_at(y);
   }, tol_category::exact);
 
   // An interior bond: the new bond 1 selects the input
   auto interior = TCICT_NOTHROW_VALUE(tci::stack<TenT>(ctx, ins, 1));
-  expect_elems(fix, interior, {2, 2, 3}, [&](const auto &x) {
+  TCICT_EXPECT_ELEMS(fix, interior, {2, 2, 3}, [&](const auto &x) {
     const auto y = without_bond(x, 1);
     return x[1] == 0 ? t1_at(y) : t2_at(y);
   }, tol_category::exact);
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, t1, {2, 3}, t1_at, tol_category::exact);
-  expect_elems(fix, t2, {2, 3}, t2_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, t1, {2, 3}, t1_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, t2, {2, 3}, t2_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -1200,7 +1200,7 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
       tci::stack<TenT>(ctx, {std::cref(t1), std::cref(t2), std::cref(t3)}, 2));
 
   // The new bond 2 selects the input
-  expect_elems(fix, result, {2, 3, 3}, [&](const auto &x) {
+  TCICT_EXPECT_ELEMS(fix, result, {2, 3, 3}, [&](const auto &x) {
     const auto y = without_bond(x, 2);
     if (x[2] == 0) {
       return t1_at(y);
@@ -1213,9 +1213,9 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, t1, {2, 3}, t1_at, tol_category::exact);
-  expect_elems(fix, t2, {2, 3}, t2_at, tol_category::exact);
-  expect_elems(fix, t3, {2, 3}, t3_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, t1, {2, 3}, t1_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, t2, {2, 3}, t2_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, t3, {2, 3}, t3_at, tol_category::exact);
 #else
   (void)fix;
 #endif

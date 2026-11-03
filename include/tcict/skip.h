@@ -53,7 +53,9 @@
 // TCICT_SKIP_SET_ELEM, TCICT_SKIP_GET_ELEM or TCICT_SKIP_SHAPE therefore
 // skips those tests too, so a gap in one of those four APIs is not reported
 // as a concatenate, stack or linear_combine failure. TCICT_HAS_ELEM_SWEEP,
-// defined below, holds exactly when none of the four is skipped.
+// defined below, holds exactly when none of the four is skipped. It is fixed
+// when this file is first included, so define those four before including any
+// tcict header, for instance as compile definitions (see "Usage" above).
 //
 // Precision-conditional skip macros (factorization + iterative APIs):
 //

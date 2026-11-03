@@ -107,7 +107,7 @@ template <typename TenT> std::complex<double> written(double v) {
 /// Sets the element at every coordinate `coors` of `tensor` to the value with
 /// real part `v = value_at(coors)` and, for a complex element type, imaginary
 /// part `-0.5 * v`, so that an operation losing or conjugating imaginary parts
-/// is visible. Pairs with `expect_elems`, so a test can build an input and
+/// is visible. Pairs with `TCICT_EXPECT_ELEMS`, so a test can build an input and
 /// check it with the same function; real-coefficient linear operations keep
 /// the imaginary part at `-0.5` times the real part.
 template <typename TenT, typename ValueAt>
@@ -122,20 +122,36 @@ void set_elems(tci_test_fixture<TenT> &fix, TenT &tensor, ValueAt value_at) {
 
 /// Asserts that `tensor` has `shape`, then that the element at every
 /// coordinate of that shape equals `value_at(coors)` within
-/// `tolerance(fix, cat, n)`, part by part; `tol_category::exact` compares for
-/// equality instead. A real `value_at` result `v` stands
-/// for `written<TenT>(v)`, the value `set_elems` writes; a
-/// `std::complex<double>` result is compared as it is. The imaginary part is
-/// compared only for a complex element type. The shape is asserted first, so
-/// the sweep reads only coordinates the tensor has.
+/// `tolerance(fix, cat, n)`, part by part; `tol_category::exact` admits only
+/// equality. A real `value_at` result `v` stands for `written<TenT>(v)`, the
+/// value `set_elems` writes; a `std::complex<double>` result is compared as it
+/// is. The imaginary part is compared only for a complex element type. The
+/// shape is asserted first, so the sweep reads only coordinates the tensor has.
+/// A failure is reported at `file`:`line`; call it through TCICT_EXPECT_ELEMS,
+/// which passes the caller's location.
 template <typename TenT, typename ValueAt>
-void expect_elems(tci_test_fixture<TenT> &fix, const TenT &tensor,
-                  const tci::shape_t<TenT> &shape, ValueAt value_at,
-                  tol_category cat = tol_category::elementwise,
-                  std::size_t n = 1) {
+void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
+                     const TenT &tensor, const tci::shape_t<TenT> &shape,
+                     ValueAt value_at,
+                     tol_category cat = tol_category::elementwise,
+                     std::size_t n = 1) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, cat, n);
-  TCICT_ASSERT(tci::shape(ctx, tensor) == shape);
+  auto shape_text = [](const auto &dims) {
+    std::ostringstream oss;
+    oss << "{";
+    for (std::size_t b = 0; b < dims.size(); ++b) {
+      oss << (b == 0 ? "" : ", ") << dims[b];
+    }
+    oss << "}";
+    return oss.str();
+  };
+  const auto actual_shape = tci::shape(ctx, tensor);
+  if (!(actual_shape == shape)) {
+    detail::fail_at(file, line,
+                    "shape " + shape_text(actual_shape) + " != expected " +
+                        shape_text(shape));
+  }
   detail::for_each_coors<TenT>(
       shape, [&](const tci::elem_coors_t<TenT> &coors) {
         auto elem = tci::get_elem(ctx, tensor, coors);
@@ -149,15 +165,11 @@ void expect_elems(tci_test_fixture<TenT> &fix, const TenT &tensor,
         // A zero tolerance (tol_category::exact) admits only equality.
         auto check = [&](double actual, double wanted, const char *part) {
           if (!(std::abs(actual - wanted) <= tol)) {
-            std::ostringstream oss_;
-            oss_ << __FILE__ << ":" << __LINE__ << ": " << part
-                 << " part at {";
-            for (std::size_t b = 0; b < coors.size(); ++b) {
-              oss_ << (b == 0 ? "" : ", ") << coors[b];
-            }
-            oss_ << "} differs: " << actual << " != " << wanted
-                 << " (tolerance " << tol << ")";
-            throw ::tcict::assertion_error(oss_.str());
+            std::ostringstream oss;
+            oss << part << " part at " << shape_text(coors)
+                << " differs: " << actual << " != " << wanted
+                << " (tolerance " << tol << ")";
+            detail::fail_at(file, line, oss.str());
           }
         };
         check(real_part<TenT>(elem), expected.real(), "real");
@@ -170,3 +182,7 @@ void expect_elems(tci_test_fixture<TenT> &fix, const TenT &tensor,
 #endif
 
 } // namespace tcict
+
+/// expect_elems_at with the caller's file and line:
+/// TCICT_EXPECT_ELEMS(fix, tensor, shape, value_at[, cat[, n]]).
+#define TCICT_EXPECT_ELEMS(...) ::tcict::expect_elems_at(__FILE__, __LINE__, __VA_ARGS__)
