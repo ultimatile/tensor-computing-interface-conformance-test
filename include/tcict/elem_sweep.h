@@ -77,6 +77,9 @@ auto ramp_over(const tci::shape_t<TenT> &shape, double offset) {
 template <typename Coors>
 Coors shifted(const Coors &coors, std::size_t bond, std::size_t by) {
   TCICT_ASSERT(bond < coors.size());
+  if constexpr (std::is_signed_v<typename Coors::value_type>) {
+    TCICT_ASSERT(coors[bond] >= 0);
+  }
   TCICT_ASSERT(static_cast<std::size_t>(coors[bond]) >= by);
   Coors out = coors;
   out[bond] = static_cast<typename Coors::value_type>(

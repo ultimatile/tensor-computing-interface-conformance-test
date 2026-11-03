@@ -22,14 +22,33 @@ namespace detail {
   throw assertion_error(oss.str());
 }
 
-/// Instantiated with `decltype((expr))`, which is a reference for every
-/// expression that is not a prvalue (a name, a member access, an element
-/// access, ...); rejects those at compile time, since TCICT_NOTHROW_VALUE would
-/// return a reference that could refer to a temporary dying inside it.
-template <typename T> constexpr bool require_prvalue() {
-  static_assert(!std::is_reference_v<T>,
+/// Calls `f` and returns its result, turning a std::exception other than an
+/// assertion_error into an assertion_error reported at `file`:`line`; an
+/// assertion_error raised inside `f` passes through unchanged. `f` must
+/// return a value, not a reference, which could refer to a temporary that has
+/// died by the time the caller reads it. A prvalue result reaches the caller
+/// without a copy or move.
+template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&& f) {
+  static_assert(!std::is_reference_v<std::invoke_result_t<F&>>,
                 "TCICT_NOTHROW_VALUE takes a prvalue, such as a call returning by value");
-  return true;
+  try {
+    return f();
+  } catch (const assertion_error&) {
+    throw;
+  } catch (const std::exception& e) {
+    fail_at(file, line, std::string("unexpected exception: ") + e.what());
+  }
+}
+
+/// Calls `f` and discards its result, with nothrow_call's exception handling.
+template <typename F> void nothrow_run(const char* file, int line, F&& f) {
+  try {
+    (void)f();
+  } catch (const assertion_error&) {
+    throw;
+  } catch (const std::exception& e) {
+    fail_at(file, line, std::string("unexpected exception: ") + e.what());
+  }
 }
 
 }  // namespace detail
@@ -70,33 +89,22 @@ template <typename T> constexpr bool require_prvalue() {
     }                                                                                              \
   } while (false)
 
-// Evaluates the expression in a lambda and yields its result, turning a
-// std::exception from it into an assertion_error at the file and line where the
-// macro is used. CHECK runs first and is discarded.
-#define TCICT_DETAIL_NOTHROW_CALL(CHECK, ...)                                                      \
-  ([&]() -> decltype(auto) {                                                                       \
-    (void)(CHECK);                                                                                 \
-    try {                                                                                          \
-      return __VA_ARGS__;                                                                          \
-    } catch (const std::exception& e_) {                                                           \
-      ::tcict::detail::fail_at(__FILE__, __LINE__,                                                 \
-                               std::string("unexpected exception: ") + e_.what());                 \
-    }                                                                                              \
-  }())
-
 /// Evaluate a prvalue expression, such as a call returning by value, and yield
-/// its value, turning a std::exception from it into an assertion_error that names
-/// the file and line where the macro is used. The value reaches the caller
-/// without a copy or move: `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of
-/// the result type that `auto r = f();` does not. Any other expression does not
-/// compile, since its result could refer to a temporary. Variadic so that the
-/// expression may contain commas.
+/// its value, turning a std::exception from it into an assertion_error reported
+/// at the macro's use; an assertion_error raised while evaluating it passes
+/// through. The value reaches the caller without a copy or move:
+/// `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of the result type that
+/// `auto r = f();` does not. Any other expression does not compile, since its
+/// result could refer to a temporary. The reported line is one of the lines the
+/// invocation spans; which one, for an invocation spanning several, depends on
+/// the compiler. Variadic so that the expression may contain commas.
 #define TCICT_NOTHROW_VALUE(...)                                                                   \
-  TCICT_DETAIL_NOTHROW_CALL(::tcict::detail::require_prvalue<decltype((__VA_ARGS__))>(),           \
-                            __VA_ARGS__)
+  ::tcict::detail::nothrow_call(__FILE__, __LINE__,                                                \
+                               [&]() -> decltype(auto) { return __VA_ARGS__; })
 
-/// Assert that an expression does not throw.
+/// Assert that an expression does not throw a std::exception other than an
+/// assertion_error, which passes through.
 #define TCICT_ASSERT_NOTHROW(expr)                                                                 \
   do {                                                                                             \
-    (void)TCICT_DETAIL_NOTHROW_CALL(true, expr);                                                   \
+    ::tcict::detail::nothrow_run(__FILE__, __LINE__, [&]() -> decltype(auto) { return expr; });    \
   } while (false)
