@@ -142,7 +142,8 @@ void set_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
 /// admits only a difference below it. A real
 /// `value_at` result `v` stands for `written<TenT>(v)`, the value
 /// `TCICT_SET_ELEMS` writes; a `std::complex<double>` result is compared as it
-/// is. The imaginary part is compared only for a complex element type. The
+/// is. For a real element type, the expected imaginary part is compared
+/// against zero. The
 /// shape is asserted first, so the sweep reads only coordinates the tensor has.
 /// A shape or element mismatch is reported at `file`:`line`. So is a
 /// std::exception from shape, get_elem or `value_at`, an assertion failing in
@@ -201,6 +202,10 @@ void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
         check(real_part<TenT>(elem), expected.real(), "real");
         if constexpr (is_complex_v<TenT>) {
           check(imag_part<TenT>(elem), expected.imag(), "imaginary");
+        } else {
+          // A real element has imaginary part zero, so an expected value
+          // that is not real fails instead of going unchecked.
+          check(0.0, expected.imag(), "imaginary");
         }
       });
 }
