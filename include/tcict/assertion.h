@@ -28,8 +28,7 @@ namespace detail {
 /// its own message, and any other std::exception as unexpected. An exception
 /// of another type passes through unchanged, since a handler catching every
 /// type would also catch the unwind of a cancelled thread, which must not be
-/// stopped. An allocation failure while building the report escapes as
-/// itself. `f` must not return a reference, which could refer to a temporary
+/// stopped. `f` must not return a reference, which could refer to a temporary
 /// that has died by the time the caller reads it. A prvalue result reaches the
 /// caller without a copy or move.
 template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&& f) {

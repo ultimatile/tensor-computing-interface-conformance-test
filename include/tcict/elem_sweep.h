@@ -203,8 +203,7 @@ void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
         if constexpr (is_complex_v<TenT>) {
           check(imag_part<TenT>(elem), expected.imag(), "imaginary");
         } else {
-          // A real element has imaginary part zero, so an expected value
-          // that is not real fails instead of going unchecked.
+          // A real element's imaginary part is zero.
           check(0.0, expected.imag(), "imaginary");
         }
       });
