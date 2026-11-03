@@ -25,6 +25,7 @@ make integration-check
 
 This:
 
+0. Refuses to run while tracked files of this repo have uncommitted changes (see "Caveats").
 1. Clones cytnx (with submodules) into `./build/tensor-computing-interface-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard $CYTNX_REF`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF` (default under "Environment variables" below).
 2. Replaces `external/tcict/` content with this repo's tracked HEAD via `git archive HEAD | tar -xmf -`; `-m` stamps the extracted files with the current time, so the build recompiles against them.
 3. Builds the cytnx test target (`TCITests`).
