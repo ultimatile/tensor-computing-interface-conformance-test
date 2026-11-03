@@ -22,8 +22,10 @@ namespace detail {
   throw assertion_error(oss.str());
 }
 
-/// Rejects, at compile time, an expression whose decltype is a reference: its
-/// result could refer to a temporary that dies inside TCICT_NOTHROW_VALUE.
+/// Instantiated with `decltype((expr))`, which is a reference for every
+/// expression that is not a prvalue (a name, a member access, an element
+/// access, ...); rejects those at compile time, since TCICT_NOTHROW_VALUE would
+/// return a reference that could refer to a temporary dying inside it.
 template <typename T> constexpr bool require_prvalue() {
   static_assert(!std::is_reference_v<T>,
                 "TCICT_NOTHROW_VALUE takes a prvalue, such as a call returning by value");
@@ -86,9 +88,9 @@ template <typename T> constexpr bool require_prvalue() {
 /// its value, turning a std::exception from it into an assertion_error that names
 /// the file and line where the macro is used. The value reaches the caller
 /// without a copy or move: `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of
-/// the result type that `auto r = f();` does not. An expression of reference
-/// type does not compile, since its result could refer to a temporary. Variadic
-/// so that the expression may contain commas.
+/// the result type that `auto r = f();` does not. Any other expression does not
+/// compile, since its result could refer to a temporary. Variadic so that the
+/// expression may contain commas.
 #define TCICT_NOTHROW_VALUE(...)                                                                   \
   TCICT_DETAIL_NOTHROW_CALL(::tcict::detail::require_prvalue<decltype((__VA_ARGS__))>(),           \
                             __VA_ARGS__)

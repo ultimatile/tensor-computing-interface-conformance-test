@@ -127,8 +127,8 @@ void set_elems(tci_test_fixture<TenT> &fix, TenT &tensor, ValueAt value_at) {
 /// value `set_elems` writes; a `std::complex<double>` result is compared as it
 /// is. The imaginary part is compared only for a complex element type. The
 /// shape is asserted first, so the sweep reads only coordinates the tensor has.
-/// A failure is reported at `file`:`line`; call it through TCICT_EXPECT_ELEMS,
-/// which passes the caller's location.
+/// A shape or element mismatch is reported at `file`:`line`; call it through
+/// TCICT_EXPECT_ELEMS, which passes the caller's location.
 template <typename TenT, typename ValueAt>
 void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
                      const TenT &tensor, const tci::shape_t<TenT> &shape,
