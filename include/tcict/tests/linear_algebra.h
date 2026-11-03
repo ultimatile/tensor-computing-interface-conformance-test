@@ -43,8 +43,8 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
   auto tensor_c = tci::zeros<TenT>(ctx, {2, 2});
 
   // a = [[1,2],[3,4]], b = [[5,6],[7,8]], c = [[1,1],[1,1]]
-  auto a_at = [](const auto &x) { return 1.0 + 2.0 * x[0] + x[1]; };
-  auto b_at = [](const auto &x) { return 5.0 + 2.0 * x[0] + x[1]; };
+  auto a_at = ramp_over<TenT>({2, 2}, 1.0);
+  auto b_at = ramp_over<TenT>({2, 2}, 5.0);
   auto c_at = [](const auto &) { return 1.0; };
   set_elems(fix, tensor_a, a_at);
   set_elems(fix, tensor_b, b_at);
@@ -124,8 +124,9 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
 
+  auto single_at = [](const auto &) { return 5.0; };
   auto single_tensor = tci::zeros<TenT>(ctx, {1, 1});
-  tci::set_elem(ctx, single_tensor, {0, 0}, make_elem<TenT>(5.0));
+  set_elems(fix, single_tensor, single_at);
 
   // A named list, feeding both overloads; see "Inputs to multi-input
   // operations" in CONTRIBUTING.md.
@@ -141,7 +142,7 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
 
   // Input unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, single_tensor, {1, 1}, [](const auto &) { return 5.0; });
+  expect_elems(fix, single_tensor, {1, 1}, single_at);
 #else
   (void)fix;
 #endif

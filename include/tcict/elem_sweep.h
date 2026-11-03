@@ -46,6 +46,23 @@ void for_each_coors(const tci::shape_t<TenT> &shape, F f) {
 
 } // namespace detail
 
+/// Returns the function sending a coordinate of `shape` to `offset` plus the
+/// coordinate's position in a row-major walk of `shape`, so distinct
+/// coordinates of `shape` get distinct values `offset`, `offset + 1`, ...
+/// The position is a function of the coordinate alone; it says nothing about
+/// how a backend lays the elements out.
+template <typename TenT>
+auto ramp_over(const tci::shape_t<TenT> &shape, double offset) {
+  return [shape, offset](const tci::elem_coors_t<TenT> &coors) {
+    double position = 0.0;
+    for (std::size_t b = 0; b < shape.size(); ++b) {
+      position = position * static_cast<double>(shape[b]) +
+                 static_cast<double>(coors[b]);
+    }
+    return offset + position;
+  };
+}
+
 /// Sets the element at every coordinate `coors` of `tensor` to the real value
 /// `value_at(coors)`. Pairs with `expect_elems`, so a test can build an input
 /// and check it with the same function.

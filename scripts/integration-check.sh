@@ -40,7 +40,8 @@ usage() {
 Usage: $0 <subcommand>
 
 Subcommands:
-  check     sync (default-path only) -> override external/tcict -> cmake build
+  check     refuse if tracked tcict files have uncommitted changes -> sync
+            (default-path only) -> override external/tcict -> cmake build
   test      same as check, then run \$CYTNX_BACKEND_DIR/build/test/TCITests
   restore   restore external/tcict to the cytnx submodule pin
 
