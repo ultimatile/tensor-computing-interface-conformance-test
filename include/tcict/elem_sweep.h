@@ -114,7 +114,7 @@ template <typename TenT> std::complex<double> written(double v) {
 /// part `-0.5 * v`, so that an operation losing or conjugating imaginary parts
 /// is visible. Pairs with `TCICT_EXPECT_ELEMS`, so a test can build an input and
 /// check it with the same function; real-coefficient linear operations keep
-/// the imaginary part at `-0.5` times the real part. A std::exception from
+/// the imaginary part at `-0.5` times the real part. An exception from
 /// shape, set_elem or `value_at`, an assertion failing in `value_at` included,
 /// is reported at `file`:`line`; call it through TCICT_SET_ELEMS, which passes
 /// the caller's location.
@@ -143,7 +143,7 @@ void set_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
 /// `TCICT_SET_ELEMS` writes; a `std::complex<double>` result is compared as it
 /// is. The imaginary part is compared only for a complex element type. The
 /// shape is asserted first, so the sweep reads only coordinates the tensor has.
-/// A shape or element mismatch, and a std::exception from shape, get_elem or
+/// A shape or element mismatch, and an exception from shape, get_elem or
 /// `value_at`, an assertion failing in `value_at` included, is reported at
 /// `file`:`line`; call it through TCICT_EXPECT_ELEMS, which passes the
 /// caller's location.
