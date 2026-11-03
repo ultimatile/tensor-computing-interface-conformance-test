@@ -820,9 +820,12 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
   // Distinct values across all three inputs; the expected result is computed
   // from the same functions. See "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  auto a_at = ramp_over<TenT>({2, 3, 4}, 100.0);
-  auto b_at = ramp_over<TenT>({2, 1, 4}, 200.0);
-  auto c_at = ramp_over<TenT>({2, 2, 4}, 300.0);
+  // a holds 1..24, b 25..32 and c 33..48: small enough that a float holds
+  // each value, and its imaginary part, with a spacing well below the
+  // single-precision tolerance.
+  auto a_at = ramp_over<TenT>({2, 3, 4}, 1.0);
+  auto b_at = ramp_over<TenT>({2, 1, 4}, 25.0);
+  auto c_at = ramp_over<TenT>({2, 2, 4}, 33.0);
   auto a = tci::zeros<TenT>(ctx, {2, 3, 4});
   auto b = tci::zeros<TenT>(ctx, {2, 1, 4});
   auto c = tci::zeros<TenT>(ctx, {2, 2, 4});
@@ -1155,7 +1158,8 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
 
   // The new bond 0 selects the input: slice 0 is t1, slice 1 is t2
   expect_elems(fix, result, {2, 2, 3}, [&](const auto &x) {
-    return x[0] == 0 ? t1_at(without_bond(x, 0)) : t2_at(without_bond(x, 0));
+    const auto y = without_bond(x, 0);
+    return x[0] == 0 ? t1_at(y) : t2_at(y);
   });
 
   // Inputs unchanged; see "Inputs to multi-input operations" in

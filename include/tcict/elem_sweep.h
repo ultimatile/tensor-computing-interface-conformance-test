@@ -4,7 +4,9 @@
 #include <tcict/elem_helper.h>
 #include <tcict/fixture.h>
 
+#include <complex>
 #include <cstddef>
+#include <type_traits>
 
 namespace tcict {
 
@@ -93,6 +95,12 @@ Coors without_bond(const Coors &coors, std::size_t bond) {
   return out;
 }
 
+/// The element value `set_elems` writes for the real value `v`: real part `v`
+/// and, for a complex element type, imaginary part `-0.5 * v`.
+template <typename TenT> std::complex<double> written(double v) {
+  return {v, is_complex_v<TenT> ? -0.5 * v : 0.0};
+}
+
 /// Sets the element at every coordinate `coors` of `tensor` to the value with
 /// real part `v = value_at(coors)` and, for a complex element type, imaginary
 /// part `-0.5 * v`, so that an operation losing or conjugating imaginary parts
@@ -104,15 +112,17 @@ void set_elems(tci_test_fixture<TenT> &fix, TenT &tensor, ValueAt value_at) {
   auto &ctx = fix.context();
   detail::for_each_coors<TenT>(
       tci::shape(ctx, tensor), [&](const tci::elem_coors_t<TenT> &coors) {
-        const double v = static_cast<double>(value_at(coors));
-        tci::set_elem(ctx, tensor, coors, make_elem<TenT>(v, -0.5 * v));
+        const auto w = written<TenT>(static_cast<double>(value_at(coors)));
+        tci::set_elem(ctx, tensor, coors, make_elem<TenT>(w.real(), w.imag()));
       });
 }
 
 /// Asserts that `tensor` has `shape`, then that the element at every
-/// coordinate of that shape has real part `v = value_at(coors)` and, for a
-/// complex element type, imaginary part `-0.5 * v`, as `set_elems` writes
-/// them, each within `tolerance(fix, cat, n)`. The shape is asserted first, so
+/// coordinate of that shape equals `value_at(coors)` within
+/// `tolerance(fix, cat, n)`, part by part. A real `value_at` result `v` stands
+/// for `written<TenT>(v)`, the value `set_elems` writes; a
+/// `std::complex<double>` result is compared as it is. The imaginary part is
+/// compared only for a complex element type. The shape is asserted first, so
 /// the sweep reads only coordinates the tensor has.
 template <typename TenT, typename ValueAt>
 void expect_elems(tci_test_fixture<TenT> &fix, const TenT &tensor,
@@ -125,10 +135,16 @@ void expect_elems(tci_test_fixture<TenT> &fix, const TenT &tensor,
   detail::for_each_coors<TenT>(
       shape, [&](const tci::elem_coors_t<TenT> &coors) {
         auto elem = tci::get_elem(ctx, tensor, coors);
-        const double v = static_cast<double>(value_at(coors));
-        TCICT_ASSERT_CLOSE(real_part<TenT>(elem), v, tol);
+        const auto value = value_at(coors);
+        std::complex<double> expected;
+        if constexpr (std::is_arithmetic_v<std::decay_t<decltype(value)>>) {
+          expected = written<TenT>(static_cast<double>(value));
+        } else {
+          expected = value;
+        }
+        TCICT_ASSERT_CLOSE(real_part<TenT>(elem), expected.real(), tol);
         if constexpr (is_complex_v<TenT>) {
-          TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), -0.5 * v, tol);
+          TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), expected.imag(), tol);
         }
       });
 }

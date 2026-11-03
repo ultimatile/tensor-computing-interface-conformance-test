@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <complex>
 #include <functional>
 #include <vector>
 
@@ -89,15 +90,23 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 
   // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
   tci::List<tci::CRef<TenT>> ins = {std::cref(tensor_a), std::cref(tensor_b)};
-  tci::List<tci::elem_t<TenT>> coefficients = {make_elem<TenT>(0.5),
-                                               make_elem<TenT>(2.0)};
+  // For a complex element type the coefficients have imaginary parts too, so
+  // a backend that conjugates them or drops their imaginary parts fails.
+  const std::complex<double> s_a(0.5, is_complex_v<TenT> ? 0.25 : 0.0);
+  const std::complex<double> s_b(2.0, is_complex_v<TenT> ? -1.0 : 0.0);
+  tci::List<tci::elem_t<TenT>> coefficients = {
+      make_elem<TenT>(s_a.real(), s_a.imag()),
+      make_elem<TenT>(s_b.real(), s_b.imag())};
 
   auto result = tci::linear_combine<TenT>(ctx, ins, coefficients);
 
-  // Expected real parts: 0.5*a + 2*b = [[10.5,13],[15.5,18]]
+  // Expected: s_a*a + s_b*b; for a real element type, real parts
+  // [[10.5,13],[15.5,18]]
   expect_elems(
       fix, result, {2, 2},
-      [&](const auto &x) { return 0.5 * a_at(x) + 2.0 * b_at(x); },
+      [&](const auto &x) {
+        return s_a * written<TenT>(a_at(x)) + s_b * written<TenT>(b_at(x));
+      },
       tol_category::reduction, 2);
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
@@ -116,7 +125,7 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_LINEAR_COMBINE
   auto &ctx = fix.context();
 
-  auto single_at = [](const auto &) { return 5.0; };
+  auto single_at = ramp_over<TenT>({1, 1}, 5.0);
   auto single_tensor = tci::zeros<TenT>(ctx, {1, 1});
   set_elems(fix, single_tensor, single_at);
 
@@ -126,10 +135,14 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
   auto summed = tci::linear_combine<TenT>(ctx, single_list);
   expect_elems(fix, summed, {1, 1}, single_at);
 
-  tci::List<tci::elem_t<TenT>> single_coef = {make_elem<TenT>(3.0)};
+  // For a complex element type the coefficient has an imaginary part too.
+  const std::complex<double> s(3.0, is_complex_v<TenT> ? 1.5 : 0.0);
+  tci::List<tci::elem_t<TenT>> single_coef = {make_elem<TenT>(s.real(),
+                                                              s.imag())};
   auto scaled = tci::linear_combine<TenT>(ctx, single_list, single_coef);
-  expect_elems(fix, scaled, {1, 1},
-               [&](const auto &x) { return 3.0 * single_at(x); });
+  expect_elems(fix, scaled, {1, 1}, [&](const auto &x) {
+    return s * written<TenT>(single_at(x));
+  });
 
   // Input unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
