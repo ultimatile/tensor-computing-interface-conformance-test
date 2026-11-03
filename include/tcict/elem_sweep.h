@@ -8,6 +8,8 @@
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <iomanip>
+#include <limits>
 #include <sstream>
 #include <type_traits>
 
@@ -101,8 +103,8 @@ Coors without_bond(const Coors &coors, std::size_t bond) {
   return out;
 }
 
-/// The element value `set_elems` writes for the real value `v`: real part `v`
-/// and, for a complex element type, imaginary part `-0.5 * v`.
+/// The element value `TCICT_SET_ELEMS` writes for the real value `v`: real
+/// part `v` and, for a complex element type, imaginary part `-0.5 * v`.
 template <typename TenT> std::complex<double> written(double v) {
   return {v, is_complex_v<TenT> ? -0.5 * v : 0.0};
 }
@@ -112,26 +114,36 @@ template <typename TenT> std::complex<double> written(double v) {
 /// part `-0.5 * v`, so that an operation losing or conjugating imaginary parts
 /// is visible. Pairs with `TCICT_EXPECT_ELEMS`, so a test can build an input and
 /// check it with the same function; real-coefficient linear operations keep
-/// the imaginary part at `-0.5` times the real part.
+/// the imaginary part at `-0.5` times the real part. A std::exception from
+/// shape or set_elem is reported at `file`:`line`; call it through
+/// TCICT_SET_ELEMS, which passes the caller's location.
 template <typename TenT, typename ValueAt>
-void set_elems(tci_test_fixture<TenT> &fix, TenT &tensor, ValueAt value_at) {
+void set_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
+                  TenT &tensor, ValueAt value_at) {
   auto &ctx = fix.context();
+  const auto shape = detail::nothrow_call(
+      file, line, [&] { return tci::shape(ctx, tensor); });
   detail::for_each_coors<TenT>(
-      tci::shape(ctx, tensor), [&](const tci::elem_coors_t<TenT> &coors) {
+      shape, [&](const tci::elem_coors_t<TenT> &coors) {
         const auto w = written<TenT>(static_cast<double>(value_at(coors)));
-        tci::set_elem(ctx, tensor, coors, make_elem<TenT>(w.real(), w.imag()));
+        detail::nothrow_call(file, line, [&] {
+          tci::set_elem(ctx, tensor, coors,
+                        make_elem<TenT>(w.real(), w.imag()));
+        });
       });
 }
 
 /// Asserts that `tensor` has `shape`, then that the element at every
 /// coordinate of that shape equals `value_at(coors)` within
 /// `tolerance(fix, cat, n)`, part by part; `tol_category::exact` admits only
-/// equality. A real `value_at` result `v` stands for `written<TenT>(v)`, the
-/// value `set_elems` writes; a `std::complex<double>` result is compared as it
+/// equality, and any other tolerance admits only a difference below it. A real
+/// `value_at` result `v` stands for `written<TenT>(v)`, the value
+/// `TCICT_SET_ELEMS` writes; a `std::complex<double>` result is compared as it
 /// is. The imaginary part is compared only for a complex element type. The
 /// shape is asserted first, so the sweep reads only coordinates the tensor has.
-/// A shape or element mismatch is reported at `file`:`line`; call it through
-/// TCICT_EXPECT_ELEMS, which passes the caller's location.
+/// A shape or element mismatch, and a std::exception from shape or get_elem,
+/// is reported at `file`:`line`; call it through TCICT_EXPECT_ELEMS, which
+/// passes the caller's location.
 template <typename TenT, typename ValueAt>
 void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
                      const TenT &tensor, const tci::shape_t<TenT> &shape,
@@ -149,7 +161,8 @@ void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
     oss << "}";
     return oss.str();
   };
-  const auto actual_shape = tci::shape(ctx, tensor);
+  const auto actual_shape = detail::nothrow_call(
+      file, line, [&] { return tci::shape(ctx, tensor); });
   if (!(actual_shape == shape)) {
     detail::fail_at(file, line,
                     "shape " + shape_text(actual_shape) + " != expected " +
@@ -157,7 +170,8 @@ void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
   }
   detail::for_each_coors<TenT>(
       shape, [&](const tci::elem_coors_t<TenT> &coors) {
-        auto elem = tci::get_elem(ctx, tensor, coors);
+        const auto elem = detail::nothrow_call(
+            file, line, [&] { return tci::get_elem(ctx, tensor, coors); });
         const auto value = value_at(coors);
         std::complex<double> expected;
         if constexpr (std::is_arithmetic_v<std::decay_t<decltype(value)>>) {
@@ -165,13 +179,17 @@ void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
         } else {
           expected = value;
         }
-        // A zero tolerance (tol_category::exact) admits only equality.
+        // A zero tolerance (tol_category::exact) admits only equality; any
+        // other is compared strictly, as TCICT_ASSERT_CLOSE compares.
         auto check = [&](double actual, double wanted, const char *part) {
-          if (!(std::abs(actual - wanted) <= tol)) {
+          const double diff = std::abs(actual - wanted);
+          const bool ok = tol == 0 ? actual == wanted : diff < tol;
+          if (!ok) {
             std::ostringstream oss;
-            oss << part << " part at " << shape_text(coors)
+            oss << std::setprecision(std::numeric_limits<double>::max_digits10)
+                << part << " part at " << shape_text(coors)
                 << " differs: " << actual << " != " << wanted
-                << " (tolerance " << tol << ")";
+                << " (|difference| " << diff << ", tolerance " << tol << ")";
             detail::fail_at(file, line, oss.str());
           }
         };
@@ -189,3 +207,7 @@ void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
 /// expect_elems_at with the caller's file and line:
 /// TCICT_EXPECT_ELEMS(fix, tensor, shape, value_at[, cat[, n]]).
 #define TCICT_EXPECT_ELEMS(...) ::tcict::expect_elems_at(__FILE__, __LINE__, __VA_ARGS__)
+
+/// set_elems_at with the caller's file and line:
+/// TCICT_SET_ELEMS(fix, tensor, value_at).
+#define TCICT_SET_ELEMS(...) ::tcict::set_elems_at(__FILE__, __LINE__, __VA_ARGS__)

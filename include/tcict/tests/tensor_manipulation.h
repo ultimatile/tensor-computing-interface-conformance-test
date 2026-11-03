@@ -784,8 +784,8 @@ void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
   auto t2_at = ramp_over<TenT>({2, 3}, 20.0);
   auto t1 = tci::zeros<TenT>(ctx, {2, 3});
   auto t2 = tci::zeros<TenT>(ctx, {2, 3});
-  set_elems(fix, t1, t1_at);
-  set_elems(fix, t2, t2_at);
+  TCICT_SET_ELEMS(fix, t1, t1_at);
+  TCICT_SET_ELEMS(fix, t2, t2_at);
 
   // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
   tci::List<tci::CRef<TenT>> ins = {std::cref(t1), std::cref(t2)};
@@ -828,9 +828,9 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
   auto a = tci::zeros<TenT>(ctx, {2, 3, 4});
   auto b = tci::zeros<TenT>(ctx, {2, 1, 4});
   auto c = tci::zeros<TenT>(ctx, {2, 2, 4});
-  set_elems(fix, a, a_at);
-  set_elems(fix, b, b_at);
-  set_elems(fix, c, c_at);
+  TCICT_SET_ELEMS(fix, a, a_at);
+  TCICT_SET_ELEMS(fix, b, b_at);
+  TCICT_SET_ELEMS(fix, c, c_at);
 
   auto d = TCICT_NOTHROW_VALUE(tci::concatenate<TenT>(
       ctx, {std::cref(a), std::cref(b), std::cref(c)}, 1));
@@ -1148,8 +1148,8 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
   auto t2_at = ramp_over<TenT>({2, 3}, 20.0);
   auto t1 = tci::zeros<TenT>(ctx, {2, 3});
   auto t2 = tci::zeros<TenT>(ctx, {2, 3});
-  set_elems(fix, t1, t1_at);
-  set_elems(fix, t2, t2_at);
+  TCICT_SET_ELEMS(fix, t1, t1_at);
+  TCICT_SET_ELEMS(fix, t2, t2_at);
 
   // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
   tci::List<tci::CRef<TenT>> ins = {std::cref(t1), std::cref(t2)};
@@ -1192,9 +1192,9 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
   auto t1 = tci::zeros<TenT>(ctx, {2, 3});
   auto t2 = tci::zeros<TenT>(ctx, {2, 3});
   auto t3 = tci::zeros<TenT>(ctx, {2, 3});
-  set_elems(fix, t1, t1_at);
-  set_elems(fix, t2, t2_at);
-  set_elems(fix, t3, t3_at);
+  TCICT_SET_ELEMS(fix, t1, t1_at);
+  TCICT_SET_ELEMS(fix, t2, t2_at);
+  TCICT_SET_ELEMS(fix, t3, t3_at);
 
   auto result = TCICT_NOTHROW_VALUE(
       tci::stack<TenT>(ctx, {std::cref(t1), std::cref(t2), std::cref(t3)}, 2));

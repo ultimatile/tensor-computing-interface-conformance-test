@@ -48,9 +48,9 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
   auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_c = tci::zeros<TenT>(ctx, {2, 2});
-  set_elems(fix, tensor_a, a_at);
-  set_elems(fix, tensor_b, b_at);
-  set_elems(fix, tensor_c, c_at);
+  TCICT_SET_ELEMS(fix, tensor_a, a_at);
+  TCICT_SET_ELEMS(fix, tensor_b, b_at);
+  TCICT_SET_ELEMS(fix, tensor_c, c_at);
 
   auto result = TCICT_NOTHROW_VALUE(tci::linear_combine<TenT>(
       ctx, {std::cref(tensor_a), std::cref(tensor_b), std::cref(tensor_c)}));
@@ -85,8 +85,8 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
   auto b_at = ramp_over<TenT>({2, 2}, 5.0);
   auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
-  set_elems(fix, tensor_a, a_at);
-  set_elems(fix, tensor_b, b_at);
+  TCICT_SET_ELEMS(fix, tensor_a, a_at);
+  TCICT_SET_ELEMS(fix, tensor_b, b_at);
 
   // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
   tci::List<tci::CRef<TenT>> ins = {std::cref(tensor_a), std::cref(tensor_b)};
@@ -128,7 +128,7 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
 
   auto single_at = ramp_over<TenT>({1, 1}, 5.0);
   auto single_tensor = tci::zeros<TenT>(ctx, {1, 1});
-  set_elems(fix, single_tensor, single_at);
+  TCICT_SET_ELEMS(fix, single_tensor, single_at);
 
   // A named list, feeding both overloads; see "Inputs to multi-input
   // operations" in CONTRIBUTING.md.
