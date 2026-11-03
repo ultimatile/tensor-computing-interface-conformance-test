@@ -145,24 +145,23 @@ restore_tcict() {
   git -C "$DEST" clean -ffd
 }
 
+prepare_and_build() {
+  require_clean_tcict
+  [[ "$USER_SUPPLIED" == 1 ]] || sync_default_path
+  [[ -d "$CYTNX_BACKEND_DIR" ]] || fail "$CYTNX_BACKEND_DIR does not exist"
+  require_sentinel
+  override_tcict
+  cmake_build
+}
+
 main() {
   local cmd="${1:-}"
   case "$cmd" in
     check)
-      require_clean_tcict
-      [[ "$USER_SUPPLIED" == 1 ]] || sync_default_path
-      [[ -d "$CYTNX_BACKEND_DIR" ]] || fail "$CYTNX_BACKEND_DIR does not exist"
-      require_sentinel
-      override_tcict
-      cmake_build
+      prepare_and_build
       ;;
     test)
-      require_clean_tcict
-      [[ "$USER_SUPPLIED" == 1 ]] || sync_default_path
-      [[ -d "$CYTNX_BACKEND_DIR" ]] || fail "$CYTNX_BACKEND_DIR does not exist"
-      require_sentinel
-      override_tcict
-      cmake_build
+      prepare_and_build
       run_tests
       ;;
     restore)
