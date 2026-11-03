@@ -45,6 +45,18 @@
 //   TCICT_SKIP_TO_RANGE, TCICT_SKIP_SHOW, TCICT_SKIP_CLOSE, TCICT_SKIP_CONVERT,
 //   TCICT_SKIP_VERSION
 //
+// Tests that build and check tensors element by element:
+//
+// The concatenate, stack and linear_combine tests build every input with
+// zeros and set_elem and check every element with shape and get_elem (see
+// include/tcict/elem_sweep.h). Defining any of TCICT_SKIP_ZEROS,
+// TCICT_SKIP_SET_ELEM, TCICT_SKIP_GET_ELEM or TCICT_SKIP_SHAPE therefore
+// skips those tests too, so a gap in one of those four APIs is not reported
+// as a concatenate, stack or linear_combine failure. TCICT_HAS_ELEM_SWEEP,
+// defined below, holds exactly when none of the four is skipped. It is fixed
+// when this file is first included, so define those four before including any
+// tcict header, for instance as compile definitions (see "Usage" above).
+//
 // Precision-conditional skip macros (factorization + iterative APIs):
 //
 // When the corresponding TCICT_SKIP_<API>_SINGLE_PRECISION macro is
@@ -100,3 +112,10 @@
       return;                                                                  \
     }                                                                          \
   } while (false)
+
+// Defined when the APIs the element-by-element tests need are all available;
+// see "Tests that build and check tensors element by element" above.
+#if !defined(TCICT_SKIP_ZEROS) && !defined(TCICT_SKIP_SET_ELEM) &&            \
+    !defined(TCICT_SKIP_GET_ELEM) && !defined(TCICT_SKIP_SHAPE)
+#define TCICT_HAS_ELEM_SWEEP
+#endif

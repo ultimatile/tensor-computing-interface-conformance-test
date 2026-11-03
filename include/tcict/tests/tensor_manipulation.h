@@ -2,6 +2,7 @@
 
 #include <tcict/assertion.h>
 #include <tcict/elem_helper.h>
+#include <tcict/elem_sweep.h>
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
 
@@ -9,6 +10,7 @@
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <functional>
 #include <vector>
 
 namespace tcict {
@@ -773,23 +775,37 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_CONCATENATE
+#if !defined(TCICT_SKIP_CONCATENATE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
-  auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
-  auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
+  // Distinct values across both inputs; the expected results are computed
+  // from the same functions. See "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  auto t1_at = ramp_over<TenT>({2, 3}, 10.0);
+  auto t2_at = ramp_over<TenT>({2, 3}, 20.0);
+  auto t1 = tci::zeros<TenT>(ctx, {2, 3});
+  auto t2 = tci::zeros<TenT>(ctx, {2, 3});
+  TCICT_SET_ELEMS(fix, t1, t1_at);
+  TCICT_SET_ELEMS(fix, t2, t2_at);
 
-  tci::List<TenT> tensors = {t1, t2};
+  // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
+  tci::List<tci::CRef<TenT>> ins = {std::cref(t1), std::cref(t2)};
 
-  // Vertical concatenation
-  TenT result;
-  TCICT_ASSERT_NOTHROW(tci::concatenate(ctx, tensors, 0, result));
-  tci::shape_t<TenT> expected_v = {4, 3};
-  TCICT_ASSERT(tci::shape(ctx, result) == expected_v);
+  // Vertical concatenation: rows 0-1 from t1, rows 2-3 from t2
+  auto vertical = TCICT_NOTHROW_VALUE(tci::concatenate<TenT>(ctx, ins, 0));
+  TCICT_EXPECT_ELEMS(fix, vertical, {4, 3}, [&](const auto &x) {
+    return x[0] < 2 ? t1_at(x) : t2_at(shifted(x, 0, 2));
+  }, tol_category::exact);
 
-  // Horizontal concatenation
-  TCICT_ASSERT_NOTHROW(tci::concatenate(ctx, tensors, 1, result));
-  tci::shape_t<TenT> expected_h = {2, 6};
-  TCICT_ASSERT(tci::shape(ctx, result) == expected_h);
+  // Horizontal concatenation: columns 0-2 from t1, columns 3-5 from t2
+  auto horizontal = TCICT_NOTHROW_VALUE(tci::concatenate<TenT>(ctx, ins, 1));
+  TCICT_EXPECT_ELEMS(fix, horizontal, {2, 6}, [&](const auto &x) {
+    return x[1] < 3 ? t1_at(x) : t2_at(shifted(x, 1, 3));
+  }, tol_category::exact);
+
+  // Inputs unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  TCICT_EXPECT_ELEMS(fix, t1, {2, 3}, t1_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, t2, {2, 3}, t2_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -799,23 +815,42 @@ void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_concatenate_values(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_CONCATENATE
+#if !defined(TCICT_SKIP_CONCATENATE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
-  auto a = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
-  auto b = tci::fill<TenT>(ctx, {2, 1, 4}, make_elem<TenT>(2.0));
-  auto c = tci::fill<TenT>(ctx, {2, 2, 4}, make_elem<TenT>(3.0));
+  // Distinct values across all three inputs; the expected result is computed
+  // from the same functions. See "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  // a holds 1..24, b 25..32 and c 33..48: small integers, so a float
+  // represents each value, and its imaginary part, exactly.
+  auto a_at = ramp_over<TenT>({2, 3, 4}, 1.0);
+  auto b_at = ramp_over<TenT>({2, 1, 4}, 25.0);
+  auto c_at = ramp_over<TenT>({2, 2, 4}, 33.0);
+  auto a = tci::zeros<TenT>(ctx, {2, 3, 4});
+  auto b = tci::zeros<TenT>(ctx, {2, 1, 4});
+  auto c = tci::zeros<TenT>(ctx, {2, 2, 4});
+  TCICT_SET_ELEMS(fix, a, a_at);
+  TCICT_SET_ELEMS(fix, b, b_at);
+  TCICT_SET_ELEMS(fix, c, c_at);
 
-  TenT d;
-  tci::List<TenT> tensors = {a, b, c};
-  TCICT_ASSERT_NOTHROW(tci::concatenate(ctx, tensors, 1, d));
+  auto d = TCICT_NOTHROW_VALUE(tci::concatenate<TenT>(
+      ctx, {std::cref(a), std::cref(b), std::cref(c)}, 1));
 
-  tci::shape_t<TenT> expected = {2, 6, 4};
-  TCICT_ASSERT(tci::shape(ctx, d) == expected);
+  // Bond 1 of d: 0-2 from a, 3 from b, 4-5 from c
+  TCICT_EXPECT_ELEMS(fix, d, {2, 6, 4}, [&](const auto &x) {
+    if (x[1] < 3) {
+      return a_at(x);
+    }
+    if (x[1] < 4) {
+      return b_at(shifted(x, 1, 3));
+    }
+    return c_at(shifted(x, 1, 4));
+  }, tol_category::exact);
 
-  // Verify element positions
-  auto el_b = tci::get_elem(ctx, b, {0, 0, 0});
-  auto el_d3 = tci::get_elem(ctx, d, {0, 3, 0});
-  TCICT_ASSERT(el_b == el_d3);
+  // Inputs unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  TCICT_EXPECT_ELEMS(fix, a, {2, 3, 4}, a_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, b, {2, 1, 4}, b_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, c, {2, 2, 4}, c_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -1104,32 +1139,39 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
 // --- stack: basic ---
 
 template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_STACK
+#if !defined(TCICT_SKIP_STACK) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
+  // Distinct values across both inputs; the expected result is computed from
+  // the same functions. See "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  auto t1_at = ramp_over<TenT>({2, 3}, 10.0);
+  auto t2_at = ramp_over<TenT>({2, 3}, 20.0);
+  auto t1 = tci::zeros<TenT>(ctx, {2, 3});
+  auto t2 = tci::zeros<TenT>(ctx, {2, 3});
+  TCICT_SET_ELEMS(fix, t1, t1_at);
+  TCICT_SET_ELEMS(fix, t2, t2_at);
 
-  auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
-  auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
+  // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
+  tci::List<tci::CRef<TenT>> ins = {std::cref(t1), std::cref(t2)};
+  auto result = TCICT_NOTHROW_VALUE(tci::stack<TenT>(ctx, ins, 0));
 
-  TenT result;
-  tci::List<TenT> tensors = {t1, t2};
-  tci::stack(ctx, tensors, 0, result);
+  // The new bond 0 selects the input: slice 0 is t1, slice 1 is t2
+  TCICT_EXPECT_ELEMS(fix, result, {2, 2, 3}, [&](const auto &x) {
+    const auto y = without_bond(x, 0);
+    return x[0] == 0 ? t1_at(y) : t2_at(y);
+  }, tol_category::exact);
 
-  auto s = tci::shape(ctx, result);
-  TCICT_ASSERT(s.size() == 3);
-  TCICT_ASSERT(s[0] == 2); // stacked dimension
-  TCICT_ASSERT(s[1] == 2);
-  TCICT_ASSERT(s[2] == 3);
+  // An interior bond: the new bond 1 selects the input
+  auto interior = TCICT_NOTHROW_VALUE(tci::stack<TenT>(ctx, ins, 1));
+  TCICT_EXPECT_ELEMS(fix, interior, {2, 2, 3}, [&](const auto &x) {
+    const auto y = without_bond(x, 1);
+    return x[1] == 0 ? t1_at(y) : t2_at(y);
+  }, tol_category::exact);
 
-  // First slice filled with 1, second with 2
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 0})),
-                     1.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1, 2})),
-                     1.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0, 0})),
-                     2.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1, 2})),
-                     2.0, tol);
+  // Inputs unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  TCICT_EXPECT_ELEMS(fix, t1, {2, 3}, t1_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, t2, {2, 3}, t2_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -1139,30 +1181,41 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_STACK
+#if !defined(TCICT_SKIP_STACK) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
+  // Distinct values across all three inputs; the expected result is computed
+  // from the same functions. See "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  auto t1_at = ramp_over<TenT>({2, 3}, 10.0);
+  auto t2_at = ramp_over<TenT>({2, 3}, 20.0);
+  auto t3_at = ramp_over<TenT>({2, 3}, 30.0);
+  auto t1 = tci::zeros<TenT>(ctx, {2, 3});
+  auto t2 = tci::zeros<TenT>(ctx, {2, 3});
+  auto t3 = tci::zeros<TenT>(ctx, {2, 3});
+  TCICT_SET_ELEMS(fix, t1, t1_at);
+  TCICT_SET_ELEMS(fix, t2, t2_at);
+  TCICT_SET_ELEMS(fix, t3, t3_at);
 
-  auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
-  auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
-  auto t3 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(3.0));
+  auto result = TCICT_NOTHROW_VALUE(
+      tci::stack<TenT>(ctx, {std::cref(t1), std::cref(t2), std::cref(t3)}, 2));
 
-  TenT result;
-  tci::List<TenT> tensors = {t1, t2, t3};
-  tci::stack(ctx, tensors, 2, result);
+  // The new bond 2 selects the input
+  TCICT_EXPECT_ELEMS(fix, result, {2, 3, 3}, [&](const auto &x) {
+    const auto y = without_bond(x, 2);
+    if (x[2] == 0) {
+      return t1_at(y);
+    }
+    if (x[2] == 1) {
+      return t2_at(y);
+    }
+    return t3_at(y);
+  }, tol_category::exact);
 
-  auto s = tci::shape(ctx, result);
-  TCICT_ASSERT(s.size() == 3);
-  TCICT_ASSERT(s[0] == 2);
-  TCICT_ASSERT(s[1] == 3);
-  TCICT_ASSERT(s[2] == 3); // stacked dimension
-
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 0})),
-                     1.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 1})),
-                     2.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 2})),
-                     3.0, tol);
+  // Inputs unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  TCICT_EXPECT_ELEMS(fix, t1, {2, 3}, t1_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, t2, {2, 3}, t2_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, t3, {2, 3}, t3_at, tol_category::exact);
 #else
   (void)fix;
 #endif

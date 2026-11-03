@@ -2,11 +2,14 @@
 
 #include <tcict/assertion.h>
 #include <tcict/elem_helper.h>
+#include <tcict/elem_sweep.h>
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
 
 #include <algorithm>
 #include <cmath>
+#include <complex>
+#include <functional>
 #include <vector>
 
 namespace tcict {
@@ -32,41 +35,38 @@ template <typename TenT> void test_norm_identity(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_LINEAR_COMBINE
+#if !defined(TCICT_SKIP_LINEAR_COMBINE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::reduction, 3);
 
+  // Real parts a = [[1,2],[3,4]], b = [[5,6],[7,8]], c = [[20,21],[22,23]]:
+  // distinct values across all three inputs; the expected result is computed
+  // from the same functions. See "Inputs to multi-input operations" in
+  // CONTRIBUTING.md. The offsets are not evenly spaced: evenly spaced ones
+  // would make a + c == 2b, so a backend returning 3b would pass.
+  auto a_at = ramp_over<TenT>({2, 2}, 1.0);
+  auto b_at = ramp_over<TenT>({2, 2}, 5.0);
+  auto c_at = ramp_over<TenT>({2, 2}, 20.0);
   auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_c = tci::zeros<TenT>(ctx, {2, 2});
+  TCICT_SET_ELEMS(fix, tensor_a, a_at);
+  TCICT_SET_ELEMS(fix, tensor_b, b_at);
+  TCICT_SET_ELEMS(fix, tensor_c, c_at);
 
-  // a = [[1,2],[3,4]], b = [[5,6],[7,8]], c = [[1,1],[1,1]]
-  tci::set_elem(ctx, tensor_a, {0, 0}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, tensor_a, {0, 1}, make_elem<TenT>(2.0));
-  tci::set_elem(ctx, tensor_a, {1, 0}, make_elem<TenT>(3.0));
-  tci::set_elem(ctx, tensor_a, {1, 1}, make_elem<TenT>(4.0));
-  tci::set_elem(ctx, tensor_b, {0, 0}, make_elem<TenT>(5.0));
-  tci::set_elem(ctx, tensor_b, {0, 1}, make_elem<TenT>(6.0));
-  tci::set_elem(ctx, tensor_b, {1, 0}, make_elem<TenT>(7.0));
-  tci::set_elem(ctx, tensor_b, {1, 1}, make_elem<TenT>(8.0));
-  tci::set_elem(ctx, tensor_c, {0, 0}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, tensor_c, {0, 1}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, tensor_c, {1, 0}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, tensor_c, {1, 1}, make_elem<TenT>(1.0));
+  auto result = TCICT_NOTHROW_VALUE(tci::linear_combine<TenT>(
+      ctx, {std::cref(tensor_a), std::cref(tensor_b), std::cref(tensor_c)}));
 
-  TenT result;
-  tci::List<TenT> tensors = {tensor_a, tensor_b, tensor_c};
-  TCICT_ASSERT_NOTHROW(result = tci::linear_combine(ctx, tensors));
+  // Expected real parts: a + b + c = [[26,29],[32,35]]
+  TCICT_EXPECT_ELEMS(
+      fix, result, {2, 2},
+      [&](const auto &x) { return a_at(x) + b_at(x) + c_at(x); },
+      tol_category::reduction, 3);
 
-  // Expected: [[7,9],[11,13]]
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 7.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1})), 9.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0})), 11.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), 13.0,
-                     tol);
+  // Inputs unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  TCICT_EXPECT_ELEMS(fix, tensor_a, {2, 2}, a_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, tensor_b, {2, 2}, b_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, tensor_c, {2, 2}, c_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -76,40 +76,45 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_LINEAR_COMBINE
+#if !defined(TCICT_SKIP_LINEAR_COMBINE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::reduction, 2);
 
+  // Real parts a = [[1,2],[3,4]], b = [[5,6],[7,8]]: distinct values across
+  // both inputs; the expected result is computed from the same functions. See
+  // "Inputs to multi-input operations" in CONTRIBUTING.md.
+  auto a_at = ramp_over<TenT>({2, 2}, 1.0);
+  auto b_at = ramp_over<TenT>({2, 2}, 5.0);
   auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
+  TCICT_SET_ELEMS(fix, tensor_a, a_at);
+  TCICT_SET_ELEMS(fix, tensor_b, b_at);
 
-  // a = [[2,4],[6,8]], b = [[1,3],[5,7]]
-  tci::set_elem(ctx, tensor_a, {0, 0}, make_elem<TenT>(2.0));
-  tci::set_elem(ctx, tensor_a, {0, 1}, make_elem<TenT>(4.0));
-  tci::set_elem(ctx, tensor_a, {1, 0}, make_elem<TenT>(6.0));
-  tci::set_elem(ctx, tensor_a, {1, 1}, make_elem<TenT>(8.0));
-  tci::set_elem(ctx, tensor_b, {0, 0}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, tensor_b, {0, 1}, make_elem<TenT>(3.0));
-  tci::set_elem(ctx, tensor_b, {1, 0}, make_elem<TenT>(5.0));
-  tci::set_elem(ctx, tensor_b, {1, 1}, make_elem<TenT>(7.0));
+  // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
+  tci::List<tci::CRef<TenT>> ins = {std::cref(tensor_a), std::cref(tensor_b)};
+  // For a complex element type the coefficients have imaginary parts too, so
+  // a backend that conjugates them or drops their imaginary parts fails.
+  const std::complex<double> s_a(0.5, is_complex_v<TenT> ? 0.25 : 0.0);
+  const std::complex<double> s_b(2.0, is_complex_v<TenT> ? -1.0 : 0.0);
+  tci::List<tci::elem_t<TenT>> coefficients = {
+      make_elem<TenT>(s_a.real(), s_a.imag()),
+      make_elem<TenT>(s_b.real(), s_b.imag())};
 
-  tci::List<TenT> tensors = {tensor_a, tensor_b};
-  tci::List<tci::elem_t<TenT>> coefficients = {make_elem<TenT>(0.5),
-                                               make_elem<TenT>(2.0)};
+  auto result =
+      TCICT_NOTHROW_VALUE(tci::linear_combine<TenT>(ctx, ins, coefficients));
 
-  TenT result;
-  TCICT_ASSERT_NOTHROW(result =
-                           tci::linear_combine(ctx, tensors, coefficients));
+  // Expected: s_a*a + s_b*b; for a real element type, real parts
+  // [[10.5,13],[15.5,18]]
+  TCICT_EXPECT_ELEMS(
+      fix, result, {2, 2},
+      [&](const auto &x) {
+        return s_a * written<TenT>(a_at(x)) + s_b * written<TenT>(b_at(x));
+      },
+      tol_category::reduction, 2);
 
-  // Expected: 0.5*a + 2*b = [[3,8],[13,18]]
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 3.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1})), 8.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0})), 13.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), 18.0,
-                     tol);
+  // Inputs unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  TCICT_EXPECT_ELEMS(fix, tensor_a, {2, 2}, a_at, tol_category::exact);
+  TCICT_EXPECT_ELEMS(fix, tensor_b, {2, 2}, b_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -119,24 +124,35 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_LINEAR_COMBINE
+#if !defined(TCICT_SKIP_LINEAR_COMBINE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
 
+  auto single_at = ramp_over<TenT>({1, 1}, 5.0);
   auto single_tensor = tci::zeros<TenT>(ctx, {1, 1});
-  tci::set_elem(ctx, single_tensor, {0, 0}, make_elem<TenT>(5.0));
+  TCICT_SET_ELEMS(fix, single_tensor, single_at);
 
-  TenT result;
-  tci::List<TenT> single_list = {single_tensor};
-  TCICT_ASSERT_NOTHROW(result = tci::linear_combine(ctx, single_list));
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 5.0,
-                     tol);
+  // A named list, feeding both overloads; see "Inputs to multi-input
+  // operations" in CONTRIBUTING.md.
+  tci::List<tci::CRef<TenT>> single_list = {std::cref(single_tensor)};
+  auto summed =
+      TCICT_NOTHROW_VALUE(tci::linear_combine<TenT>(ctx, single_list));
+  TCICT_EXPECT_ELEMS(fix, summed, {1, 1}, single_at, tol_category::exact);
 
-  tci::List<tci::elem_t<TenT>> single_coef = {make_elem<TenT>(3.0)};
-  TCICT_ASSERT_NOTHROW(result =
-                           tci::linear_combine(ctx, single_list, single_coef));
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 15.0,
-                     tol);
+  // For a complex element type the coefficient has an imaginary part too.
+  // An input element is v(1 - 0.5i), and (3 - 1.5i) v (1 - 0.5i) =
+  // v (2.25 - 3i) keeps an imaginary part in the result.
+  const std::complex<double> s(3.0, is_complex_v<TenT> ? -1.5 : 0.0);
+  tci::List<tci::elem_t<TenT>> single_coef = {make_elem<TenT>(s.real(),
+                                                              s.imag())};
+  auto scaled = TCICT_NOTHROW_VALUE(
+      tci::linear_combine<TenT>(ctx, single_list, single_coef));
+  TCICT_EXPECT_ELEMS(fix, scaled, {1, 1}, [&](const auto &x) {
+    return s * written<TenT>(single_at(x));
+  });
+
+  // Input unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  TCICT_EXPECT_ELEMS(fix, single_tensor, {1, 1}, single_at, tol_category::exact);
 #else
   (void)fix;
 #endif

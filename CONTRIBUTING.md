@@ -25,8 +25,9 @@ make integration-check
 
 This:
 
-1. Clones cytnx (with submodules) into `./build/tensor-computing-interface-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard $CYTNX_REF`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF` (default `origin/main`).
-2. Replaces `external/tcict/` content with this repo's tracked HEAD via `git archive HEAD | tar -xf -`.
+0. Refuses to run while tracked files of this repo have uncommitted changes (see "Caveats").
+1. Clones cytnx (with submodules) into `./build/tensor-computing-interface-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard $CYTNX_REF`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF` (default under "Environment variables" below).
+2. Replaces `external/tcict/` content with this repo's tracked HEAD via `git archive HEAD | tar -xmf -`; `-m` stamps the extracted files with the current time, so the build recompiles against them.
 3. Builds the cytnx test target (`TCITests`).
 
 `build/` is gitignored, so the cloned backend and its cmake artefacts stay untracked.
@@ -37,7 +38,7 @@ This:
 make integration-check CYTNX_BACKEND_DIR=$HOME/path/to/tensor-computing-interface-backend-cytnx
 ```
 
-When `CYTNX_BACKEND_DIR` is set in the environment, the script does **not** clone or modify the outer cytnx working tree — it only overrides `external/tcict/`. To return to the auto-clone default, unset the variable rather than passing the default value explicitly.
+When `CYTNX_BACKEND_DIR` is set in the environment, the script does **not** clone or modify the outer cytnx working tree — it only overrides `external/tcict/`. That checkout must already provide the signatures the suite calls; see `CYTNX_REF` under "Environment variables". To return to the auto-clone default, unset the variable rather than passing the default value explicitly.
 
 ### Run the tests
 
@@ -71,7 +72,7 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 
 ### Caveats
 
-- The override copies tcict **HEAD** (last committed state). Uncommitted changes are not included; commit first.
+- The override copies tcict **HEAD** (last committed state), so `make integration-check` and `make integration-test` refuse to run while tracked files have uncommitted changes; commit or stash them first. Untracked files are not shipped either.
 - The script never writes to `external/tcict/.git*`, so `make integration-restore` always recovers the pinned state.
 - The `TCICT_SKIP_*` skip-macro matrix (cross-build with various skip-macro combinations) is deferred to a follow-up issue.
 - `make integration-restore` requires `CYTNX_BACKEND_DIR` to point at an actual git checkout (with `external/tcict` initialized as a submodule).
@@ -82,7 +83,7 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 |---|---|---|
 | `CYTNX_BACKEND_DIR` | `./build/tensor-computing-interface-backend-cytnx` | cytnx checkout to override into; **set** disables auto-clone/sync |
 | `CYTNX_REPO_URL` | `https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx.git` | URL used only when auto-cloning the default path |
-| `CYTNX_REF` | `origin/main` | ref the default-path checkout is reset to on every run |
+| `CYTNX_REF` | `origin/dev/tcapi-v1` | ref the default-path checkout is reset to on every run; it must provide the TCAPI V1 signatures this suite calls, such as `concatenate`, `stack` and `linear_combine` over `List<CRef<TenT>>`; the default is cytnx's TCAPI V1 integration branch |
 | `INTEGRATION_CMAKE_ARGS` | (empty) | extra args appended to the cmake configure command |
 
 ## Conventions for writing tests
@@ -93,6 +94,19 @@ These apply to every header under `include/tcict/`; comments in the code refer t
 
 TCAPI V1: "Most mutating functions provide two overloads: (1) in-place and (2) out-of-place writing to a separate output."
 The tests that read their input back after an out-of-place call assert a reading of that sentence: that the input is unchanged.
+
+### Inputs to multi-input operations
+
+`concatenate`, `stack` and `linear_combine` take their inputs as `List<CRef<TenT>>`, and TCAPI V1 says of them, under "Type System", "Auxiliary Types": "The referenced tensors are not copied, consumed, or modified and must stay alive for the call".
+Each test reads every input back after its last call to the operation and asserts that its shape and elements are unchanged.
+That asserts the "not ... modified" of V1's words as they stand, not a reading of them as in "Out-of-place inputs"; the read-back cannot detect a copy, so "not copied" is not asserted.
+An input whose elements all hold one value would pass that read-back even after being reordered in place, so each input element gets a value no other input element has.
+Each input is built from a coordinate-to-value function, through `TCICT_SET_ELEMS` in `include/tcict/elem_sweep.h`, and both the read-back and the check of every element of the result are computed from the same functions, through `TCICT_EXPECT_ELEMS`; `ramp_over` there gives distinct values to distinct coordinates.
+
+Each of the three operations, and each `linear_combine` overload, is called at least once through a named `tci::List<tci::CRef<TenT>>` variable, not only through a braced `{std::cref(a), ...}` list.
+When `TenT` is copy-constructible, a braced list of `std::cref`s also initializes a `List<TenT>`, so a braced call alone compiles against a backend that still takes `List<TenT>`.
+A named `List<CRef<TenT>>` does not convert to `List<TenT>`, so that call compiles only against V1's parameter type.
+A call with a braced list names `TenT` explicitly, as in `tci::stack<TenT>(ctx, {std::cref(a), std::cref(b)}, 0)`, because no parameter of these functions deduces it from a braced list.
 
 ### Callbacks the backend invokes
 

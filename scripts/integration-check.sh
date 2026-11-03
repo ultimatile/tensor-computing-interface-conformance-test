@@ -9,9 +9,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TCICT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Default cytnx repo coordinates. Both are overridable via env so this script
-# can target forks or alternate refs without code edits.
+# can target forks or alternate refs without code edits. The ref must provide
+# the TCAPI V1 signatures this suite calls, such as concatenate, stack and
+# linear_combine over List<CRef<TenT>>; the default is cytnx's TCAPI V1
+# integration branch.
 CYTNX_REPO_URL="${CYTNX_REPO_URL:-https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx.git}"
-CYTNX_REF="${CYTNX_REF:-origin/main}"
+CYTNX_REF="${CYTNX_REF:-origin/dev/tcapi-v1}"
 
 # Extra cmake configure args (e.g. "--preset brew-debug" or
 # "-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.cmake -DUSE_HPTT=ON").
@@ -38,7 +41,8 @@ usage() {
 Usage: $0 <subcommand>
 
 Subcommands:
-  check     sync (default-path only) -> override external/tcict -> cmake build
+  check     refuse if tracked tcict files have uncommitted changes -> sync
+            (default-path only) -> override external/tcict -> cmake build
   test      same as check, then run \$CYTNX_BACKEND_DIR/build/test/TCITests
   restore   restore external/tcict to the cytnx submodule pin
 
@@ -88,9 +92,24 @@ override_tcict() {
   # does not delete; the wipe is what makes the override idempotent.
   find "$DEST" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf -- {} +
   # Ship only tracked files from HEAD; working-tree artefacts (build outputs,
-  # editor backups) do not leak into the override. `tar -xf -` makes the stdin
-  # archive source explicit for portability across tar implementations.
-  git -C "$TCICT_ROOT" archive HEAD | tar -xf - -C "$DEST"
+  # editor backups) do not leak into the override. `-f -` makes the stdin
+  # archive source explicit for portability across tar implementations. `-m`
+  # stamps the extracted files with the current time instead of the commit's:
+  # an older stamp than the existing build objects would let the build skip
+  # recompiling against the new headers.
+  git -C "$TCICT_ROOT" archive HEAD | tar -xmf - -C "$DEST"
+}
+
+require_clean_tcict() {
+  # The override ships HEAD only, so an uncommitted edit to a tracked file
+  # would silently go untested.
+  local rc=0
+  git -C "$TCICT_ROOT" diff --quiet HEAD -- || rc=$?
+  case "$rc" in
+    0) ;;
+    1) fail "tracked files in $TCICT_ROOT have uncommitted changes, which the override (tcict HEAD) would not include; commit or stash them first" ;;
+    *) fail "git diff failed (exit $rc) while checking $TCICT_ROOT for uncommitted changes" ;;
+  esac
 }
 
 cmake_build() {
@@ -126,22 +145,23 @@ restore_tcict() {
   git -C "$DEST" clean -ffd
 }
 
+prepare_and_build() {
+  require_clean_tcict
+  [[ "$USER_SUPPLIED" == 1 ]] || sync_default_path
+  [[ -d "$CYTNX_BACKEND_DIR" ]] || fail "$CYTNX_BACKEND_DIR does not exist"
+  require_sentinel
+  override_tcict
+  cmake_build
+}
+
 main() {
   local cmd="${1:-}"
   case "$cmd" in
     check)
-      [[ "$USER_SUPPLIED" == 1 ]] || sync_default_path
-      [[ -d "$CYTNX_BACKEND_DIR" ]] || fail "$CYTNX_BACKEND_DIR does not exist"
-      require_sentinel
-      override_tcict
-      cmake_build
+      prepare_and_build
       ;;
     test)
-      [[ "$USER_SUPPLIED" == 1 ]] || sync_default_path
-      [[ -d "$CYTNX_BACKEND_DIR" ]] || fail "$CYTNX_BACKEND_DIR does not exist"
-      require_sentinel
-      override_tcict
-      cmake_build
+      prepare_and_build
       run_tests
       ;;
     restore)
