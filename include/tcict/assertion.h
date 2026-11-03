@@ -25,7 +25,8 @@ namespace detail {
 
 /// Calls `f` and returns its result, turning a std::exception other than an
 /// assertion_error into an assertion_error reported at `file`:`line`; an
-/// assertion_error raised inside `f` passes through unchanged. `f` must not
+/// assertion_error raised inside `f` is reported at `file`:`line` too, followed
+/// by its own message, which names where it was raised. `f` must not
 /// return a reference, which could refer to a temporary that has died by the
 /// time the caller reads it. A prvalue result reaches the caller without a copy
 /// or move.
@@ -34,8 +35,8 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
                 "TCICT_NOTHROW_VALUE takes a prvalue, such as a call returning by value");
   try {
     return f();
-  } catch (const assertion_error&) {
-    throw;
+  } catch (const assertion_error& e) {
+    fail_at(file, line, e.what());
   } catch (const std::exception& e) {
     fail_at(file, line, std::string("unexpected exception: ") + e.what());
   }
@@ -81,8 +82,9 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
 
 /// Evaluate a prvalue expression, such as a call returning by value, and yield
 /// its value, turning a std::exception from it into an assertion_error reported
-/// at the macro's use; an assertion_error raised while evaluating it passes
-/// through. The value reaches the caller without a copy or move:
+/// at the macro's use; an assertion_error raised while evaluating it is
+/// reported there too, followed by its own message. The value reaches the
+/// caller without a copy or move:
 /// `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of the result type that
 /// `auto r = f();` does not. Any other expression, a variable's name included,
 /// does not compile, since its result could refer to a temporary. The reported
@@ -94,8 +96,9 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
                                [&]() -> decltype(auto) { return (__VA_ARGS__); })
 
 /// Assert that an expression does not throw a std::exception other than an
-/// assertion_error, which passes through. Variadic so that the expression may
-/// contain commas.
+/// assertion_error; an assertion_error raised while evaluating it is reported
+/// at the macro's use, followed by its own message. Variadic so that the
+/// expression may contain commas.
 #define TCICT_ASSERT_NOTHROW(...)                                                                  \
   do {                                                                                             \
     ::tcict::detail::nothrow_call(__FILE__, __LINE__, [&] { (void)(__VA_ARGS__); });               \

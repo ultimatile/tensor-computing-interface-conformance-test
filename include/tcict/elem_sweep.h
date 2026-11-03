@@ -115,8 +115,9 @@ template <typename TenT> std::complex<double> written(double v) {
 /// is visible. Pairs with `TCICT_EXPECT_ELEMS`, so a test can build an input and
 /// check it with the same function; real-coefficient linear operations keep
 /// the imaginary part at `-0.5` times the real part. A std::exception from
-/// shape or set_elem is reported at `file`:`line`; call it through
-/// TCICT_SET_ELEMS, which passes the caller's location.
+/// shape, set_elem or `value_at`, an assertion failing in `value_at` included,
+/// is reported at `file`:`line`; call it through TCICT_SET_ELEMS, which passes
+/// the caller's location.
 template <typename TenT, typename ValueAt>
 void set_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
                   TenT &tensor, ValueAt value_at) {
@@ -125,7 +126,8 @@ void set_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
       file, line, [&] { return tci::shape(ctx, tensor); });
   detail::for_each_coors<TenT>(
       shape, [&](const tci::elem_coors_t<TenT> &coors) {
-        const auto w = written<TenT>(static_cast<double>(value_at(coors)));
+        const auto w = written<TenT>(static_cast<double>(
+            detail::nothrow_call(file, line, [&] { return value_at(coors); })));
         detail::nothrow_call(file, line, [&] {
           tci::set_elem(ctx, tensor, coors,
                         make_elem<TenT>(w.real(), w.imag()));
@@ -141,9 +143,10 @@ void set_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
 /// `TCICT_SET_ELEMS` writes; a `std::complex<double>` result is compared as it
 /// is. The imaginary part is compared only for a complex element type. The
 /// shape is asserted first, so the sweep reads only coordinates the tensor has.
-/// A shape or element mismatch, and a std::exception from shape or get_elem,
-/// is reported at `file`:`line`; call it through TCICT_EXPECT_ELEMS, which
-/// passes the caller's location.
+/// A shape or element mismatch, and a std::exception from shape, get_elem or
+/// `value_at`, an assertion failing in `value_at` included, is reported at
+/// `file`:`line`; call it through TCICT_EXPECT_ELEMS, which passes the
+/// caller's location.
 template <typename TenT, typename ValueAt>
 void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
                      const TenT &tensor, const tci::shape_t<TenT> &shape,
@@ -172,7 +175,8 @@ void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
       shape, [&](const tci::elem_coors_t<TenT> &coors) {
         const auto elem = detail::nothrow_call(
             file, line, [&] { return tci::get_elem(ctx, tensor, coors); });
-        const auto value = value_at(coors);
+        const auto value =
+            detail::nothrow_call(file, line, [&] { return value_at(coors); });
         std::complex<double> expected;
         if constexpr (std::is_arithmetic_v<std::decay_t<decltype(value)>>) {
           expected = written<TenT>(static_cast<double>(value));
