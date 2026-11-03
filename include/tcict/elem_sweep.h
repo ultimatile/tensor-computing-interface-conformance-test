@@ -3,6 +3,7 @@
 #include <tcict/assertion.h>
 #include <tcict/elem_helper.h>
 #include <tcict/fixture.h>
+#include <tcict/skip.h>
 
 #include <complex>
 #include <cstddef>
@@ -11,9 +12,11 @@
 namespace tcict {
 
 // Compiled exactly when at least one of their callers is: the concatenate,
-// stack and linear_combine tests.
-#if !defined(TCICT_SKIP_CONCATENATE) || !defined(TCICT_SKIP_STACK) ||         \
-    !defined(TCICT_SKIP_LINEAR_COMBINE)
+// stack and linear_combine tests, which also need the element APIs these
+// helpers call (TCICT_HAS_ELEM_SWEEP in include/tcict/skip.h).
+#if defined(TCICT_HAS_ELEM_SWEEP) &&                                          \
+    (!defined(TCICT_SKIP_CONCATENATE) || !defined(TCICT_SKIP_STACK) ||        \
+     !defined(TCICT_SKIP_LINEAR_COMBINE))
 
 namespace detail {
 

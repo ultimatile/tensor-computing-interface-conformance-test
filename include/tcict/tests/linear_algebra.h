@@ -35,7 +35,7 @@ template <typename TenT> void test_norm_identity(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_LINEAR_COMBINE
+#if !defined(TCICT_SKIP_LINEAR_COMBINE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
 
   // Real parts a = [[1,2],[3,4]], b = [[5,6],[7,8]], c = [[9,10],[11,12]]:
@@ -75,7 +75,7 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_LINEAR_COMBINE
+#if !defined(TCICT_SKIP_LINEAR_COMBINE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
 
   // Real parts a = [[1,2],[3,4]], b = [[5,6],[7,8]]: distinct values across
@@ -122,7 +122,7 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_LINEAR_COMBINE
+#if !defined(TCICT_SKIP_LINEAR_COMBINE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
 
   auto single_at = ramp_over<TenT>({1, 1}, 5.0);

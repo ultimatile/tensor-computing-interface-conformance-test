@@ -775,7 +775,7 @@ template <typename TenT> void test_transpose(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_CONCATENATE
+#if !defined(TCICT_SKIP_CONCATENATE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
   // Distinct values across both inputs; the expected results are computed
   // from the same functions. See "Inputs to multi-input operations" in
@@ -815,7 +815,7 @@ void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_concatenate_values(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_CONCATENATE
+#if !defined(TCICT_SKIP_CONCATENATE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
   // Distinct values across all three inputs; the expected result is computed
   // from the same functions. See "Inputs to multi-input operations" in
@@ -1140,7 +1140,7 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
 // --- stack: basic ---
 
 template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_STACK
+#if !defined(TCICT_SKIP_STACK) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
   // Distinct values across both inputs; the expected result is computed from
   // the same functions. See "Inputs to multi-input operations" in
@@ -1175,7 +1175,7 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_STACK
+#if !defined(TCICT_SKIP_STACK) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
   // Distinct values across all three inputs; the expected result is computed
   // from the same functions. See "Inputs to multi-input operations" in
