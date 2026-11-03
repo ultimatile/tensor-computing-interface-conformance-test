@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <exception>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -24,10 +25,10 @@ namespace detail {
 
 /// Calls `f` and returns its result, turning a std::exception other than an
 /// assertion_error into an assertion_error reported at `file`:`line`; an
-/// assertion_error raised inside `f` passes through unchanged. `f` must
-/// return a value, not a reference, which could refer to a temporary that has
-/// died by the time the caller reads it. A prvalue result reaches the caller
-/// without a copy or move.
+/// assertion_error raised inside `f` passes through unchanged. `f` must not
+/// return a reference, which could refer to a temporary that has died by the
+/// time the caller reads it. A prvalue result reaches the caller without a copy
+/// or move.
 template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&& f) {
   static_assert(!std::is_reference_v<std::invoke_result_t<F&>>,
                 "TCICT_NOTHROW_VALUE takes a prvalue, such as a call returning by value");

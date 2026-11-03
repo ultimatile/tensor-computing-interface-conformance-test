@@ -180,7 +180,7 @@ void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
           expected = value;
         }
         // A zero tolerance (tol_category::exact) admits only equality; any
-        // other is compared strictly, as TCICT_ASSERT_CLOSE compares.
+        // other admits only a difference below it.
         auto check = [&](double actual, double wanted, const char *part) {
           const double diff = std::abs(actual - wanted);
           const bool ok = tol == 0 ? actual == wanted : diff < tol;
