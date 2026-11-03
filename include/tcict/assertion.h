@@ -50,11 +50,10 @@ struct assertion_error : std::runtime_error {
 
 /// Evaluate an expression and yield what it yields, turning a std::exception
 /// from it into an assertion_error that names the file and line where the macro
-/// is used. The lambda returns `decltype(auto)`: a prvalue result (a value)
-/// reaches the caller without a copy or move, so
+/// is used. The lambda returns `decltype(auto)`, so a prvalue result, such as a
+/// call returning by value, reaches the caller without a copy or move:
 /// `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of the result type that
-/// `auto r = f();` does not; an lvalue result is returned as a reference, and a
-/// void expression yields void. Variadic so that the expression may contain
+/// `auto r = f();` does not. Variadic so that the expression may contain
 /// commas.
 #define TCICT_NOTHROW_VALUE(...)                                                                   \
   ([&]() -> decltype(auto) {                                                                       \

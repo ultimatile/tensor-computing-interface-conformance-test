@@ -13,9 +13,9 @@
 
 namespace tcict {
 
-// Guarded by TCICT_HAS_ELEM_SWEEP (include/tcict/skip.h), the condition of the
-// tests that use these helpers: the helpers call set_elem, shape and get_elem,
-// and those tests also build their inputs with zeros.
+// Guarded by TCICT_HAS_ELEM_SWEEP (include/tcict/skip.h), the element-API
+// condition every test using these helpers also requires: the helpers call
+// set_elem, shape and get_elem, and those tests build their inputs with zeros.
 #if defined(TCICT_HAS_ELEM_SWEEP)
 
 namespace detail {
@@ -151,7 +151,11 @@ void expect_elems(tci_test_fixture<TenT> &fix, const TenT &tensor,
           if (!(std::abs(actual - wanted) <= tol)) {
             std::ostringstream oss_;
             oss_ << __FILE__ << ":" << __LINE__ << ": " << part
-                 << " part differs: " << actual << " != " << wanted
+                 << " part at {";
+            for (std::size_t b = 0; b < coors.size(); ++b) {
+              oss_ << (b == 0 ? "" : ", ") << coors[b];
+            }
+            oss_ << "} differs: " << actual << " != " << wanted
                  << " (tolerance " << tol << ")";
             throw ::tcict::assertion_error(oss_.str());
           }

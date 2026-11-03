@@ -138,7 +138,8 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
   expect_elems(fix, summed, {1, 1}, single_at, tol_category::exact);
 
   // For a complex element type the coefficient has an imaginary part too.
-  // (3 - 1.5i)(1 - 0.5i) = 2.25 - 3i keeps an imaginary part in the result.
+  // An input element is v(1 - 0.5i), and (3 - 1.5i) v (1 - 0.5i) =
+  // v (2.25 - 3i) keeps an imaginary part in the result.
   const std::complex<double> s(3.0, is_complex_v<TenT> ? -1.5 : 0.0);
   tci::List<tci::elem_t<TenT>> single_coef = {make_elem<TenT>(s.real(),
                                                               s.imag())};
