@@ -10,8 +10,8 @@ TCICT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Default cytnx repo coordinates. Both are overridable via env so this script
 # can target forks or alternate refs without code edits. The default ref is the
-# cytnx branch that tracks this suite's TCAPI V1 migration; it goes back to
-# origin/main when both branches merge to main.
+# cytnx branch that carries the TCAPI V1 signatures this suite calls, which
+# origin/main does not.
 CYTNX_REPO_URL="${CYTNX_REPO_URL:-https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx.git}"
 CYTNX_REF="${CYTNX_REF:-origin/dev/tcapi-v1}"
 

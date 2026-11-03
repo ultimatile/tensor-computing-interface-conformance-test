@@ -25,7 +25,7 @@ make integration-check
 
 This:
 
-1. Clones cytnx (with submodules) into `./build/tensor-computing-interface-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard $CYTNX_REF`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF` (default `origin/dev/tcapi-v1`, the cytnx branch that tracks this suite's TCAPI V1 migration).
+1. Clones cytnx (with submodules) into `./build/tensor-computing-interface-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard $CYTNX_REF`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF` (default under "Environment variables" below).
 2. Replaces `external/tcict/` content with this repo's tracked HEAD via `git archive HEAD | tar -xmf -`; `-m` stamps the extracted files with the current time, so the build recompiles against them.
 3. Builds the cytnx test target (`TCITests`).
 
@@ -71,7 +71,7 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 
 ### Caveats
 
-- The override copies tcict **HEAD** (last committed state), so `check` and `test` refuse to run while tracked files have uncommitted changes; commit or stash them first. Untracked files are not shipped either.
+- The override copies tcict **HEAD** (last committed state), so `make integration-check` and `make integration-test` refuse to run while tracked files have uncommitted changes; commit or stash them first. Untracked files are not shipped either.
 - The script never writes to `external/tcict/.git*`, so `make integration-restore` always recovers the pinned state.
 - The `TCICT_SKIP_*` skip-macro matrix (cross-build with various skip-macro combinations) is deferred to a follow-up issue.
 - `make integration-restore` requires `CYTNX_BACKEND_DIR` to point at an actual git checkout (with `external/tcict` initialized as a submodule).
@@ -82,7 +82,7 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 |---|---|---|
 | `CYTNX_BACKEND_DIR` | `./build/tensor-computing-interface-backend-cytnx` | cytnx checkout to override into; **set** disables auto-clone/sync |
 | `CYTNX_REPO_URL` | `https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx.git` | URL used only when auto-cloning the default path |
-| `CYTNX_REF` | `origin/dev/tcapi-v1` | ref the default-path checkout is reset to on every run |
+| `CYTNX_REF` | `origin/dev/tcapi-v1` | ref the default-path checkout is reset to on every run; the default is the cytnx branch that carries the TCAPI V1 signatures this suite calls, which `origin/main` does not |
 | `INTEGRATION_CMAKE_ARGS` | (empty) | extra args appended to the cmake configure command |
 
 ## Conventions for writing tests
@@ -97,7 +97,7 @@ The tests that read their input back after an out-of-place call assert a reading
 ### Inputs to multi-input operations
 
 `concatenate`, `stack` and `linear_combine` take their inputs as `List<CRef<TenT>>`, and TCAPI V1 says of them: "The referenced tensors are not copied, consumed, or modified and must stay alive for the call".
-The tests read every input back after the call and assert that it is unchanged; unlike "Out-of-place inputs", this asserts V1's own words, not a reading of them.
+Each test reads every input back after its last call to the operation and asserts that it is unchanged; unlike "Out-of-place inputs", this asserts V1's own words, not a reading of them.
 
 Each of the three operations, and each `linear_combine` overload, is called at least once through a named `tci::List<tci::CRef<TenT>>` variable, not only through a braced `{std::cref(a), ...}` list.
 When `TenT` is copy-constructible, a braced list of `std::cref`s also initializes a `List<TenT>`, so a braced call alone compiles against a backend that still takes `List<TenT>`.
