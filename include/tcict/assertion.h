@@ -39,7 +39,7 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
   } catch (const std::exception& e) {
     fail_at(file, line, std::string("unexpected exception: ") + e.what());
   } catch (...) {
-    fail_at(file, line, "unexpected exception not derived from std::exception");
+    fail_at(file, line, "unexpected exception not catchable as std::exception");
   }
 }
 
@@ -85,8 +85,7 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
 /// its value, turning an exception of any type other than assertion_error from
 /// it into an assertion_error reported at the macro's use; an assertion_error
 /// raised while evaluating it is reported there too, followed by its own
-/// message. The value reaches the
-/// caller without a copy or move:
+/// message. The value reaches the caller without a copy or move:
 /// `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of the result type that
 /// `auto r = f();` does not. Any other expression, a variable's name included,
 /// does not compile, since its result could refer to a temporary. The reported
