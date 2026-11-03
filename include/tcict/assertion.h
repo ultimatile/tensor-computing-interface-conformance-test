@@ -27,12 +27,11 @@ namespace detail {
   throw assertion_error(oss.str());
 }
 
-/// Calls `f` and returns its result, turning an exception of any type other
-/// than assertion_error into an assertion_error reported at `file`:`line`; an
-/// assertion_error raised inside `f` is reported at `file`:`line` too, followed
-/// by its own message. Under libstdc++, the exception that unwinds a cancelled
-/// thread is rethrown unchanged, since swallowing it terminates the program.
-/// `f` must not return a reference, which could refer to a temporary that has
+/// Calls `f` and returns its result, reporting an exception from `f` as an
+/// assertion_error at `file`:`line`: an assertion_error is reported followed by
+/// its own message, and an exception of any other type as unexpected. The one
+/// exception left as it is, under libstdc++, unwinds a cancelled thread, and is
+/// rethrown unchanged since swallowing it terminates the program. `f` must not return a reference, which could refer to a temporary that has
 /// died by the time the caller reads it. A prvalue result reaches the caller
 /// without a copy or move.
 template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&& f) {
@@ -93,10 +92,9 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
   } while (false)
 
 /// Evaluate a prvalue expression, such as a call returning by value, and yield
-/// its value, turning an exception of any type other than assertion_error from
-/// it into an assertion_error reported at the macro's use; an assertion_error
-/// raised while evaluating it is reported there too, followed by its own
-/// message. The value reaches the caller without a copy or move:
+/// its value, reporting an exception from it at the macro's use as
+/// detail::nothrow_call does. The value reaches the caller without a copy or
+/// move:
 /// `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of the result type that
 /// `auto r = f();` does not. Any other expression, a variable's name included,
 /// does not compile, since its result could refer to a temporary. The reported
@@ -107,10 +105,9 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
   ::tcict::detail::nothrow_call(__FILE__, __LINE__,                                                \
                                [&]() -> decltype(auto) { return (__VA_ARGS__); })
 
-/// Assert that an expression does not throw: an exception of any type other
-/// than assertion_error is reported at the macro's use, and an assertion_error
-/// raised while evaluating it is reported there too, followed by its own
-/// message. Variadic so that the expression may contain commas.
+/// Assert that an expression does not throw, reporting an exception from it at
+/// the macro's use as detail::nothrow_call does. Variadic so that the
+/// expression may contain commas.
 #define TCICT_ASSERT_NOTHROW(...)                                                                  \
   do {                                                                                             \
     ::tcict::detail::nothrow_call(__FILE__, __LINE__, [&] { (void)(__VA_ARGS__); });               \
