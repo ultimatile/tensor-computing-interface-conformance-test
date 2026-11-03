@@ -777,9 +777,9 @@ template <typename TenT>
 void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_CONCATENATE
   auto &ctx = fix.context();
-  // Pairwise-distinct values across both inputs, so that the read-back below
-  // also sees an input reordered in place; see "Inputs to multi-input
-  // operations" in CONTRIBUTING.md.
+  // Distinct values across both inputs; the expected results are computed
+  // from the same functions. See "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
   auto t1_at = ramp_over<TenT>({2, 3}, 10.0);
   auto t2_at = ramp_over<TenT>({2, 3}, 20.0);
   auto t1 = tci::zeros<TenT>(ctx, {2, 3});
@@ -790,15 +790,17 @@ void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
   // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
   tci::List<tci::CRef<TenT>> ins = {std::cref(t1), std::cref(t2)};
 
-  // Vertical concatenation
+  // Vertical concatenation: rows 0-1 from t1, rows 2-3 from t2
   auto vertical = tci::concatenate<TenT>(ctx, ins, 0);
-  tci::shape_t<TenT> expected_v = {4, 3};
-  TCICT_ASSERT(tci::shape(ctx, vertical) == expected_v);
+  expect_elems(fix, vertical, {4, 3}, [&](const auto &x) {
+    return x[0] < 2 ? t1_at(x) : t2_at(shifted(x, 0, 2));
+  });
 
-  // Horizontal concatenation
+  // Horizontal concatenation: columns 0-2 from t1, columns 3-5 from t2
   auto horizontal = tci::concatenate<TenT>(ctx, ins, 1);
-  tci::shape_t<TenT> expected_h = {2, 6};
-  TCICT_ASSERT(tci::shape(ctx, horizontal) == expected_h);
+  expect_elems(fix, horizontal, {2, 6}, [&](const auto &x) {
+    return x[1] < 3 ? t1_at(x) : t2_at(shifted(x, 1, 3));
+  });
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
@@ -815,9 +817,9 @@ template <typename TenT>
 void test_concatenate_values(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_CONCATENATE
   auto &ctx = fix.context();
-  // Pairwise-distinct values across all three inputs, so that the read-back
-  // below also sees an input reordered in place; see "Inputs to multi-input
-  // operations" in CONTRIBUTING.md.
+  // Distinct values across all three inputs; the expected result is computed
+  // from the same functions. See "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
   auto a_at = ramp_over<TenT>({2, 3, 4}, 100.0);
   auto b_at = ramp_over<TenT>({2, 1, 4}, 200.0);
   auto c_at = ramp_over<TenT>({2, 2, 4}, 300.0);
@@ -831,13 +833,16 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
   auto d = tci::concatenate<TenT>(
       ctx, {std::cref(a), std::cref(b), std::cref(c)}, 1);
 
-  tci::shape_t<TenT> expected = {2, 6, 4};
-  TCICT_ASSERT(tci::shape(ctx, d) == expected);
-
-  // Verify element positions
-  auto el_b = tci::get_elem(ctx, b, {0, 0, 0});
-  auto el_d3 = tci::get_elem(ctx, d, {0, 3, 0});
-  TCICT_ASSERT(el_b == el_d3);
+  // Bond 1 of d: 0-2 from a, 3 from b, 4-5 from c
+  expect_elems(fix, d, {2, 6, 4}, [&](const auto &x) {
+    if (x[1] < 3) {
+      return a_at(x);
+    }
+    if (x[1] < 4) {
+      return b_at(shifted(x, 1, 3));
+    }
+    return c_at(shifted(x, 1, 4));
+  });
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
@@ -1134,21 +1139,11 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
 template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_STACK
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
-
-  // {0, 0} and {1, 2}, the coordinates the slice checks below read, hold 1 in
-  // t1 and 2 in t2; every other element has a value no other input element
-  // has, so that the read-back below also sees an input reordered in place.
-  // See "Inputs to multi-input operations" in CONTRIBUTING.md.
-  auto input_at = [](double m) {
-    return [m, ramp = ramp_over<TenT>({2, 3}, 10.0 * m)](const auto &x) {
-      const bool read_below =
-          (x[0] == 0 && x[1] == 0) || (x[0] == 1 && x[1] == 2);
-      return read_below ? m : ramp(x);
-    };
-  };
-  auto t1_at = input_at(1.0);
-  auto t2_at = input_at(2.0);
+  // Distinct values across both inputs; the expected result is computed from
+  // the same functions. See "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  auto t1_at = ramp_over<TenT>({2, 3}, 10.0);
+  auto t2_at = ramp_over<TenT>({2, 3}, 20.0);
   auto t1 = tci::zeros<TenT>(ctx, {2, 3});
   auto t2 = tci::zeros<TenT>(ctx, {2, 3});
   set_elems(fix, t1, t1_at);
@@ -1158,21 +1153,10 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
   tci::List<tci::CRef<TenT>> ins = {std::cref(t1), std::cref(t2)};
   auto result = tci::stack<TenT>(ctx, ins, 0);
 
-  auto s = tci::shape(ctx, result);
-  TCICT_ASSERT(s.size() == 3);
-  TCICT_ASSERT(s[0] == 2); // stacked dimension
-  TCICT_ASSERT(s[1] == 2);
-  TCICT_ASSERT(s[2] == 3);
-
-  // First slice holds t1, second t2
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 0})),
-                     1.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1, 2})),
-                     1.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0, 0})),
-                     2.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1, 2})),
-                     2.0, tol);
+  // The new bond 0 selects the input: slice 0 is t1, slice 1 is t2
+  expect_elems(fix, result, {2, 2, 3}, [&](const auto &x) {
+    return x[0] == 0 ? t1_at(without_bond(x, 0)) : t2_at(without_bond(x, 0));
+  });
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
@@ -1189,45 +1173,39 @@ template <typename TenT>
 void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_STACK
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
-
-  // Input m (1, 2, 3) holds m at {0, 0}, the coordinate the checks below read;
-  // every other element has a value no other input element has, so that the
-  // read-back below also sees an input reordered in place. See "Inputs to
-  // multi-input operations" in CONTRIBUTING.md.
-  auto input_at = [](double m) {
-    return [m, ramp = ramp_over<TenT>({2, 3}, 10.0 * m)](const auto &x) {
-      return (x[0] == 0 && x[1] == 0) ? m : ramp(x);
-    };
-  };
+  // Distinct values across all three inputs; the expected result is computed
+  // from the same functions. See "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  auto t1_at = ramp_over<TenT>({2, 3}, 10.0);
+  auto t2_at = ramp_over<TenT>({2, 3}, 20.0);
+  auto t3_at = ramp_over<TenT>({2, 3}, 30.0);
   auto t1 = tci::zeros<TenT>(ctx, {2, 3});
   auto t2 = tci::zeros<TenT>(ctx, {2, 3});
   auto t3 = tci::zeros<TenT>(ctx, {2, 3});
-  set_elems(fix, t1, input_at(1.0));
-  set_elems(fix, t2, input_at(2.0));
-  set_elems(fix, t3, input_at(3.0));
+  set_elems(fix, t1, t1_at);
+  set_elems(fix, t2, t2_at);
+  set_elems(fix, t3, t3_at);
 
   auto result = tci::stack<TenT>(
       ctx, {std::cref(t1), std::cref(t2), std::cref(t3)}, 2);
 
-  auto s = tci::shape(ctx, result);
-  TCICT_ASSERT(s.size() == 3);
-  TCICT_ASSERT(s[0] == 2);
-  TCICT_ASSERT(s[1] == 3);
-  TCICT_ASSERT(s[2] == 3); // stacked dimension
-
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 0})),
-                     1.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 1})),
-                     2.0, tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 2})),
-                     3.0, tol);
+  // The new bond 2 selects the input
+  expect_elems(fix, result, {2, 3, 3}, [&](const auto &x) {
+    const auto y = without_bond(x, 2);
+    if (x[2] == 0) {
+      return t1_at(y);
+    }
+    if (x[2] == 1) {
+      return t2_at(y);
+    }
+    return t3_at(y);
+  });
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, t1, {2, 3}, input_at(1.0));
-  expect_elems(fix, t2, {2, 3}, input_at(2.0));
-  expect_elems(fix, t3, {2, 3}, input_at(3.0));
+  expect_elems(fix, t1, {2, 3}, t1_at);
+  expect_elems(fix, t2, {2, 3}, t2_at);
+  expect_elems(fix, t3, {2, 3}, t3_at);
 #else
   (void)fix;
 #endif

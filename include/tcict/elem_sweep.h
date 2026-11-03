@@ -50,8 +50,8 @@ void for_each_coors(const tci::shape_t<TenT> &shape, F f) {
 /// coordinate's position in a row-major walk of `shape`, so distinct
 /// coordinates of `shape` get distinct values `offset`, `offset + 1`, ...
 /// The position is a function of the coordinate alone; it says nothing about
-/// how a backend lays the elements out. Asserts that the coordinate is one of
-/// `shape`'s, so a ramp built for another shape fails instead of colliding.
+/// how a backend lays the elements out. Asserts that the coordinate has
+/// `shape`'s order and lies inside `shape`.
 template <typename TenT>
 auto ramp_over(const tci::shape_t<TenT> &shape, double offset) {
   return [shape, offset](const tci::elem_coors_t<TenT> &coors) {
@@ -65,6 +65,32 @@ auto ramp_over(const tci::shape_t<TenT> &shape, double offset) {
     }
     return offset + position;
   };
+}
+
+/// `coors` with bond `bond`'s coordinate lowered by `by`: the coordinate an
+/// element of a concatenation result has in the input it came from.
+template <typename Coors>
+Coors shifted(const Coors &coors, std::size_t bond, std::size_t by) {
+  TCICT_ASSERT(bond < coors.size());
+  TCICT_ASSERT(static_cast<std::size_t>(coors[bond]) >= by);
+  Coors out = coors;
+  out[bond] = static_cast<typename Coors::value_type>(
+      static_cast<std::size_t>(coors[bond]) - by);
+  return out;
+}
+
+/// `coors` without bond `bond`: the coordinate an element of a stack result
+/// has in the input `coors[bond]` it came from.
+template <typename Coors>
+Coors without_bond(const Coors &coors, std::size_t bond) {
+  TCICT_ASSERT(bond < coors.size());
+  Coors out;
+  for (std::size_t b = 0; b < coors.size(); ++b) {
+    if (b != bond) {
+      out.push_back(coors[b]);
+    }
+  }
+  return out;
 }
 
 /// Sets the element at every coordinate `coors` of `tensor` to the real value
@@ -82,14 +108,15 @@ void set_elems(tci_test_fixture<TenT> &fix, TenT &tensor, ValueAt value_at) {
 
 /// Asserts that `tensor` has `shape`, then that the element at every
 /// coordinate of that shape has real part `value_at(coors)` and, for a complex
-/// element type, imaginary part zero, each within the `elementwise`
-/// tolerance. The shape is asserted first, so the
-/// sweep reads only coordinates the tensor has.
+/// element type, imaginary part zero, each within the tolerance of `cat`. The
+/// shape is asserted first, so the sweep reads only coordinates the tensor
+/// has.
 template <typename TenT, typename ValueAt>
 void expect_elems(tci_test_fixture<TenT> &fix, const TenT &tensor,
-                  const tci::shape_t<TenT> &shape, ValueAt value_at) {
+                  const tci::shape_t<TenT> &shape, ValueAt value_at,
+                  tol_category cat = tol_category::elementwise) {
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
+  auto tol = tolerance(fix, cat);
   TCICT_ASSERT(tci::shape(ctx, tensor) == shape);
   detail::for_each_coors<TenT>(
       shape, [&](const tci::elem_coors_t<TenT> &coors) {

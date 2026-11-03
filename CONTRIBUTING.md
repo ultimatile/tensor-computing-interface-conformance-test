@@ -98,8 +98,8 @@ The tests that read their input back after an out-of-place call assert a reading
 
 `concatenate`, `stack` and `linear_combine` take their inputs as `List<CRef<TenT>>`, and TCAPI V1 says of them: "The referenced tensors are not copied, consumed, or modified and must stay alive for the call".
 Each test reads every input back after its last call to the operation and asserts that it is unchanged; unlike "Out-of-place inputs", this asserts V1's own words, not a reading of them.
-An input whose elements all hold one value would pass that read-back even after being reordered in place, so each input element gets a value no other input element has, unless another assertion of the test depends on its value, directly or through an output element computed from it.
-The tests build and read back an input with the same coordinate-to-value function, through `set_elems` and `expect_elems` in `include/tcict/elem_sweep.h`; `ramp_over` there gives distinct values to distinct coordinates.
+An input whose elements all hold one value would pass that read-back even after being reordered in place, so each input element gets a value no other input element has.
+Each input is built from a coordinate-to-value function, through `set_elems` in `include/tcict/elem_sweep.h`, and both the read-back and the check of every element of the result are computed from the same functions, through `expect_elems`; `ramp_over` there gives distinct values to distinct coordinates.
 
 Each of the three operations, and each `linear_combine` overload, is called at least once through a named `tci::List<tci::CRef<TenT>>` variable, not only through a braced `{std::cref(a), ...}` list.
 When `TenT` is copy-constructible, a braced list of `std::cref`s also initializes a `List<TenT>`, so a braced call alone compiles against a backend that still takes `List<TenT>`.

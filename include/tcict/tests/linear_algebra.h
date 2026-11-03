@@ -36,16 +36,16 @@ template <typename TenT>
 void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_LINEAR_COMBINE
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::reduction, 3);
 
+  // a = [[1,2],[3,4]], b = [[5,6],[7,8]], c = [[9,10],[11,12]]: distinct
+  // values across all three inputs; the expected result is computed from the
+  // same functions. See "Inputs to multi-input operations" in CONTRIBUTING.md.
+  auto a_at = ramp_over<TenT>({2, 2}, 1.0);
+  auto b_at = ramp_over<TenT>({2, 2}, 5.0);
+  auto c_at = ramp_over<TenT>({2, 2}, 9.0);
   auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_c = tci::zeros<TenT>(ctx, {2, 2});
-
-  // a = [[1,2],[3,4]], b = [[5,6],[7,8]], c = [[1,1],[1,1]]
-  auto a_at = ramp_over<TenT>({2, 2}, 1.0);
-  auto b_at = ramp_over<TenT>({2, 2}, 5.0);
-  auto c_at = [](const auto &) { return 1.0; };
   set_elems(fix, tensor_a, a_at);
   set_elems(fix, tensor_b, b_at);
   set_elems(fix, tensor_c, c_at);
@@ -53,15 +53,11 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
   auto result = tci::linear_combine<TenT>(
       ctx, {std::cref(tensor_a), std::cref(tensor_b), std::cref(tensor_c)});
 
-  // Expected: [[7,9],[11,13]]
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 7.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1})), 9.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0})), 11.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), 13.0,
-                     tol);
+  // Expected: a + b + c = [[15,18],[21,24]]
+  expect_elems(
+      fix, result, {2, 2},
+      [&](const auto &x) { return a_at(x) + b_at(x) + c_at(x); },
+      tol_category::reduction);
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
@@ -79,19 +75,14 @@ template <typename TenT>
 void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_LINEAR_COMBINE
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::reduction, 2);
 
+  // a = [[1,2],[3,4]], b = [[5,6],[7,8]]: distinct values across both inputs;
+  // the expected result is computed from the same functions. See "Inputs to
+  // multi-input operations" in CONTRIBUTING.md.
+  auto a_at = ramp_over<TenT>({2, 2}, 1.0);
+  auto b_at = ramp_over<TenT>({2, 2}, 5.0);
   auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
-
-  // a = [[2,4],[6,8]], b = [[1,3],[5,7]]: twice the ramp 1, 2, 3, 4, and one
-  // less than that
-  auto a_at = [ramp = ramp_over<TenT>({2, 2}, 1.0)](const auto &x) {
-    return 2.0 * ramp(x);
-  };
-  auto b_at = [ramp = ramp_over<TenT>({2, 2}, 1.0)](const auto &x) {
-    return 2.0 * ramp(x) - 1.0;
-  };
   set_elems(fix, tensor_a, a_at);
   set_elems(fix, tensor_b, b_at);
 
@@ -102,15 +93,11 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 
   auto result = tci::linear_combine<TenT>(ctx, ins, coefficients);
 
-  // Expected: 0.5*a + 2*b = [[3,8],[13,18]]
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 3.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1})), 8.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 0})), 13.0,
-                     tol);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), 18.0,
-                     tol);
+  // Expected: 0.5*a + 2*b = [[10.5,13],[15.5,18]]
+  expect_elems(
+      fix, result, {2, 2},
+      [&](const auto &x) { return 0.5 * a_at(x) + 2.0 * b_at(x); },
+      tol_category::reduction);
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
@@ -127,7 +114,6 @@ template <typename TenT>
 void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_LINEAR_COMBINE
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
 
   auto single_at = [](const auto &) { return 5.0; };
   auto single_tensor = tci::zeros<TenT>(ctx, {1, 1});
@@ -137,13 +123,12 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
   // operations" in CONTRIBUTING.md.
   tci::List<tci::CRef<TenT>> single_list = {std::cref(single_tensor)};
   auto summed = tci::linear_combine<TenT>(ctx, single_list);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, summed, {0, 0})), 5.0,
-                     tol);
+  expect_elems(fix, summed, {1, 1}, single_at);
 
   tci::List<tci::elem_t<TenT>> single_coef = {make_elem<TenT>(3.0)};
   auto scaled = tci::linear_combine<TenT>(ctx, single_list, single_coef);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, scaled, {0, 0})), 15.0,
-                     tol);
+  expect_elems(fix, scaled, {1, 1},
+               [&](const auto &x) { return 3.0 * single_at(x); });
 
   // Input unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
