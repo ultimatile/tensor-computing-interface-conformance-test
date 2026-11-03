@@ -26,7 +26,7 @@ namespace detail {
 /// Calls `f` and returns its result, turning a std::exception other than an
 /// assertion_error into an assertion_error reported at `file`:`line`; an
 /// assertion_error raised inside `f` is reported at `file`:`line` too, followed
-/// by its own message, which names where it was raised. `f` must not
+/// by its own message. `f` must not
 /// return a reference, which could refer to a temporary that has died by the
 /// time the caller reads it. A prvalue result reaches the caller without a copy
 /// or move.
