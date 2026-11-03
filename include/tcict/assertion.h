@@ -48,11 +48,14 @@ struct assertion_error : std::runtime_error {
     }                                                                                              \
   } while (false)
 
-/// Evaluate an expression and yield its value, turning a std::exception from it
-/// into an assertion_error that names the file and line where the macro is used,
-/// as TCICT_ASSERT_NOTHROW does. A prvalue result reaches the caller without a copy or move, so
+/// Evaluate an expression and yield what it yields, turning a std::exception
+/// from it into an assertion_error that names the file and line where the macro
+/// is used. The lambda returns `decltype(auto)`: a prvalue result (a value)
+/// reaches the caller without a copy or move, so
 /// `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of the result type that
-/// `auto r = f();` does not. Variadic so that the expression may contain commas.
+/// `auto r = f();` does not; an lvalue result is returned as a reference, and a
+/// void expression yields void. Variadic so that the expression may contain
+/// commas.
 #define TCICT_NOTHROW_VALUE(...)                                                                   \
   ([&]() -> decltype(auto) {                                                                       \
     try {                                                                                          \
@@ -67,11 +70,5 @@ struct assertion_error : std::runtime_error {
 /// Assert that an expression does not throw.
 #define TCICT_ASSERT_NOTHROW(expr)                                                                 \
   do {                                                                                             \
-    try {                                                                                          \
-      expr;                                                                                        \
-    } catch (const std::exception& e_) {                                                           \
-      std::ostringstream oss_;                                                                     \
-      oss_ << __FILE__ << ":" << __LINE__ << ": unexpected exception: " << e_.what();              \
-      throw ::tcict::assertion_error(oss_.str());                                                  \
-    }                                                                                              \
+    (void)TCICT_NOTHROW_VALUE(expr);                                                               \
   } while (false)

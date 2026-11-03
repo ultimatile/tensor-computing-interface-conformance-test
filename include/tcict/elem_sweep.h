@@ -5,8 +5,10 @@
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
 
+#include <cmath>
 #include <complex>
 #include <cstddef>
+#include <sstream>
 #include <type_traits>
 
 namespace tcict {
@@ -144,16 +146,19 @@ void expect_elems(tci_test_fixture<TenT> &fix, const TenT &tensor,
         } else {
           expected = value;
         }
-        if (cat == tol_category::exact) {
-          TCICT_ASSERT(real_part<TenT>(elem) == expected.real());
-          if constexpr (is_complex_v<TenT>) {
-            TCICT_ASSERT(imag_part<TenT>(elem) == expected.imag());
+        // A zero tolerance (tol_category::exact) admits only equality.
+        auto check = [&](double actual, double wanted, const char *part) {
+          if (!(std::abs(actual - wanted) <= tol)) {
+            std::ostringstream oss_;
+            oss_ << __FILE__ << ":" << __LINE__ << ": " << part
+                 << " part differs: " << actual << " != " << wanted
+                 << " (tolerance " << tol << ")";
+            throw ::tcict::assertion_error(oss_.str());
           }
-        } else {
-          TCICT_ASSERT_CLOSE(real_part<TenT>(elem), expected.real(), tol);
-          if constexpr (is_complex_v<TenT>) {
-            TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), expected.imag(), tol);
-          }
+        };
+        check(real_part<TenT>(elem), expected.real(), "real");
+        if constexpr (is_complex_v<TenT>) {
+          check(imag_part<TenT>(elem), expected.imag(), "imaginary");
         }
       });
 }
