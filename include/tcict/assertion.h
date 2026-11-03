@@ -7,6 +7,10 @@
 #include <string>
 #include <type_traits>
 
+#if defined(__GLIBCXX__)
+#include <cxxabi.h>
+#endif
+
 namespace tcict {
 
 /// Exception thrown when a conformance test assertion fails.
@@ -26,18 +30,25 @@ namespace detail {
 /// Calls `f` and returns its result, turning an exception of any type other
 /// than assertion_error into an assertion_error reported at `file`:`line`; an
 /// assertion_error raised inside `f` is reported at `file`:`line` too, followed
-/// by its own message. `f` must not return a reference, which could refer to a
-/// temporary that has died by the time the caller reads it. A prvalue result
-/// reaches the caller without a copy or move.
+/// by its own message. Under libstdc++, the exception that unwinds a cancelled
+/// thread is rethrown unchanged, since swallowing it terminates the program.
+/// `f` must not return a reference, which could refer to a temporary that has
+/// died by the time the caller reads it. A prvalue result reaches the caller
+/// without a copy or move.
 template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&& f) {
   static_assert(!std::is_reference_v<std::invoke_result_t<F&>>,
-                "TCICT_NOTHROW_VALUE takes a prvalue, such as a call returning by value");
+                "the expression must not yield a reference: TCICT_NOTHROW_VALUE takes "
+                "a prvalue, such as a call returning by value");
   try {
     return f();
   } catch (const assertion_error& e) {
     fail_at(file, line, e.what());
   } catch (const std::exception& e) {
     fail_at(file, line, std::string("unexpected exception: ") + e.what());
+#if defined(__GLIBCXX__)
+  } catch (abi::__forced_unwind&) {
+    throw;
+#endif
   } catch (...) {
     fail_at(file, line, "unexpected exception not catchable as std::exception");
   }
