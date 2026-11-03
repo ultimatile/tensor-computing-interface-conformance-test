@@ -84,9 +84,14 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
   auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
 
-  // a = [[2,4],[6,8]], b = [[1,3],[5,7]]
-  auto a_at = [](const auto &x) { return 2.0 + 4.0 * x[0] + 2.0 * x[1]; };
-  auto b_at = [](const auto &x) { return 1.0 + 4.0 * x[0] + 2.0 * x[1]; };
+  // a = [[2,4],[6,8]], b = [[1,3],[5,7]]: twice the ramp 1, 2, 3, 4, and one
+  // less than that
+  auto a_at = [ramp = ramp_over<TenT>({2, 2}, 1.0)](const auto &x) {
+    return 2.0 * ramp(x);
+  };
+  auto b_at = [ramp = ramp_over<TenT>({2, 2}, 1.0)](const auto &x) {
+    return 2.0 * ramp(x) - 1.0;
+  };
   set_elems(fix, tensor_a, a_at);
   set_elems(fix, tensor_b, b_at);
 

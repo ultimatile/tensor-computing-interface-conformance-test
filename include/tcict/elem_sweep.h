@@ -82,7 +82,8 @@ void set_elems(tci_test_fixture<TenT> &fix, TenT &tensor, ValueAt value_at) {
 
 /// Asserts that `tensor` has `shape`, then that the element at every
 /// coordinate of that shape has real part `value_at(coors)` and, for a complex
-/// element type, imaginary part zero. The shape is asserted first, so the
+/// element type, imaginary part zero, each within the `elementwise`
+/// tolerance. The shape is asserted first, so the
 /// sweep reads only coordinates the tensor has.
 template <typename TenT, typename ValueAt>
 void expect_elems(tci_test_fixture<TenT> &fix, const TenT &tensor,

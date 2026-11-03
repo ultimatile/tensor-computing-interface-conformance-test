@@ -9,9 +9,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TCICT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Default cytnx repo coordinates. Both are overridable via env so this script
-# can target forks or alternate refs without code edits. The default ref is the
-# cytnx branch that carries the TCAPI V1 signatures this suite calls, which
-# origin/main does not.
+# can target forks or alternate refs without code edits. The ref must provide
+# the TCAPI V1 signatures this suite calls, such as concatenate, stack and
+# linear_combine over List<CRef<TenT>>; the default is cytnx's TCAPI V1
+# integration branch.
 CYTNX_REPO_URL="${CYTNX_REPO_URL:-https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx.git}"
 CYTNX_REF="${CYTNX_REF:-origin/dev/tcapi-v1}"
 

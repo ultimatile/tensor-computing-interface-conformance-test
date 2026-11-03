@@ -37,7 +37,7 @@ This:
 make integration-check CYTNX_BACKEND_DIR=$HOME/path/to/tensor-computing-interface-backend-cytnx
 ```
 
-When `CYTNX_BACKEND_DIR` is set in the environment, the script does **not** clone or modify the outer cytnx working tree — it only overrides `external/tcict/`. To return to the auto-clone default, unset the variable rather than passing the default value explicitly.
+When `CYTNX_BACKEND_DIR` is set in the environment, the script does **not** clone or modify the outer cytnx working tree — it only overrides `external/tcict/`. That checkout must already provide the signatures the suite calls; see `CYTNX_REF` under "Environment variables". To return to the auto-clone default, unset the variable rather than passing the default value explicitly.
 
 ### Run the tests
 
@@ -82,7 +82,7 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 |---|---|---|
 | `CYTNX_BACKEND_DIR` | `./build/tensor-computing-interface-backend-cytnx` | cytnx checkout to override into; **set** disables auto-clone/sync |
 | `CYTNX_REPO_URL` | `https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx.git` | URL used only when auto-cloning the default path |
-| `CYTNX_REF` | `origin/dev/tcapi-v1` | ref the default-path checkout is reset to on every run; the default is the cytnx branch that carries the TCAPI V1 signatures this suite calls, which `origin/main` does not |
+| `CYTNX_REF` | `origin/dev/tcapi-v1` | ref the default-path checkout is reset to on every run; it must provide the TCAPI V1 signatures this suite calls, such as `concatenate`, `stack` and `linear_combine` over `List<CRef<TenT>>`; the default is cytnx's TCAPI V1 integration branch |
 | `INTEGRATION_CMAKE_ARGS` | (empty) | extra args appended to the cmake configure command |
 
 ## Conventions for writing tests
