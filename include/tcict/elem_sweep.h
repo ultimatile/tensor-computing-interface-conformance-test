@@ -50,12 +50,16 @@ void for_each_coors(const tci::shape_t<TenT> &shape, F f) {
 /// coordinate's position in a row-major walk of `shape`, so distinct
 /// coordinates of `shape` get distinct values `offset`, `offset + 1`, ...
 /// The position is a function of the coordinate alone; it says nothing about
-/// how a backend lays the elements out.
+/// how a backend lays the elements out. Asserts that the coordinate is one of
+/// `shape`'s, so a ramp built for another shape fails instead of colliding.
 template <typename TenT>
 auto ramp_over(const tci::shape_t<TenT> &shape, double offset) {
   return [shape, offset](const tci::elem_coors_t<TenT> &coors) {
+    TCICT_ASSERT(coors.size() == shape.size());
     double position = 0.0;
     for (std::size_t b = 0; b < shape.size(); ++b) {
+      TCICT_ASSERT(static_cast<std::size_t>(coors[b]) <
+                   static_cast<std::size_t>(shape[b]));
       position = position * static_cast<double>(shape[b]) +
                  static_cast<double>(coors[b]);
     }

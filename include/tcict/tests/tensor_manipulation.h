@@ -817,12 +817,9 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
   auto &ctx = fix.context();
   // Pairwise-distinct values across all three inputs, so that the read-back
   // below also sees an input reordered in place; see "Inputs to multi-input
-  // operations" in CONTRIBUTING.md. b keeps 2 at {0, 0, 0}, the element the
-  // position check below reads.
+  // operations" in CONTRIBUTING.md.
   auto a_at = ramp_over<TenT>({2, 3, 4}, 100.0);
-  auto b_at = [ramp = ramp_over<TenT>({2, 1, 4}, 200.0)](const auto &x) {
-    return (x[0] == 0 && x[2] == 0) ? 2.0 : ramp(x);
-  };
+  auto b_at = ramp_over<TenT>({2, 1, 4}, 200.0);
   auto c_at = ramp_over<TenT>({2, 2, 4}, 300.0);
   auto a = tci::zeros<TenT>(ctx, {2, 3, 4});
   auto b = tci::zeros<TenT>(ctx, {2, 1, 4});
@@ -1143,13 +1140,15 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
   // t1 and 2 in t2; every other element has a value no other input element
   // has, so that the read-back below also sees an input reordered in place.
   // See "Inputs to multi-input operations" in CONTRIBUTING.md.
-  auto read_below = [](const auto &x) {
-    return (x[0] == 0 && x[1] == 0) || (x[0] == 1 && x[1] == 2);
+  auto input_at = [](double m) {
+    return [m, ramp = ramp_over<TenT>({2, 3}, 10.0 * m)](const auto &x) {
+      const bool read_below =
+          (x[0] == 0 && x[1] == 0) || (x[0] == 1 && x[1] == 2);
+      return read_below ? m : ramp(x);
+    };
   };
-  auto t1_at = [read_below, ramp = ramp_over<TenT>({2, 3}, 10.0)](
-                   const auto &x) { return read_below(x) ? 1.0 : ramp(x); };
-  auto t2_at = [read_below, ramp = ramp_over<TenT>({2, 3}, 20.0)](
-                   const auto &x) { return read_below(x) ? 2.0 : ramp(x); };
+  auto t1_at = input_at(1.0);
+  auto t2_at = input_at(2.0);
   auto t1 = tci::zeros<TenT>(ctx, {2, 3});
   auto t2 = tci::zeros<TenT>(ctx, {2, 3});
   set_elems(fix, t1, t1_at);
