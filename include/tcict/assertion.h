@@ -29,9 +29,9 @@ namespace detail {
 
 /// Calls `f` and returns its result, reporting an exception from `f` as an
 /// assertion_error at `file`:`line`: an assertion_error is reported followed by
-/// its own message, and an exception of any other type as unexpected. The one
-/// exception left as it is, under libstdc++, unwinds a cancelled thread, and is
-/// rethrown unchanged since swallowing it terminates the program. `f` must not
+/// its own message, and an exception of any other type as unexpected. Under
+/// libstdc++, the exception that unwinds a cancelled thread is rethrown
+/// unchanged, since swallowing it terminates the program. `f` must not
 /// return a reference, which could refer to a temporary that has died by the
 /// time the caller reads it. A prvalue result reaches the caller without a copy
 /// or move.
