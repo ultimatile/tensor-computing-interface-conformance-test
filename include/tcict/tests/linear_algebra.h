@@ -2,7 +2,7 @@
 
 #include <tcict/assertion.h>
 #include <tcict/elem_helper.h>
-#include <tcict/expect_elems.h>
+#include <tcict/elem_sweep.h>
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
 
@@ -43,18 +43,12 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
   auto tensor_c = tci::zeros<TenT>(ctx, {2, 2});
 
   // a = [[1,2],[3,4]], b = [[5,6],[7,8]], c = [[1,1],[1,1]]
-  tci::set_elem(ctx, tensor_a, {0, 0}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, tensor_a, {0, 1}, make_elem<TenT>(2.0));
-  tci::set_elem(ctx, tensor_a, {1, 0}, make_elem<TenT>(3.0));
-  tci::set_elem(ctx, tensor_a, {1, 1}, make_elem<TenT>(4.0));
-  tci::set_elem(ctx, tensor_b, {0, 0}, make_elem<TenT>(5.0));
-  tci::set_elem(ctx, tensor_b, {0, 1}, make_elem<TenT>(6.0));
-  tci::set_elem(ctx, tensor_b, {1, 0}, make_elem<TenT>(7.0));
-  tci::set_elem(ctx, tensor_b, {1, 1}, make_elem<TenT>(8.0));
-  tci::set_elem(ctx, tensor_c, {0, 0}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, tensor_c, {0, 1}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, tensor_c, {1, 0}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, tensor_c, {1, 1}, make_elem<TenT>(1.0));
+  auto a_at = [](const auto &x) { return 1.0 + 2.0 * x[0] + x[1]; };
+  auto b_at = [](const auto &x) { return 5.0 + 2.0 * x[0] + x[1]; };
+  auto c_at = [](const auto &) { return 1.0; };
+  set_elems(fix, tensor_a, a_at);
+  set_elems(fix, tensor_b, b_at);
+  set_elems(fix, tensor_c, c_at);
 
   auto result = tci::linear_combine<TenT>(
       ctx, {std::cref(tensor_a), std::cref(tensor_b), std::cref(tensor_c)});
@@ -71,11 +65,9 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, tensor_a, {2, 2},
-               [](const auto &c) { return 1.0 + 2.0 * c[0] + c[1]; });
-  expect_elems(fix, tensor_b, {2, 2},
-               [](const auto &c) { return 5.0 + 2.0 * c[0] + c[1]; });
-  expect_elems(fix, tensor_c, {2, 2}, [](const auto &) { return 1.0; });
+  expect_elems(fix, tensor_a, {2, 2}, a_at);
+  expect_elems(fix, tensor_b, {2, 2}, b_at);
+  expect_elems(fix, tensor_c, {2, 2}, c_at);
 #else
   (void)fix;
 #endif
@@ -93,14 +85,10 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
   auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
 
   // a = [[2,4],[6,8]], b = [[1,3],[5,7]]
-  tci::set_elem(ctx, tensor_a, {0, 0}, make_elem<TenT>(2.0));
-  tci::set_elem(ctx, tensor_a, {0, 1}, make_elem<TenT>(4.0));
-  tci::set_elem(ctx, tensor_a, {1, 0}, make_elem<TenT>(6.0));
-  tci::set_elem(ctx, tensor_a, {1, 1}, make_elem<TenT>(8.0));
-  tci::set_elem(ctx, tensor_b, {0, 0}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, tensor_b, {0, 1}, make_elem<TenT>(3.0));
-  tci::set_elem(ctx, tensor_b, {1, 0}, make_elem<TenT>(5.0));
-  tci::set_elem(ctx, tensor_b, {1, 1}, make_elem<TenT>(7.0));
+  auto a_at = [](const auto &x) { return 2.0 + 4.0 * x[0] + 2.0 * x[1]; };
+  auto b_at = [](const auto &x) { return 1.0 + 4.0 * x[0] + 2.0 * x[1]; };
+  set_elems(fix, tensor_a, a_at);
+  set_elems(fix, tensor_b, b_at);
 
   // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
   tci::List<tci::CRef<TenT>> ins = {std::cref(tensor_a), std::cref(tensor_b)};
@@ -121,10 +109,8 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, tensor_a, {2, 2},
-               [](const auto &c) { return 2.0 + 4.0 * c[0] + 2.0 * c[1]; });
-  expect_elems(fix, tensor_b, {2, 2},
-               [](const auto &c) { return 1.0 + 4.0 * c[0] + 2.0 * c[1]; });
+  expect_elems(fix, tensor_a, {2, 2}, a_at);
+  expect_elems(fix, tensor_b, {2, 2}, b_at);
 #else
   (void)fix;
 #endif

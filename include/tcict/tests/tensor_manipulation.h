@@ -2,7 +2,7 @@
 
 #include <tcict/assertion.h>
 #include <tcict/elem_helper.h>
-#include <tcict/expect_elems.h>
+#include <tcict/elem_sweep.h>
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
 
@@ -777,8 +777,15 @@ template <typename TenT>
 void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_CONCATENATE
   auto &ctx = fix.context();
-  auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
-  auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
+  // Pairwise-distinct values across both inputs, so that the read-back below
+  // also sees an input reordered in place; see "Inputs to multi-input
+  // operations" in CONTRIBUTING.md.
+  auto t1_at = [](const auto &c) { return 10.0 + 3.0 * c[0] + c[1]; };
+  auto t2_at = [](const auto &c) { return 20.0 + 3.0 * c[0] + c[1]; };
+  auto t1 = tci::zeros<TenT>(ctx, {2, 3});
+  auto t2 = tci::zeros<TenT>(ctx, {2, 3});
+  set_elems(fix, t1, t1_at);
+  set_elems(fix, t2, t2_at);
 
   // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
   tci::List<tci::CRef<TenT>> ins = {std::cref(t1), std::cref(t2)};
@@ -795,8 +802,8 @@ void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, t1, {2, 3}, [](const auto &) { return 1.0; });
-  expect_elems(fix, t2, {2, 3}, [](const auto &) { return 2.0; });
+  expect_elems(fix, t1, {2, 3}, t1_at);
+  expect_elems(fix, t2, {2, 3}, t2_at);
 #else
   (void)fix;
 #endif
@@ -808,9 +815,25 @@ template <typename TenT>
 void test_concatenate_values(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_CONCATENATE
   auto &ctx = fix.context();
-  auto a = tci::fill<TenT>(ctx, {2, 3, 4}, make_elem<TenT>(1.0));
-  auto b = tci::fill<TenT>(ctx, {2, 1, 4}, make_elem<TenT>(2.0));
-  auto c = tci::fill<TenT>(ctx, {2, 2, 4}, make_elem<TenT>(3.0));
+  // Pairwise-distinct values across all three inputs, so that the read-back
+  // below also sees an input reordered in place; see "Inputs to multi-input
+  // operations" in CONTRIBUTING.md. b keeps 2 at {0, 0, 0}, the element the
+  // position check below reads.
+  auto a_at = [](const auto &x) {
+    return 100.0 + 12.0 * x[0] + 4.0 * x[1] + x[2];
+  };
+  auto b_at = [](const auto &x) {
+    return (x[0] == 0 && x[2] == 0) ? 2.0 : 200.0 + 4.0 * x[0] + x[2];
+  };
+  auto c_at = [](const auto &x) {
+    return 300.0 + 8.0 * x[0] + 4.0 * x[1] + x[2];
+  };
+  auto a = tci::zeros<TenT>(ctx, {2, 3, 4});
+  auto b = tci::zeros<TenT>(ctx, {2, 1, 4});
+  auto c = tci::zeros<TenT>(ctx, {2, 2, 4});
+  set_elems(fix, a, a_at);
+  set_elems(fix, b, b_at);
+  set_elems(fix, c, c_at);
 
   auto d = tci::concatenate<TenT>(
       ctx, {std::cref(a), std::cref(b), std::cref(c)}, 1);
@@ -825,9 +848,9 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, a, {2, 3, 4}, [](const auto &) { return 1.0; });
-  expect_elems(fix, b, {2, 1, 4}, [](const auto &) { return 2.0; });
-  expect_elems(fix, c, {2, 2, 4}, [](const auto &) { return 3.0; });
+  expect_elems(fix, a, {2, 3, 4}, a_at);
+  expect_elems(fix, b, {2, 1, 4}, b_at);
+  expect_elems(fix, c, {2, 2, 4}, c_at);
 #else
   (void)fix;
 #endif
@@ -1120,8 +1143,23 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
 
-  auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
-  auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
+  // {0, 0} and {1, 2}, the coordinates the slice checks below read, hold 1 in
+  // t1 and 2 in t2; every other element has a value no other input element
+  // has, so that the read-back below also sees an input reordered in place.
+  // See "Inputs to multi-input operations" in CONTRIBUTING.md.
+  auto read_below = [](const auto &x) {
+    return (x[0] == 0 && x[1] == 0) || (x[0] == 1 && x[1] == 2);
+  };
+  auto t1_at = [read_below](const auto &x) {
+    return read_below(x) ? 1.0 : 10.0 + 3.0 * x[0] + x[1];
+  };
+  auto t2_at = [read_below](const auto &x) {
+    return read_below(x) ? 2.0 : 20.0 + 3.0 * x[0] + x[1];
+  };
+  auto t1 = tci::zeros<TenT>(ctx, {2, 3});
+  auto t2 = tci::zeros<TenT>(ctx, {2, 3});
+  set_elems(fix, t1, t1_at);
+  set_elems(fix, t2, t2_at);
 
   // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
   tci::List<tci::CRef<TenT>> ins = {std::cref(t1), std::cref(t2)};
@@ -1133,7 +1171,7 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(s[1] == 2);
   TCICT_ASSERT(s[2] == 3);
 
-  // First slice filled with 1, second with 2
+  // First slice holds t1, second t2
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 0})),
                      1.0, tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 1, 2})),
@@ -1145,8 +1183,8 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, t1, {2, 3}, [](const auto &) { return 1.0; });
-  expect_elems(fix, t2, {2, 3}, [](const auto &) { return 2.0; });
+  expect_elems(fix, t1, {2, 3}, t1_at);
+  expect_elems(fix, t2, {2, 3}, t2_at);
 #else
   (void)fix;
 #endif
@@ -1160,9 +1198,21 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
 
-  auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
-  auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
-  auto t3 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(3.0));
+  // Input m (1, 2, 3) holds m at {0, 0}, the coordinate the checks below read;
+  // every other element has a value no other input element has, so that the
+  // read-back below also sees an input reordered in place. See "Inputs to
+  // multi-input operations" in CONTRIBUTING.md.
+  auto input_at = [](double m) {
+    return [m](const auto &x) {
+      return (x[0] == 0 && x[1] == 0) ? m : 10.0 * m + 3.0 * x[0] + x[1];
+    };
+  };
+  auto t1 = tci::zeros<TenT>(ctx, {2, 3});
+  auto t2 = tci::zeros<TenT>(ctx, {2, 3});
+  auto t3 = tci::zeros<TenT>(ctx, {2, 3});
+  set_elems(fix, t1, input_at(1.0));
+  set_elems(fix, t2, input_at(2.0));
+  set_elems(fix, t3, input_at(3.0));
 
   auto result = tci::stack<TenT>(
       ctx, {std::cref(t1), std::cref(t2), std::cref(t3)}, 2);
@@ -1182,9 +1232,9 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, t1, {2, 3}, [](const auto &) { return 1.0; });
-  expect_elems(fix, t2, {2, 3}, [](const auto &) { return 2.0; });
-  expect_elems(fix, t3, {2, 3}, [](const auto &) { return 3.0; });
+  expect_elems(fix, t1, {2, 3}, input_at(1.0));
+  expect_elems(fix, t2, {2, 3}, input_at(2.0));
+  expect_elems(fix, t3, {2, 3}, input_at(3.0));
 #else
   (void)fix;
 #endif
