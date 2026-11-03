@@ -25,8 +25,8 @@ make integration-check
 
 This:
 
-1. Clones cytnx (with submodules) into `./build/tensor-computing-interface-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard $CYTNX_REF`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF` (default `origin/main`).
-2. Replaces `external/tcict/` content with this repo's tracked HEAD via `git archive HEAD | tar -xf -`.
+1. Clones cytnx (with submodules) into `./build/tensor-computing-interface-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard $CYTNX_REF`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF` (default `origin/dev/tcapi-v1`, the cytnx branch that tracks this suite's TCAPI V1 migration).
+2. Replaces `external/tcict/` content with this repo's tracked HEAD via `git archive HEAD | tar -xmf -`; `-m` stamps the extracted files with the current time, so the build recompiles against them.
 3. Builds the cytnx test target (`TCITests`).
 
 `build/` is gitignored, so the cloned backend and its cmake artefacts stay untracked.
@@ -71,7 +71,7 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 
 ### Caveats
 
-- The override copies tcict **HEAD** (last committed state). Uncommitted changes are not included; commit first.
+- The override copies tcict **HEAD** (last committed state), so `check` and `test` refuse to run while tracked files have uncommitted changes; commit or stash them first. Untracked files are not shipped either.
 - The script never writes to `external/tcict/.git*`, so `make integration-restore` always recovers the pinned state.
 - The `TCICT_SKIP_*` skip-macro matrix (cross-build with various skip-macro combinations) is deferred to a follow-up issue.
 - `make integration-restore` requires `CYTNX_BACKEND_DIR` to point at an actual git checkout (with `external/tcict` initialized as a submodule).
@@ -82,7 +82,7 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 |---|---|---|
 | `CYTNX_BACKEND_DIR` | `./build/tensor-computing-interface-backend-cytnx` | cytnx checkout to override into; **set** disables auto-clone/sync |
 | `CYTNX_REPO_URL` | `https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx.git` | URL used only when auto-cloning the default path |
-| `CYTNX_REF` | `origin/main` | ref the default-path checkout is reset to on every run |
+| `CYTNX_REF` | `origin/dev/tcapi-v1` | ref the default-path checkout is reset to on every run |
 | `INTEGRATION_CMAKE_ARGS` | (empty) | extra args appended to the cmake configure command |
 
 ## Conventions for writing tests

@@ -9,9 +9,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TCICT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Default cytnx repo coordinates. Both are overridable via env so this script
-# can target forks or alternate refs without code edits.
+# can target forks or alternate refs without code edits. The default ref is the
+# cytnx branch that tracks this suite's TCAPI V1 migration; it goes back to
+# origin/main when both branches merge to main.
 CYTNX_REPO_URL="${CYTNX_REPO_URL:-https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx.git}"
-CYTNX_REF="${CYTNX_REF:-origin/main}"
+CYTNX_REF="${CYTNX_REF:-origin/dev/tcapi-v1}"
 
 # Extra cmake configure args (e.g. "--preset brew-debug" or
 # "-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.cmake -DUSE_HPTT=ON").
@@ -88,9 +90,19 @@ override_tcict() {
   # does not delete; the wipe is what makes the override idempotent.
   find "$DEST" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf -- {} +
   # Ship only tracked files from HEAD; working-tree artefacts (build outputs,
-  # editor backups) do not leak into the override. `tar -xf -` makes the stdin
-  # archive source explicit for portability across tar implementations.
-  git -C "$TCICT_ROOT" archive HEAD | tar -xf - -C "$DEST"
+  # editor backups) do not leak into the override. `-f -` makes the stdin
+  # archive source explicit for portability across tar implementations. `-m`
+  # stamps the extracted files with the current time instead of the commit's:
+  # an older stamp than the existing build objects would let the build skip
+  # recompiling against the new headers.
+  git -C "$TCICT_ROOT" archive HEAD | tar -xmf - -C "$DEST"
+}
+
+require_clean_tcict() {
+  # The override ships HEAD only, so an uncommitted edit to a tracked file
+  # would silently go untested.
+  git -C "$TCICT_ROOT" diff --quiet HEAD -- \
+    || fail "tracked files in $TCICT_ROOT have uncommitted changes, which the override (tcict HEAD) would not include; commit or stash them first"
 }
 
 cmake_build() {
@@ -130,6 +142,7 @@ main() {
   local cmd="${1:-}"
   case "$cmd" in
     check)
+      require_clean_tcict
       [[ "$USER_SUPPLIED" == 1 ]] || sync_default_path
       [[ -d "$CYTNX_BACKEND_DIR" ]] || fail "$CYTNX_BACKEND_DIR does not exist"
       require_sentinel
@@ -137,6 +150,7 @@ main() {
       cmake_build
       ;;
     test)
+      require_clean_tcict
       [[ "$USER_SUPPLIED" == 1 ]] || sync_default_path
       [[ -d "$CYTNX_BACKEND_DIR" ]] || fail "$CYTNX_BACKEND_DIR does not exist"
       require_sentinel
