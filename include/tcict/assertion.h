@@ -31,9 +31,10 @@ namespace detail {
 /// assertion_error at `file`:`line`: an assertion_error is reported followed by
 /// its own message, and an exception of any other type as unexpected. The one
 /// exception left as it is, under libstdc++, unwinds a cancelled thread, and is
-/// rethrown unchanged since swallowing it terminates the program. `f` must not return a reference, which could refer to a temporary that has
-/// died by the time the caller reads it. A prvalue result reaches the caller
-/// without a copy or move.
+/// rethrown unchanged since swallowing it terminates the program. `f` must not
+/// return a reference, which could refer to a temporary that has died by the
+/// time the caller reads it. A prvalue result reaches the caller without a copy
+/// or move.
 template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&& f) {
   static_assert(!std::is_reference_v<std::invoke_result_t<F&>>,
                 "the expression must not yield a reference: TCICT_NOTHROW_VALUE takes "

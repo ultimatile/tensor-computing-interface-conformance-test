@@ -97,7 +97,7 @@ The tests that read their input back after an out-of-place call assert a reading
 
 ### Inputs to multi-input operations
 
-`concatenate`, `stack` and `linear_combine` take their inputs as `List<CRef<TenT>>`, and TCAPI V1 says of them: "The referenced tensors are not copied, consumed, or modified and must stay alive for the call".
+`concatenate`, `stack` and `linear_combine` take their inputs as `List<CRef<TenT>>`, and TCAPI V1 says of them, under "Type System", "Auxiliary Types": "The referenced tensors are not copied, consumed, or modified and must stay alive for the call".
 Each test reads every input back after its last call to the operation and asserts that its shape and elements are unchanged.
 That asserts the "not ... modified" of V1's words as they stand, not a reading of them as in "Out-of-place inputs"; the read-back cannot detect a copy, so "not copied" is not asserted.
 An input whose elements all hold one value would pass that read-back even after being reordered in place, so each input element gets a value no other input element has.
