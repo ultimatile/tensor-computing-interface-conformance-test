@@ -40,17 +40,6 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
   }
 }
 
-/// Calls `f` and discards its result, with nothrow_call's exception handling.
-template <typename F> void nothrow_run(const char* file, int line, F&& f) {
-  try {
-    (void)f();
-  } catch (const assertion_error&) {
-    throw;
-  } catch (const std::exception& e) {
-    fail_at(file, line, std::string("unexpected exception: ") + e.what());
-  }
-}
-
 }  // namespace detail
 
 }  // namespace tcict
@@ -94,17 +83,19 @@ template <typename F> void nothrow_run(const char* file, int line, F&& f) {
 /// at the macro's use; an assertion_error raised while evaluating it passes
 /// through. The value reaches the caller without a copy or move:
 /// `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of the result type that
-/// `auto r = f();` does not. Any other expression does not compile, since its
-/// result could refer to a temporary. The reported line is one of the lines the
-/// invocation spans; which one, for an invocation spanning several, depends on
-/// the compiler. Variadic so that the expression may contain commas.
+/// `auto r = f();` does not. Any other expression, a variable's name included,
+/// does not compile, since its result could refer to a temporary. The reported
+/// line is one of the lines the invocation spans; which one, for an invocation
+/// spanning several, depends on the compiler. Variadic so that the expression
+/// may contain commas.
 #define TCICT_NOTHROW_VALUE(...)                                                                   \
   ::tcict::detail::nothrow_call(__FILE__, __LINE__,                                                \
-                               [&]() -> decltype(auto) { return __VA_ARGS__; })
+                               [&]() -> decltype(auto) { return (__VA_ARGS__); })
 
 /// Assert that an expression does not throw a std::exception other than an
-/// assertion_error, which passes through.
-#define TCICT_ASSERT_NOTHROW(expr)                                                                 \
+/// assertion_error, which passes through. Variadic so that the expression may
+/// contain commas.
+#define TCICT_ASSERT_NOTHROW(...)                                                                  \
   do {                                                                                             \
-    ::tcict::detail::nothrow_run(__FILE__, __LINE__, [&]() -> decltype(auto) { return expr; });    \
+    ::tcict::detail::nothrow_call(__FILE__, __LINE__, [&] { (void)(__VA_ARGS__); });               \
   } while (false)
