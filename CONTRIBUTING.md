@@ -94,6 +94,16 @@ These apply to every header under `include/tcict/`; comments in the code refer t
 TCAPI V1: "Most mutating functions provide two overloads: (1) in-place and (2) out-of-place writing to a separate output."
 The tests that read their input back after an out-of-place call assert a reading of that sentence: that the input is unchanged.
 
+### Inputs to multi-input operations
+
+`concatenate`, `stack` and `linear_combine` take their inputs as `List<CRef<TenT>>`, and TCAPI V1 says of them: "The referenced tensors are not copied, consumed, or modified and must stay alive for the call".
+The tests read every input back after the call and assert that it is unchanged; unlike "Out-of-place inputs", this asserts V1's own words, not a reading of them.
+
+Each of the three operations, and each `linear_combine` overload, is called at least once through a named `tci::List<tci::CRef<TenT>>` variable, not only through a braced `{std::cref(a), ...}` list.
+When `TenT` is copy-constructible, a braced list of `std::cref`s also initializes a `List<TenT>`, so a braced call alone compiles against a backend that still takes `List<TenT>`.
+A named `List<CRef<TenT>>` does not convert to `List<TenT>`, so that call compiles only against V1's parameter type.
+A call with a braced list names `TenT` explicitly, as in `tci::stack<TenT>(ctx, {std::cref(a), std::cref(b)}, 0)`, because no parameter of these functions deduces it from a braced list.
+
 ### Callbacks the backend invokes
 
 Coordinate maps, generators and traversal callbacks run inside the backend's frames, which a conformance suite cannot assume are able to carry an exception.

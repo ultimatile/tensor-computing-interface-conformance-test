@@ -2,11 +2,13 @@
 
 #include <tcict/assertion.h>
 #include <tcict/elem_helper.h>
+#include <tcict/expect_elems.h>
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <vector>
 
 namespace tcict {
@@ -54,9 +56,8 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
   tci::set_elem(ctx, tensor_c, {1, 0}, make_elem<TenT>(1.0));
   tci::set_elem(ctx, tensor_c, {1, 1}, make_elem<TenT>(1.0));
 
-  TenT result;
-  tci::List<TenT> tensors = {tensor_a, tensor_b, tensor_c};
-  TCICT_ASSERT_NOTHROW(result = tci::linear_combine(ctx, tensors));
+  auto result = tci::linear_combine<TenT>(
+      ctx, {std::cref(tensor_a), std::cref(tensor_b), std::cref(tensor_c)});
 
   // Expected: [[7,9],[11,13]]
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 7.0,
@@ -67,6 +68,14 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
                      tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), 13.0,
                      tol);
+
+  // Inputs unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  expect_elems(fix, tensor_a, {2, 2},
+               [](const auto &c) { return 1.0 + 2.0 * c[0] + c[1]; });
+  expect_elems(fix, tensor_b, {2, 2},
+               [](const auto &c) { return 5.0 + 2.0 * c[0] + c[1]; });
+  expect_elems(fix, tensor_c, {2, 2}, [](const auto &) { return 1.0; });
 #else
   (void)fix;
 #endif
@@ -93,13 +102,12 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
   tci::set_elem(ctx, tensor_b, {1, 0}, make_elem<TenT>(5.0));
   tci::set_elem(ctx, tensor_b, {1, 1}, make_elem<TenT>(7.0));
 
-  tci::List<TenT> tensors = {tensor_a, tensor_b};
+  // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
+  tci::List<tci::CRef<TenT>> ins = {std::cref(tensor_a), std::cref(tensor_b)};
   tci::List<tci::elem_t<TenT>> coefficients = {make_elem<TenT>(0.5),
                                                make_elem<TenT>(2.0)};
 
-  TenT result;
-  TCICT_ASSERT_NOTHROW(result =
-                           tci::linear_combine(ctx, tensors, coefficients));
+  auto result = tci::linear_combine<TenT>(ctx, ins, coefficients);
 
   // Expected: 0.5*a + 2*b = [[3,8],[13,18]]
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 3.0,
@@ -110,6 +118,13 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
                      tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1})), 18.0,
                      tol);
+
+  // Inputs unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  expect_elems(fix, tensor_a, {2, 2},
+               [](const auto &c) { return 2.0 + 4.0 * c[0] + 2.0 * c[1]; });
+  expect_elems(fix, tensor_b, {2, 2},
+               [](const auto &c) { return 1.0 + 4.0 * c[0] + 2.0 * c[1]; });
 #else
   (void)fix;
 #endif
@@ -126,17 +141,21 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
   auto single_tensor = tci::zeros<TenT>(ctx, {1, 1});
   tci::set_elem(ctx, single_tensor, {0, 0}, make_elem<TenT>(5.0));
 
-  TenT result;
-  tci::List<TenT> single_list = {single_tensor};
-  TCICT_ASSERT_NOTHROW(result = tci::linear_combine(ctx, single_list));
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 5.0,
+  // A named list, feeding both overloads; see "Inputs to multi-input
+  // operations" in CONTRIBUTING.md.
+  tci::List<tci::CRef<TenT>> single_list = {std::cref(single_tensor)};
+  auto summed = tci::linear_combine<TenT>(ctx, single_list);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, summed, {0, 0})), 5.0,
                      tol);
 
   tci::List<tci::elem_t<TenT>> single_coef = {make_elem<TenT>(3.0)};
-  TCICT_ASSERT_NOTHROW(result =
-                           tci::linear_combine(ctx, single_list, single_coef));
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0})), 15.0,
+  auto scaled = tci::linear_combine<TenT>(ctx, single_list, single_coef);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, scaled, {0, 0})), 15.0,
                      tol);
+
+  // Input unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  expect_elems(fix, single_tensor, {1, 1}, [](const auto &) { return 5.0; });
 #else
   (void)fix;
 #endif

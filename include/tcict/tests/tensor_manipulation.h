@@ -2,6 +2,7 @@
 
 #include <tcict/assertion.h>
 #include <tcict/elem_helper.h>
+#include <tcict/expect_elems.h>
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
 
@@ -9,6 +10,7 @@
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <functional>
 #include <vector>
 
 namespace tcict {
@@ -778,18 +780,23 @@ void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
   auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
   auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
 
-  tci::List<TenT> tensors = {t1, t2};
+  // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
+  tci::List<tci::CRef<TenT>> ins = {std::cref(t1), std::cref(t2)};
 
   // Vertical concatenation
-  TenT result;
-  TCICT_ASSERT_NOTHROW(tci::concatenate(ctx, tensors, 0, result));
+  auto vertical = tci::concatenate<TenT>(ctx, ins, 0);
   tci::shape_t<TenT> expected_v = {4, 3};
-  TCICT_ASSERT(tci::shape(ctx, result) == expected_v);
+  TCICT_ASSERT(tci::shape(ctx, vertical) == expected_v);
 
   // Horizontal concatenation
-  TCICT_ASSERT_NOTHROW(tci::concatenate(ctx, tensors, 1, result));
+  auto horizontal = tci::concatenate<TenT>(ctx, ins, 1);
   tci::shape_t<TenT> expected_h = {2, 6};
-  TCICT_ASSERT(tci::shape(ctx, result) == expected_h);
+  TCICT_ASSERT(tci::shape(ctx, horizontal) == expected_h);
+
+  // Inputs unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  expect_elems(fix, t1, {2, 3}, [](const auto &) { return 1.0; });
+  expect_elems(fix, t2, {2, 3}, [](const auto &) { return 2.0; });
 #else
   (void)fix;
 #endif
@@ -805,9 +812,8 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
   auto b = tci::fill<TenT>(ctx, {2, 1, 4}, make_elem<TenT>(2.0));
   auto c = tci::fill<TenT>(ctx, {2, 2, 4}, make_elem<TenT>(3.0));
 
-  TenT d;
-  tci::List<TenT> tensors = {a, b, c};
-  TCICT_ASSERT_NOTHROW(tci::concatenate(ctx, tensors, 1, d));
+  auto d = tci::concatenate<TenT>(
+      ctx, {std::cref(a), std::cref(b), std::cref(c)}, 1);
 
   tci::shape_t<TenT> expected = {2, 6, 4};
   TCICT_ASSERT(tci::shape(ctx, d) == expected);
@@ -816,6 +822,12 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
   auto el_b = tci::get_elem(ctx, b, {0, 0, 0});
   auto el_d3 = tci::get_elem(ctx, d, {0, 3, 0});
   TCICT_ASSERT(el_b == el_d3);
+
+  // Inputs unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  expect_elems(fix, a, {2, 3, 4}, [](const auto &) { return 1.0; });
+  expect_elems(fix, b, {2, 1, 4}, [](const auto &) { return 2.0; });
+  expect_elems(fix, c, {2, 2, 4}, [](const auto &) { return 3.0; });
 #else
   (void)fix;
 #endif
@@ -1111,9 +1123,9 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
   auto t1 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(1.0));
   auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
 
-  TenT result;
-  tci::List<TenT> tensors = {t1, t2};
-  tci::stack(ctx, tensors, 0, result);
+  // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
+  tci::List<tci::CRef<TenT>> ins = {std::cref(t1), std::cref(t2)};
+  auto result = tci::stack<TenT>(ctx, ins, 0);
 
   auto s = tci::shape(ctx, result);
   TCICT_ASSERT(s.size() == 3);
@@ -1130,6 +1142,11 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
                      2.0, tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {1, 1, 2})),
                      2.0, tol);
+
+  // Inputs unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  expect_elems(fix, t1, {2, 3}, [](const auto &) { return 1.0; });
+  expect_elems(fix, t2, {2, 3}, [](const auto &) { return 2.0; });
 #else
   (void)fix;
 #endif
@@ -1147,9 +1164,8 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
   auto t2 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(2.0));
   auto t3 = tci::fill<TenT>(ctx, {2, 3}, make_elem<TenT>(3.0));
 
-  TenT result;
-  tci::List<TenT> tensors = {t1, t2, t3};
-  tci::stack(ctx, tensors, 2, result);
+  auto result = tci::stack<TenT>(
+      ctx, {std::cref(t1), std::cref(t2), std::cref(t3)}, 2);
 
   auto s = tci::shape(ctx, result);
   TCICT_ASSERT(s.size() == 3);
@@ -1163,6 +1179,12 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
                      2.0, tol);
   TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {0, 0, 2})),
                      3.0, tol);
+
+  // Inputs unchanged; see "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
+  expect_elems(fix, t1, {2, 3}, [](const auto &) { return 1.0; });
+  expect_elems(fix, t2, {2, 3}, [](const auto &) { return 2.0; });
+  expect_elems(fix, t3, {2, 3}, [](const auto &) { return 3.0; });
 #else
   (void)fix;
 #endif
