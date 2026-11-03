@@ -1,5 +1,16 @@
 # Contributing
 
+## Commit messages
+
+Commit subjects follow [Conventional Commits](https://www.conventionalcommits.org/).
+This repository's deliverable is the test suite, so the type is judged against the suite, not against the backends it tests:
+
+- `feat`: new coverage, such as a new test case or a newly covered API, or new suite infrastructure, such as adapters, tolerance categories or skip macros.
+- `fix`: a test that asserts the wrong thing, including one that asserts behavior the spec does not define, or any other bug in the suite.
+- `refactor`: a change to how tests are written that leaves what they assert unchanged.
+
+`test` is not used: every change here touches tests, so the type would tell a reader nothing.
+
 ## Local integration check with the cytnx backend
 
 `make integration-check` verifies the current tcict HEAD against the [cytnx
