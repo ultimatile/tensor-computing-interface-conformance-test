@@ -7,10 +7,6 @@
 #include <string>
 #include <type_traits>
 
-#if defined(__GLIBCXX__)
-#include <cxxabi.h>
-#endif
-
 namespace tcict {
 
 /// Exception thrown when a conformance test assertion fails.
@@ -27,14 +23,14 @@ namespace detail {
   throw assertion_error(oss.str());
 }
 
-/// Calls `f` and returns its result, reporting an exception from `f` as an
+/// Calls `f` and returns its result, reporting a std::exception from `f` as an
 /// assertion_error at `file`:`line`: an assertion_error is reported followed by
-/// its own message, and an exception of any other type as unexpected. Under
-/// libstdc++, the exception that unwinds a cancelled thread is rethrown
-/// unchanged, since swallowing it terminates the program. `f` must not
-/// return a reference, which could refer to a temporary that has died by the
-/// time the caller reads it. A prvalue result reaches the caller without a copy
-/// or move.
+/// its own message, and any other std::exception as unexpected. An exception
+/// of another type passes through unchanged, since a handler catching every
+/// type would also catch the unwind of a cancelled thread, which must not be
+/// stopped. `f` must not return a reference, which could refer to a temporary
+/// that has died by the time the caller reads it. A prvalue result reaches the
+/// caller without a copy or move.
 template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&& f) {
   static_assert(!std::is_reference_v<std::invoke_result_t<F&>>,
                 "the expression must not yield a reference: TCICT_NOTHROW_VALUE takes "
@@ -45,12 +41,6 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
     fail_at(file, line, e.what());
   } catch (const std::exception& e) {
     fail_at(file, line, std::string("unexpected exception: ") + e.what());
-#if defined(__GLIBCXX__)
-  } catch (abi::__forced_unwind&) {
-    throw;
-#endif
-  } catch (...) {
-    fail_at(file, line, "unexpected exception not catchable as std::exception");
   }
 }
 
@@ -93,7 +83,7 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
   } while (false)
 
 /// Evaluate a prvalue expression, such as a call returning by value, and yield
-/// its value, reporting an exception from it at the macro's use as
+/// its value, reporting a std::exception from it at the macro's use as
 /// detail::nothrow_call does. The value reaches the caller without a copy or
 /// move:
 /// `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of the result type that
@@ -106,7 +96,7 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
   ::tcict::detail::nothrow_call(__FILE__, __LINE__,                                                \
                                [&]() -> decltype(auto) { return (__VA_ARGS__); })
 
-/// Assert that an expression does not throw, reporting an exception from it at
+/// Assert that an expression does not throw a std::exception, reporting one at
 /// the macro's use as detail::nothrow_call does. Variadic so that the
 /// expression may contain commas.
 #define TCICT_ASSERT_NOTHROW(...)                                                                  \

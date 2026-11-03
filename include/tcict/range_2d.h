@@ -46,7 +46,7 @@ auto map_2d(std::ptrdiff_t rows, std::ptrdiff_t cols, layout_2d layout,
 #ifndef TCICT_SKIP_TO_RANGE
 /// `to_range` of `a` under `layout`, into a range sized for `shape`. Asserts
 /// that `a` has that second-order shape before the call, then that the call
-/// throws no exception and that the backend passed only valid
+/// throws no std::exception and that the backend passed only valid
 /// coordinates, so a test cannot leave the coordinate check unasserted.
 template <typename TenT, typename RandomIt>
 void to_range_2d(tci::context_handle_t<TenT>& ctx, const TenT& a,
@@ -68,7 +68,7 @@ void to_range_2d(tci::context_handle_t<TenT>& ctx, const TenT& a,
 
 #ifndef TCICT_SKIP_ASSIGN_FROM_RANGE
 /// `assign_from_range` of a second-order `shape` under `layout`, into `out`.
-/// Asserts that the call throws no exception, that the backend passed
+/// Asserts that the call throws no std::exception, that the backend passed
 /// only valid coordinates, and that `out` has `shape`. The result goes to an
 /// output parameter so that this wrapper asks no more of TenT than a test
 /// calling assign_from_range directly does: assignment from its result.
