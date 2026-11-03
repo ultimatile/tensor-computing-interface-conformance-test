@@ -63,9 +63,9 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, tensor_a, {2, 2}, a_at);
-  expect_elems(fix, tensor_b, {2, 2}, b_at);
-  expect_elems(fix, tensor_c, {2, 2}, c_at);
+  expect_elems(fix, tensor_a, {2, 2}, a_at, tol_category::exact);
+  expect_elems(fix, tensor_b, {2, 2}, b_at, tol_category::exact);
+  expect_elems(fix, tensor_c, {2, 2}, c_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -111,8 +111,8 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, tensor_a, {2, 2}, a_at);
-  expect_elems(fix, tensor_b, {2, 2}, b_at);
+  expect_elems(fix, tensor_a, {2, 2}, a_at, tol_category::exact);
+  expect_elems(fix, tensor_b, {2, 2}, b_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -133,10 +133,11 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
   // operations" in CONTRIBUTING.md.
   tci::List<tci::CRef<TenT>> single_list = {std::cref(single_tensor)};
   auto summed = tci::linear_combine<TenT>(ctx, single_list);
-  expect_elems(fix, summed, {1, 1}, single_at);
+  expect_elems(fix, summed, {1, 1}, single_at, tol_category::exact);
 
   // For a complex element type the coefficient has an imaginary part too.
-  const std::complex<double> s(3.0, is_complex_v<TenT> ? 1.5 : 0.0);
+  // (3 - 1.5i)(1 - 0.5i) = 2.25 - 3i keeps an imaginary part in the result.
+  const std::complex<double> s(3.0, is_complex_v<TenT> ? -1.5 : 0.0);
   tci::List<tci::elem_t<TenT>> single_coef = {make_elem<TenT>(s.real(),
                                                               s.imag())};
   auto scaled = tci::linear_combine<TenT>(ctx, single_list, single_coef);
@@ -146,7 +147,7 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
 
   // Input unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, single_tensor, {1, 1}, single_at);
+  expect_elems(fix, single_tensor, {1, 1}, single_at, tol_category::exact);
 #else
   (void)fix;
 #endif

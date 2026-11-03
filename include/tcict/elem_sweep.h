@@ -11,12 +11,9 @@
 
 namespace tcict {
 
-// Compiled exactly when at least one of their callers is: the concatenate,
-// stack and linear_combine tests, which also need the element APIs these
-// helpers call (TCICT_HAS_ELEM_SWEEP in include/tcict/skip.h).
-#if defined(TCICT_HAS_ELEM_SWEEP) &&                                          \
-    (!defined(TCICT_SKIP_CONCATENATE) || !defined(TCICT_SKIP_STACK) ||        \
-     !defined(TCICT_SKIP_LINEAR_COMBINE))
+// Guarded by the APIs the helpers call: zeros, set_elem, shape and get_elem
+// (TCICT_HAS_ELEM_SWEEP in include/tcict/skip.h).
+#if defined(TCICT_HAS_ELEM_SWEEP)
 
 namespace detail {
 
@@ -122,7 +119,8 @@ void set_elems(tci_test_fixture<TenT> &fix, TenT &tensor, ValueAt value_at) {
 
 /// Asserts that `tensor` has `shape`, then that the element at every
 /// coordinate of that shape equals `value_at(coors)` within
-/// `tolerance(fix, cat, n)`, part by part. A real `value_at` result `v` stands
+/// `tolerance(fix, cat, n)`, part by part; `tol_category::exact` compares for
+/// equality instead. A real `value_at` result `v` stands
 /// for `written<TenT>(v)`, the value `set_elems` writes; a
 /// `std::complex<double>` result is compared as it is. The imaginary part is
 /// compared only for a complex element type. The shape is asserted first, so
@@ -145,9 +143,16 @@ void expect_elems(tci_test_fixture<TenT> &fix, const TenT &tensor,
         } else {
           expected = value;
         }
-        TCICT_ASSERT_CLOSE(real_part<TenT>(elem), expected.real(), tol);
-        if constexpr (is_complex_v<TenT>) {
-          TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), expected.imag(), tol);
+        if (cat == tol_category::exact) {
+          TCICT_ASSERT(real_part<TenT>(elem) == expected.real());
+          if constexpr (is_complex_v<TenT>) {
+            TCICT_ASSERT(imag_part<TenT>(elem) == expected.imag());
+          }
+        } else {
+          TCICT_ASSERT_CLOSE(real_part<TenT>(elem), expected.real(), tol);
+          if constexpr (is_complex_v<TenT>) {
+            TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), expected.imag(), tol);
+          }
         }
       });
 }

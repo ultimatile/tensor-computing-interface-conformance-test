@@ -794,18 +794,18 @@ void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
   auto vertical = tci::concatenate<TenT>(ctx, ins, 0);
   expect_elems(fix, vertical, {4, 3}, [&](const auto &x) {
     return x[0] < 2 ? t1_at(x) : t2_at(shifted(x, 0, 2));
-  });
+  }, tol_category::exact);
 
   // Horizontal concatenation: columns 0-2 from t1, columns 3-5 from t2
   auto horizontal = tci::concatenate<TenT>(ctx, ins, 1);
   expect_elems(fix, horizontal, {2, 6}, [&](const auto &x) {
     return x[1] < 3 ? t1_at(x) : t2_at(shifted(x, 1, 3));
-  });
+  }, tol_category::exact);
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, t1, {2, 3}, t1_at);
-  expect_elems(fix, t2, {2, 3}, t2_at);
+  expect_elems(fix, t1, {2, 3}, t1_at, tol_category::exact);
+  expect_elems(fix, t2, {2, 3}, t2_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -844,13 +844,13 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
       return b_at(shifted(x, 1, 3));
     }
     return c_at(shifted(x, 1, 4));
-  });
+  }, tol_category::exact);
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, a, {2, 3, 4}, a_at);
-  expect_elems(fix, b, {2, 1, 4}, b_at);
-  expect_elems(fix, c, {2, 2, 4}, c_at);
+  expect_elems(fix, a, {2, 3, 4}, a_at, tol_category::exact);
+  expect_elems(fix, b, {2, 1, 4}, b_at, tol_category::exact);
+  expect_elems(fix, c, {2, 2, 4}, c_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -1159,19 +1159,19 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
   expect_elems(fix, result, {2, 2, 3}, [&](const auto &x) {
     const auto y = without_bond(x, 0);
     return x[0] == 0 ? t1_at(y) : t2_at(y);
-  });
+  }, tol_category::exact);
 
   // An interior bond: the new bond 1 selects the input
   auto interior = tci::stack<TenT>(ctx, ins, 1);
   expect_elems(fix, interior, {2, 2, 3}, [&](const auto &x) {
     const auto y = without_bond(x, 1);
     return x[1] == 0 ? t1_at(y) : t2_at(y);
-  });
+  }, tol_category::exact);
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, t1, {2, 3}, t1_at);
-  expect_elems(fix, t2, {2, 3}, t2_at);
+  expect_elems(fix, t1, {2, 3}, t1_at, tol_category::exact);
+  expect_elems(fix, t2, {2, 3}, t2_at, tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -1209,13 +1209,13 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
       return t2_at(y);
     }
     return t3_at(y);
-  });
+  }, tol_category::exact);
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
-  expect_elems(fix, t1, {2, 3}, t1_at);
-  expect_elems(fix, t2, {2, 3}, t2_at);
-  expect_elems(fix, t3, {2, 3}, t3_at);
+  expect_elems(fix, t1, {2, 3}, t1_at, tol_category::exact);
+  expect_elems(fix, t2, {2, 3}, t2_at, tol_category::exact);
+  expect_elems(fix, t3, {2, 3}, t3_at, tol_category::exact);
 #else
   (void)fix;
 #endif
