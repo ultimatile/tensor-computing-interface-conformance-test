@@ -37,9 +37,10 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_LINEAR_COMBINE
   auto &ctx = fix.context();
 
-  // a = [[1,2],[3,4]], b = [[5,6],[7,8]], c = [[9,10],[11,12]]: distinct
-  // values across all three inputs; the expected result is computed from the
-  // same functions. See "Inputs to multi-input operations" in CONTRIBUTING.md.
+  // Real parts a = [[1,2],[3,4]], b = [[5,6],[7,8]], c = [[9,10],[11,12]]:
+  // distinct values across all three inputs; the expected result is computed
+  // from the same functions. See "Inputs to multi-input operations" in
+  // CONTRIBUTING.md.
   auto a_at = ramp_over<TenT>({2, 2}, 1.0);
   auto b_at = ramp_over<TenT>({2, 2}, 5.0);
   auto c_at = ramp_over<TenT>({2, 2}, 9.0);
@@ -53,11 +54,11 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
   auto result = tci::linear_combine<TenT>(
       ctx, {std::cref(tensor_a), std::cref(tensor_b), std::cref(tensor_c)});
 
-  // Expected: a + b + c = [[15,18],[21,24]]
+  // Expected real parts: a + b + c = [[15,18],[21,24]]
   expect_elems(
       fix, result, {2, 2},
       [&](const auto &x) { return a_at(x) + b_at(x) + c_at(x); },
-      tol_category::reduction);
+      tol_category::reduction, 3);
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.
@@ -76,9 +77,9 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_LINEAR_COMBINE
   auto &ctx = fix.context();
 
-  // a = [[1,2],[3,4]], b = [[5,6],[7,8]]: distinct values across both inputs;
-  // the expected result is computed from the same functions. See "Inputs to
-  // multi-input operations" in CONTRIBUTING.md.
+  // Real parts a = [[1,2],[3,4]], b = [[5,6],[7,8]]: distinct values across
+  // both inputs; the expected result is computed from the same functions. See
+  // "Inputs to multi-input operations" in CONTRIBUTING.md.
   auto a_at = ramp_over<TenT>({2, 2}, 1.0);
   auto b_at = ramp_over<TenT>({2, 2}, 5.0);
   auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
@@ -93,11 +94,11 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
 
   auto result = tci::linear_combine<TenT>(ctx, ins, coefficients);
 
-  // Expected: 0.5*a + 2*b = [[10.5,13],[15.5,18]]
+  // Expected real parts: 0.5*a + 2*b = [[10.5,13],[15.5,18]]
   expect_elems(
       fix, result, {2, 2},
       [&](const auto &x) { return 0.5 * a_at(x) + 2.0 * b_at(x); },
-      tol_category::reduction);
+      tol_category::reduction, 2);
 
   // Inputs unchanged; see "Inputs to multi-input operations" in
   // CONTRIBUTING.md.

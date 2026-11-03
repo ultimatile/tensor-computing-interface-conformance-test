@@ -93,38 +93,42 @@ Coors without_bond(const Coors &coors, std::size_t bond) {
   return out;
 }
 
-/// Sets the element at every coordinate `coors` of `tensor` to the real value
-/// `value_at(coors)`. Pairs with `expect_elems`, so a test can build an input
-/// and check it with the same function.
+/// Sets the element at every coordinate `coors` of `tensor` to the value with
+/// real part `v = value_at(coors)` and, for a complex element type, imaginary
+/// part `-0.5 * v`, so that an operation losing or conjugating imaginary parts
+/// is visible. Pairs with `expect_elems`, so a test can build an input and
+/// check it with the same function; real-coefficient linear operations keep
+/// the imaginary part at `-0.5` times the real part.
 template <typename TenT, typename ValueAt>
 void set_elems(tci_test_fixture<TenT> &fix, TenT &tensor, ValueAt value_at) {
   auto &ctx = fix.context();
   detail::for_each_coors<TenT>(
       tci::shape(ctx, tensor), [&](const tci::elem_coors_t<TenT> &coors) {
-        tci::set_elem(ctx, tensor, coors,
-                      make_elem<TenT>(static_cast<double>(value_at(coors))));
+        const double v = static_cast<double>(value_at(coors));
+        tci::set_elem(ctx, tensor, coors, make_elem<TenT>(v, -0.5 * v));
       });
 }
 
 /// Asserts that `tensor` has `shape`, then that the element at every
-/// coordinate of that shape has real part `value_at(coors)` and, for a complex
-/// element type, imaginary part zero, each within the tolerance of `cat`. The
-/// shape is asserted first, so the sweep reads only coordinates the tensor
-/// has.
+/// coordinate of that shape has real part `v = value_at(coors)` and, for a
+/// complex element type, imaginary part `-0.5 * v`, as `set_elems` writes
+/// them, each within `tolerance(fix, cat, n)`. The shape is asserted first, so
+/// the sweep reads only coordinates the tensor has.
 template <typename TenT, typename ValueAt>
 void expect_elems(tci_test_fixture<TenT> &fix, const TenT &tensor,
                   const tci::shape_t<TenT> &shape, ValueAt value_at,
-                  tol_category cat = tol_category::elementwise) {
+                  tol_category cat = tol_category::elementwise,
+                  std::size_t n = 1) {
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, cat);
+  auto tol = tolerance(fix, cat, n);
   TCICT_ASSERT(tci::shape(ctx, tensor) == shape);
   detail::for_each_coors<TenT>(
       shape, [&](const tci::elem_coors_t<TenT> &coors) {
         auto elem = tci::get_elem(ctx, tensor, coors);
-        TCICT_ASSERT_CLOSE(real_part<TenT>(elem),
-                           static_cast<double>(value_at(coors)), tol);
+        const double v = static_cast<double>(value_at(coors));
+        TCICT_ASSERT_CLOSE(real_part<TenT>(elem), v, tol);
         if constexpr (is_complex_v<TenT>) {
-          TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, tol);
+          TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), -0.5 * v, tol);
         }
       });
 }
