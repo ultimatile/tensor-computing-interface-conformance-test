@@ -38,13 +38,14 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
 #if !defined(TCICT_SKIP_LINEAR_COMBINE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
 
-  // Real parts a = [[1,2],[3,4]], b = [[5,6],[7,8]], c = [[9,10],[11,12]]:
+  // Real parts a = [[1,2],[3,4]], b = [[5,6],[7,8]], c = [[20,21],[22,23]]:
   // distinct values across all three inputs; the expected result is computed
   // from the same functions. See "Inputs to multi-input operations" in
-  // CONTRIBUTING.md.
+  // CONTRIBUTING.md. The offsets are not evenly spaced: with c = 9 + ramp,
+  // a + c == 2b everywhere, and a backend returning 3b would pass.
   auto a_at = ramp_over<TenT>({2, 2}, 1.0);
   auto b_at = ramp_over<TenT>({2, 2}, 5.0);
-  auto c_at = ramp_over<TenT>({2, 2}, 9.0);
+  auto c_at = ramp_over<TenT>({2, 2}, 20.0);
   auto tensor_a = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_b = tci::zeros<TenT>(ctx, {2, 2});
   auto tensor_c = tci::zeros<TenT>(ctx, {2, 2});
@@ -55,7 +56,7 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
   auto result = TCICT_NOTHROW_VALUE(tci::linear_combine<TenT>(
       ctx, {std::cref(tensor_a), std::cref(tensor_b), std::cref(tensor_c)}));
 
-  // Expected real parts: a + b + c = [[15,18],[21,24]]
+  // Expected real parts: a + b + c = [[26,29],[32,35]]
   TCICT_EXPECT_ELEMS(
       fix, result, {2, 2},
       [&](const auto &x) { return a_at(x) + b_at(x) + c_at(x); },
