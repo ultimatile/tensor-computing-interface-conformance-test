@@ -791,13 +791,13 @@ void test_concatenate_basic(tci_test_fixture<TenT> &fix) {
   tci::List<tci::CRef<TenT>> ins = {std::cref(t1), std::cref(t2)};
 
   // Vertical concatenation: rows 0-1 from t1, rows 2-3 from t2
-  auto vertical = tci::concatenate<TenT>(ctx, ins, 0);
+  auto vertical = TCICT_NOTHROW_VALUE(tci::concatenate<TenT>(ctx, ins, 0));
   expect_elems(fix, vertical, {4, 3}, [&](const auto &x) {
     return x[0] < 2 ? t1_at(x) : t2_at(shifted(x, 0, 2));
   }, tol_category::exact);
 
   // Horizontal concatenation: columns 0-2 from t1, columns 3-5 from t2
-  auto horizontal = tci::concatenate<TenT>(ctx, ins, 1);
+  auto horizontal = TCICT_NOTHROW_VALUE(tci::concatenate<TenT>(ctx, ins, 1));
   expect_elems(fix, horizontal, {2, 6}, [&](const auto &x) {
     return x[1] < 3 ? t1_at(x) : t2_at(shifted(x, 1, 3));
   }, tol_category::exact);
@@ -832,8 +832,8 @@ void test_concatenate_values(tci_test_fixture<TenT> &fix) {
   set_elems(fix, b, b_at);
   set_elems(fix, c, c_at);
 
-  auto d = tci::concatenate<TenT>(
-      ctx, {std::cref(a), std::cref(b), std::cref(c)}, 1);
+  auto d = TCICT_NOTHROW_VALUE(tci::concatenate<TenT>(
+      ctx, {std::cref(a), std::cref(b), std::cref(c)}, 1));
 
   // Bond 1 of d: 0-2 from a, 3 from b, 4-5 from c
   expect_elems(fix, d, {2, 6, 4}, [&](const auto &x) {
@@ -1153,7 +1153,7 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
 
   // A named list; see "Inputs to multi-input operations" in CONTRIBUTING.md.
   tci::List<tci::CRef<TenT>> ins = {std::cref(t1), std::cref(t2)};
-  auto result = tci::stack<TenT>(ctx, ins, 0);
+  auto result = TCICT_NOTHROW_VALUE(tci::stack<TenT>(ctx, ins, 0));
 
   // The new bond 0 selects the input: slice 0 is t1, slice 1 is t2
   expect_elems(fix, result, {2, 2, 3}, [&](const auto &x) {
@@ -1162,7 +1162,7 @@ template <typename TenT> void test_stack_basic(tci_test_fixture<TenT> &fix) {
   }, tol_category::exact);
 
   // An interior bond: the new bond 1 selects the input
-  auto interior = tci::stack<TenT>(ctx, ins, 1);
+  auto interior = TCICT_NOTHROW_VALUE(tci::stack<TenT>(ctx, ins, 1));
   expect_elems(fix, interior, {2, 2, 3}, [&](const auto &x) {
     const auto y = without_bond(x, 1);
     return x[1] == 0 ? t1_at(y) : t2_at(y);
@@ -1196,8 +1196,8 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
   set_elems(fix, t2, t2_at);
   set_elems(fix, t3, t3_at);
 
-  auto result = tci::stack<TenT>(
-      ctx, {std::cref(t1), std::cref(t2), std::cref(t3)}, 2);
+  auto result = TCICT_NOTHROW_VALUE(
+      tci::stack<TenT>(ctx, {std::cref(t1), std::cref(t2), std::cref(t3)}, 2));
 
   // The new bond 2 selects the input
   expect_elems(fix, result, {2, 3, 3}, [&](const auto &x) {

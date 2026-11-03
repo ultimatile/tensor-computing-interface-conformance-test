@@ -52,8 +52,8 @@ void test_linear_combine_uniform(tci_test_fixture<TenT> &fix) {
   set_elems(fix, tensor_b, b_at);
   set_elems(fix, tensor_c, c_at);
 
-  auto result = tci::linear_combine<TenT>(
-      ctx, {std::cref(tensor_a), std::cref(tensor_b), std::cref(tensor_c)});
+  auto result = TCICT_NOTHROW_VALUE(tci::linear_combine<TenT>(
+      ctx, {std::cref(tensor_a), std::cref(tensor_b), std::cref(tensor_c)}));
 
   // Expected real parts: a + b + c = [[15,18],[21,24]]
   expect_elems(
@@ -98,7 +98,8 @@ void test_linear_combine_weighted(tci_test_fixture<TenT> &fix) {
       make_elem<TenT>(s_a.real(), s_a.imag()),
       make_elem<TenT>(s_b.real(), s_b.imag())};
 
-  auto result = tci::linear_combine<TenT>(ctx, ins, coefficients);
+  auto result =
+      TCICT_NOTHROW_VALUE(tci::linear_combine<TenT>(ctx, ins, coefficients));
 
   // Expected: s_a*a + s_b*b; for a real element type, real parts
   // [[10.5,13],[15.5,18]]
@@ -132,7 +133,8 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
   // A named list, feeding both overloads; see "Inputs to multi-input
   // operations" in CONTRIBUTING.md.
   tci::List<tci::CRef<TenT>> single_list = {std::cref(single_tensor)};
-  auto summed = tci::linear_combine<TenT>(ctx, single_list);
+  auto summed =
+      TCICT_NOTHROW_VALUE(tci::linear_combine<TenT>(ctx, single_list));
   expect_elems(fix, summed, {1, 1}, single_at, tol_category::exact);
 
   // For a complex element type the coefficient has an imaginary part too.
@@ -140,7 +142,8 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
   const std::complex<double> s(3.0, is_complex_v<TenT> ? -1.5 : 0.0);
   tci::List<tci::elem_t<TenT>> single_coef = {make_elem<TenT>(s.real(),
                                                               s.imag())};
-  auto scaled = tci::linear_combine<TenT>(ctx, single_list, single_coef);
+  auto scaled = TCICT_NOTHROW_VALUE(
+      tci::linear_combine<TenT>(ctx, single_list, single_coef));
   expect_elems(fix, scaled, {1, 1}, [&](const auto &x) {
     return s * written<TenT>(single_at(x));
   });

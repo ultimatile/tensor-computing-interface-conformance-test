@@ -48,6 +48,22 @@ struct assertion_error : std::runtime_error {
     }                                                                                              \
   } while (false)
 
+/// Evaluate an expression and yield its value, turning a std::exception from it
+/// into an assertion_error that names this file and line, as TCICT_ASSERT_NOTHROW
+/// does. A prvalue result reaches the caller without a copy or move, so
+/// `auto r = TCICT_NOTHROW_VALUE(f());` needs nothing of the result type that
+/// `auto r = f();` does not. Variadic so that the expression may contain commas.
+#define TCICT_NOTHROW_VALUE(...)                                                                   \
+  ([&]() -> decltype(auto) {                                                                       \
+    try {                                                                                          \
+      return __VA_ARGS__;                                                                          \
+    } catch (const std::exception& e_) {                                                           \
+      std::ostringstream oss_;                                                                     \
+      oss_ << __FILE__ << ":" << __LINE__ << ": unexpected exception: " << e_.what();              \
+      throw ::tcict::assertion_error(oss_.str());                                                  \
+    }                                                                                              \
+  }())
+
 /// Assert that an expression does not throw.
 #define TCICT_ASSERT_NOTHROW(expr)                                                                 \
   do {                                                                                             \
