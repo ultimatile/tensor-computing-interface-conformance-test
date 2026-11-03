@@ -102,8 +102,13 @@ override_tcict() {
 require_clean_tcict() {
   # The override ships HEAD only, so an uncommitted edit to a tracked file
   # would silently go untested.
-  git -C "$TCICT_ROOT" diff --quiet HEAD -- \
-    || fail "tracked files in $TCICT_ROOT have uncommitted changes, which the override (tcict HEAD) would not include; commit or stash them first"
+  local rc=0
+  git -C "$TCICT_ROOT" diff --quiet HEAD -- || rc=$?
+  case "$rc" in
+    0) ;;
+    1) fail "tracked files in $TCICT_ROOT have uncommitted changes, which the override (tcict HEAD) would not include; commit or stash them first" ;;
+    *) fail "git diff failed (exit $rc) while checking $TCICT_ROOT for uncommitted changes" ;;
+  esac
 }
 
 cmake_build() {
