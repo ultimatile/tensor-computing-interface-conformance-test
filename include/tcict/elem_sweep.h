@@ -137,8 +137,9 @@ void set_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
 
 /// Asserts that `tensor` has `shape`, then that the element at every
 /// coordinate of that shape equals `value_at(coors)` within
-/// `tolerance(fix, cat, n)`, part by part; `tol_category::exact` admits only
-/// equality, and any other tolerance admits only a difference below it. A real
+/// `tolerance(fix, cat, n)`, part by part; a zero tolerance, which
+/// `tol_category::exact` gives, admits only equality, and any other tolerance
+/// admits only a difference below it. A real
 /// `value_at` result `v` stands for `written<TenT>(v)`, the value
 /// `TCICT_SET_ELEMS` writes; a `std::complex<double>` result is compared as it
 /// is. The imaginary part is compared only for a complex element type. The
@@ -209,9 +210,12 @@ void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
 } // namespace tcict
 
 /// expect_elems_at with the caller's file and line:
-/// TCICT_EXPECT_ELEMS(fix, tensor, shape, value_at[, cat[, n]]).
+/// TCICT_EXPECT_ELEMS(fix, tensor, shape, value_at[, cat[, n]]). The line is
+/// one of the lines the invocation spans; which one, for an invocation spanning
+/// several, depends on the compiler.
 #define TCICT_EXPECT_ELEMS(...) ::tcict::expect_elems_at(__FILE__, __LINE__, __VA_ARGS__)
 
 /// set_elems_at with the caller's file and line:
-/// TCICT_SET_ELEMS(fix, tensor, value_at).
+/// TCICT_SET_ELEMS(fix, tensor, value_at), the line chosen as for
+/// TCICT_EXPECT_ELEMS.
 #define TCICT_SET_ELEMS(...) ::tcict::set_elems_at(__FILE__, __LINE__, __VA_ARGS__)
