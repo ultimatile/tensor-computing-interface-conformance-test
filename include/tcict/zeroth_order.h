@@ -102,22 +102,29 @@ template <typename TenT> tci::elem_t<TenT> written_elem(double v) {
   return make_elem<TenT>(w.real(), w.imag());
 }
 
-/// Asserts that `tensor` is zeroth-order: order 0 and size 1, then, through
-/// expect_elems_at, shape {} and the sole element `value` within
-/// `tolerance(fix, cat, n)`. A real `value` stands for `written<TenT>(value)`; a
-/// `std::complex<double>` one is compared as it is. Call it through
-/// TCICT_EXPECT_ZEROTH_ORDER, which passes the caller's location.
-template <typename TenT, typename V>
-void expect_zeroth_order_at(const char *file, int line,
-                            tci_test_fixture<TenT> &fix, const TenT &tensor,
-                            V value, tol_category cat = tol_category::exact,
-                            std::size_t n = 1) {
-  auto &ctx = fix.context();
+#endif
+
+#if defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
+
+/// Asserts that `tensor` has order 0, shape {} and size 1, whatever its tensor
+/// type, so that the results of real, imag and to_cplx can be checked with the
+/// context their input came with. Call it through
+/// TCICT_EXPECT_ZEROTH_ORDER_SHAPE, which passes the caller's location.
+template <typename Ctx, typename Ten>
+void expect_zeroth_order_shape_at(const char *file, int line, Ctx &ctx,
+                                  const Ten &tensor) {
   const auto order =
       detail::nothrow_call(file, line, [&] { return tci::order(ctx, tensor); });
   if (order != 0) {
     std::ostringstream oss;
     oss << "order " << order << " != expected 0";
+    detail::fail_at(file, line, oss.str());
+  }
+  const auto shape =
+      detail::nothrow_call(file, line, [&] { return tci::shape(ctx, tensor); });
+  if (!shape.empty()) {
+    std::ostringstream oss;
+    oss << "shape of " << shape.size() << " bonds != expected {}";
     detail::fail_at(file, line, oss.str());
   }
   const auto size =
@@ -127,6 +134,20 @@ void expect_zeroth_order_at(const char *file, int line,
     oss << "size " << size << " != expected 1";
     detail::fail_at(file, line, oss.str());
   }
+}
+
+/// Asserts that `tensor` is zeroth-order, as expect_zeroth_order_shape_at
+/// does, then, through expect_elems_at, that its sole element is `value`
+/// within `tolerance(fix, cat, n)`. A real `value` stands for
+/// `written<TenT>(value)`; a `std::complex<double>` one is compared as it is.
+/// Call it through TCICT_EXPECT_ZEROTH_ORDER, which passes the caller's
+/// location.
+template <typename TenT, typename V>
+void expect_zeroth_order_at(const char *file, int line,
+                            tci_test_fixture<TenT> &fix, const TenT &tensor,
+                            V value, tol_category cat = tol_category::exact,
+                            std::size_t n = 1) {
+  expect_zeroth_order_shape_at(file, line, fix.context(), tensor);
   expect_elems_at(
       file, line, fix, tensor, tci::shape_t<TenT>{},
       [value](const tci::elem_coors_t<TenT> &) { return value; }, cat, n);
@@ -141,3 +162,8 @@ void expect_zeroth_order_at(const char *file, int line,
 /// TCICT_EXPECT_ELEMS.
 #define TCICT_EXPECT_ZEROTH_ORDER(...)                                         \
   ::tcict::expect_zeroth_order_at(__FILE__, __LINE__, __VA_ARGS__)
+
+/// expect_zeroth_order_shape_at with the caller's file and line:
+/// TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, tensor).
+#define TCICT_EXPECT_ZEROTH_ORDER_SHAPE(...)                                   \
+  ::tcict::expect_zeroth_order_shape_at(__FILE__, __LINE__, __VA_ARGS__)

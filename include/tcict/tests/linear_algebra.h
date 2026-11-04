@@ -166,7 +166,7 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
 // distinct input values and the read-back.
 template <typename TenT>
 void test_linear_combine_zeroth_order(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_LINEAR_COMBINE) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_LINEAR_COMBINE) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto tensor_a = tci::zeros<TenT>(ctx, {});
   auto tensor_b = tci::zeros<TenT>(ctx, {});
@@ -292,7 +292,7 @@ void test_normalize_edge_cases(tci_test_fixture<TenT> &fix) {
 // The original norm of one element v is |v|, and normalizing leaves v / |v|.
 template <typename TenT>
 void test_normalize_zeroth_order(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_NORMALIZE) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_NORMALIZE) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::reduction);
 
@@ -386,7 +386,7 @@ void test_contract_matmul(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_contract_dot_product(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_CONTRACT) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_CONTRACT) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto a = tci::zeros<TenT>(ctx, {3});
   auto b = tci::zeros<TenT>(ctx, {3});
@@ -419,7 +419,7 @@ void test_contract_dot_product(tci_test_fixture<TenT> &fix) {
 // either operand fails.
 template <typename TenT>
 void test_contract_dot_product_int_labels(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_CONTRACT) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_CONTRACT) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto a_at = ramp_over<TenT>({3}, 1.0);
   auto b_at = ramp_over<TenT>({3}, 4.0);
@@ -453,7 +453,7 @@ void test_contract_dot_product_int_labels(tci_test_fixture<TenT> &fix) {
 // the zeroth-order product.
 template <typename TenT>
 void test_contract_zeroth_order(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_CONTRACT) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_CONTRACT) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto v_at = ramp_over<TenT>({3}, 1.0);
   auto s = tci::zeros<TenT>(ctx, {});
@@ -1372,7 +1372,7 @@ template <typename TenT> void test_scale_by_zero(tci_test_fixture<TenT> &fix) {
 // dropping its imaginary part fails.
 template <typename TenT>
 void test_scale_zeroth_order(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_SCALE) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_SCALE) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   const std::complex<double> s(-1.5, is_complex_v<TenT> ? 0.5 : 0.0);
   const auto s_elem = make_elem<TenT>(s.real(), s.imag());
@@ -1400,7 +1400,7 @@ void test_scale_zeroth_order(tci_test_fixture<TenT> &fix) {
 // --- trace: 2x2 matrix ---
 
 template <typename TenT> void test_trace_partial(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_TRACE) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_TRACE) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
 
   // 2x2 diagonal matrix [[1,0],[0,4]] → trace over {0,1} = 1+4 = 5

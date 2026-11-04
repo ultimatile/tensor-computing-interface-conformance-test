@@ -121,7 +121,7 @@ Tests call `to_range` and `assign_from_range` on second-order tensors through `t
 
 TCAPI V1, under "Zeroth-Order and Diagonal Tensor Semantics": "TCAPI represents a scalar-valued **tensor** result as a zeroth-order tensor: empty shape `{}`, `size == 1`, and a single empty coordinate sequence."
 Where a test knows the element a zeroth-order `TenT` should hold, it checks the tensor through `TCICT_EXPECT_ZEROTH_ORDER` in `include/tcict/zeroth_order.h`: order 0 and size 1, then shape `{}` and the sole element read at `{}` through `TCICT_EXPECT_ELEMS`.
-The results of `real`, `imag` and `to_cplx` have another tensor type and are checked directly, and so is the result of `random`, whose element is one of the values the generator returned.
+The results of `real` and `imag` of a complex tensor, and of `to_cplx` of a real one, have another tensor type; those results are checked through `TCICT_EXPECT_ZEROTH_ORDER_SHAPE`, which takes any tensor type, and `get_elem`, and so is the result of `random`, whose element is one of the values the generator returned.
 A callback that receives a coordinate of a zeroth-order tensor expects the empty one and flags any other, under "Callbacks the backend invokes", through `to_range_0d`, `assign_from_range_0d` or `visit_record_0d` in the same header.
 
 V1 goes on: "Operations whose definitions require selecting, reordering, inserting, removing, slicing, or partitioning bonds (`transpose`, `svd`, `qr`, `eig`, `expand`, `shrink`, `extract_sub`, `replace_sub`, ...) are not applicable to zeroth-order tensors."

@@ -51,7 +51,7 @@ void test_zeros(tci_test_fixture<TenT>& fix) {
 // sole element is zero."
 template <typename TenT>
 void test_zeros_zeroth_order(tci_test_fixture<TenT>& fix) {
-#if !defined(TCICT_SKIP_ZEROS) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_ZEROS) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
   TenT tensor;
   TCICT_ASSERT_NOTHROW(tensor = tci::template zeros<TenT>(ctx, {}));
@@ -97,7 +97,7 @@ void test_fill(tci_test_fixture<TenT>& fix) {
 // sole element is `v`."
 template <typename TenT>
 void test_fill_zeroth_order(tci_test_fixture<TenT>& fix) {
-#if !defined(TCICT_SKIP_FILL) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_FILL) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
   TenT tensor;
   TCICT_ASSERT_NOTHROW(
@@ -284,7 +284,7 @@ void test_random_outofplace(tci_test_fixture<TenT>& fix) {
 // value the generator returned, each call returning a different one.
 template <typename TenT>
 void test_random_zeroth_order(tci_test_fixture<TenT>& fix) {
-#if !defined(TCICT_SKIP_RANDOM) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_RANDOM) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
   std::size_t calls = 0;
   auto gen = [&calls]() -> tci::elem_t<TenT> {
@@ -294,9 +294,7 @@ void test_random_zeroth_order(tci_test_fixture<TenT>& fix) {
 
   TenT tensor;
   TCICT_ASSERT_NOTHROW(tensor = tci::template random<TenT>(ctx, {}, gen));
-  TCICT_ASSERT(tci::order(ctx, tensor) == 0);
-  TCICT_ASSERT(tci::shape(ctx, tensor).empty());
-  TCICT_ASSERT(tci::size(ctx, tensor) == 1);
+  TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, tensor);
   TCICT_ASSERT(calls > 0);
 
   const auto elem = tci::get_elem(ctx, tensor, {});
@@ -456,7 +454,7 @@ void test_copy_large(tci_test_fixture<TenT>& fix) {
 // storage", so a write to the copy leaves the original as it was.
 template <typename TenT>
 void test_copy_zeroth_order(tci_test_fixture<TenT>& fix) {
-#if !defined(TCICT_SKIP_COPY) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_COPY) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
   auto orig = tci::template zeros<TenT>(ctx, {});
   TCICT_SET_ELEMS(fix, orig, [](const tci::elem_coors_t<TenT>&) { return 3.5; });
@@ -549,7 +547,7 @@ void test_assign_from_range_column_major(tci_test_fixture<TenT>& fix) {
 // The only coordinate of shape {} is {}, which the map sends to index 0.
 template <typename TenT>
 void test_assign_from_range_zeroth_order(tci_test_fixture<TenT>& fix) {
-#if !defined(TCICT_SKIP_ASSIGN_FROM_RANGE) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_ASSIGN_FROM_RANGE) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   std::vector<tci::elem_t<TenT>> source = {written_elem<TenT>(7.5)};
   TenT tensor;
   assign_from_range_0d(fix.context(), source.begin(), tensor);
@@ -648,13 +646,11 @@ void test_allocate_1d(tci_test_fixture<TenT>& fix) {
 // sole element is uninitialized." The element is read only after it is set.
 template <typename TenT>
 void test_allocate_zeroth_order(tci_test_fixture<TenT>& fix) {
-#if !defined(TCICT_SKIP_ALLOCATE) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_ALLOCATE) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
   TenT tensor;
   TCICT_ASSERT_NOTHROW(tensor = tci::template allocate<TenT>(ctx, {}));
-  TCICT_ASSERT(tci::order(ctx, tensor) == 0);
-  TCICT_ASSERT(tci::shape(ctx, tensor).empty());
-  TCICT_ASSERT(tci::size(ctx, tensor) == 1);
+  TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, tensor);
 
   tci::set_elem(ctx, tensor, {}, written_elem<TenT>(-1.25));
   TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, -1.25);
@@ -818,7 +814,7 @@ void test_move_preserves_values(tci_test_fixture<TenT>& fix) {
 // `TenT{}`, whose queries it does not define, so nothing is asserted on it.
 template <typename TenT>
 void test_move_zeroth_order(tci_test_fixture<TenT>& fix) {
-#if !defined(TCICT_SKIP_MOVE) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_MOVE) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
   auto source = tci::template zeros<TenT>(ctx, {});
   TCICT_SET_ELEMS(fix, source, [](const tci::elem_coors_t<TenT>&) { return 4.5; });

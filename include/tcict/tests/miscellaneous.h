@@ -259,7 +259,7 @@ void test_convert_data_integrity(tci_test_fixture<TenT> &fix) {
 // TCAPI V1: with Ten1T == Ten2T, convert is "equivalent to deep copy".
 template <typename TenT>
 void test_convert_zeroth_order(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_CONVERT) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_CONVERT) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto a = tci::zeros<TenT>(ctx, {});
   TCICT_SET_ELEMS(fix, a, [](const tci::elem_coors_t<TenT> &) { return 2.5; });

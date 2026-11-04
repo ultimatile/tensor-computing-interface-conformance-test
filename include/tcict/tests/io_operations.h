@@ -75,7 +75,7 @@ void test_load_data_integrity(tci_test_fixture<TenT>& fix) {
 template <typename TenT>
 void test_save_load_zeroth_order(tci_test_fixture<TenT>& fix) {
 #if !defined(TCICT_SKIP_SAVE) && !defined(TCICT_SKIP_LOAD) && \
-    defined(TCICT_HAS_ELEM_SWEEP)
+    defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
   auto tensor = tci::zeros<TenT>(ctx, {});
   TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT>&) { return -6.5; });

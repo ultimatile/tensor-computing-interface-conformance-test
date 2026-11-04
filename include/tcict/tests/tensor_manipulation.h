@@ -190,12 +190,13 @@ void test_imag_extraction(tci_test_fixture<TenT> &fix) {
 
 // --- real / imag extraction: zeroth-order ---
 
-// Their results have type real_ten_t<TenT>, which TCICT_EXPECT_ZEROTH_ORDER
-// does not take with this test's fixture, so they are checked directly, as the
-// extraction tests above check theirs.
+// Their results have type real_ten_t<TenT>, which is not TenT when TenT is
+// complex, so TCICT_EXPECT_ZEROTH_ORDER cannot take them with this test's
+// fixture; they are checked through TCICT_EXPECT_ZEROTH_ORDER_SHAPE and
+// get_elem, as the extraction tests above check theirs.
 template <typename TenT>
 void test_real_zeroth_order(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_REAL) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_REAL) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {});
@@ -204,9 +205,7 @@ void test_real_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto real_tensor = tci::real(ctx, tensor);
 
   using RealTenT = tci::real_ten_t<TenT>;
-  TCICT_ASSERT(tci::order(ctx, real_tensor) == 0);
-  TCICT_ASSERT(tci::shape(ctx, real_tensor).empty());
-  TCICT_ASSERT(tci::size(ctx, real_tensor) == 1);
+  TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, real_tensor);
   TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, real_tensor, {})),
                      4.0, tol);
 #else
@@ -216,7 +215,7 @@ void test_real_zeroth_order(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_imag_zeroth_order(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_IMAG) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_IMAG) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {});
@@ -227,9 +226,7 @@ void test_imag_zeroth_order(tci_test_fixture<TenT> &fix) {
   // written<TenT>(4.0) has imaginary part -2.0 for a complex TenT and none
   // for a real one, whose imag is a zero tensor.
   using RealTenT = tci::real_ten_t<TenT>;
-  TCICT_ASSERT(tci::order(ctx, imag_tensor) == 0);
-  TCICT_ASSERT(tci::shape(ctx, imag_tensor).empty());
-  TCICT_ASSERT(tci::size(ctx, imag_tensor) == 1);
+  TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, imag_tensor);
   TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, imag_tensor, {})),
                      written<TenT>(4.0).imag(), tol);
 #else
@@ -318,7 +315,7 @@ void test_cplx_conj_outofplace(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_cplx_conj_zeroth_order(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_CPLX_CONJ) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_CPLX_CONJ) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto conj_of = [](double v) { return std::conj(written<TenT>(v)); };
 
@@ -406,11 +403,12 @@ void test_to_cplx_complex_to_complex(tci_test_fixture<TenT> &fix) {
 // --- to_cplx: zeroth-order ---
 
 // Registered for every TenT: V1 embeds a real input as real parts and gives a
-// deep copy of a complex one. The result has type cplx_ten_t<TenT>, so it is
-// checked directly.
+// deep copy of a complex one. The result has type cplx_ten_t<TenT>, which is
+// not TenT when TenT is real, so it is checked through
+// TCICT_EXPECT_ZEROTH_ORDER_SHAPE and get_elem.
 template <typename TenT>
 void test_to_cplx_zeroth_order(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_TO_CPLX) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_TO_CPLX) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {});
@@ -420,9 +418,7 @@ void test_to_cplx_zeroth_order(tci_test_fixture<TenT> &fix) {
 
   using CplxTenT = tci::cplx_ten_t<TenT>;
   const auto expected = written<TenT>(-2.5);
-  TCICT_ASSERT(tci::order(ctx, complex_tensor) == 0);
-  TCICT_ASSERT(tci::shape(ctx, complex_tensor).empty());
-  TCICT_ASSERT(tci::size(ctx, complex_tensor) == 1);
+  TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, complex_tensor);
   const auto elem = tci::get_elem(ctx, complex_tensor, {});
   TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem), expected.real(), tol);
   TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem), expected.imag(), tol);
@@ -568,7 +564,7 @@ void test_for_each_inversion(tci_test_fixture<TenT> &fix) {
 // "Visits every element exactly once", and a zeroth-order tensor has one.
 template <typename TenT>
 void test_for_each_zeroth_order(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_FOR_EACH) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_FOR_EACH) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
   using Elem = tci::elem_t<TenT>;
@@ -721,7 +717,7 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
 // One visit, whose coordinate is the empty sequence.
 template <typename TenT>
 void test_for_each_with_coors_zeroth_order(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_FOR_EACH_WITH_COORS) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_FOR_EACH_WITH_COORS) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
   using Elem = tci::elem_t<TenT>;
@@ -921,7 +917,7 @@ template <typename TenT> void test_reshape(tci_test_fixture<TenT> &fix) {
 // has one position, so its value is assertable at every shape.
 template <typename TenT>
 void test_reshape_zeroth_order(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_RESHAPE) && defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCICT_SKIP_RESHAPE) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto value = [](const tci::elem_coors_t<TenT> &) { return 2.75; };
 

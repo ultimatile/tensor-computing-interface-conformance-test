@@ -100,7 +100,7 @@ void test_set_get_elem(tci_test_fixture<TenT>& fix) {
 template <typename TenT>
 void test_set_get_elem_zeroth_order(tci_test_fixture<TenT>& fix) {
 #if !defined(TCICT_SKIP_GET_ELEM) && !defined(TCICT_SKIP_SET_ELEM) && \
-    defined(TCICT_HAS_ELEM_SWEEP)
+    defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
   auto tensor = tci::zeros<TenT>(ctx, {});
 
