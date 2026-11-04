@@ -131,3 +131,13 @@ Nor does any call `diag`, whose input V1 requires to be first- or second-order.
 
 The zeroth-order tests assert nothing about `TenT{}`, the state `clear` and `move` leave, since V1 does not say what queries return on it; the `order == 0` assertions the existing `clear` and `move` tests make on it are left as they are, pending the open question on [#51](https://github.com/ultimatile/tensor-computing-interface-conformance-test/issues/51).
 Of `size_bytes` they assert only that it returns, as the tests of the other ranks do.
+
+### Diagonal tensors
+
+TCAPI V1, under "Zeroth-Order and Diagonal Tensor Semantics": "A diagonal tensor's logical elements — including off-diagonal zeros — define its behavior regardless of storage."
+It names the tensors this covers: "`eye`, `diag` (order 1 → 2), and the `sigma`/`lambda_mat` outputs of `svd`/`trunc_svd`/`eig`/`eigh` are diagonal tensors."
+`test_eye` and the tests of `diag`, `svd`, `trunc_svd`, `eig` and `eigh` check each diagonal tensor they produce, and `test_diag_mat_to_vec_outofplace` the input it reads back, which it builds with `zeros` and so holds exact off-diagonal zeros, through `TCICT_EXPECT_DIAGONAL` in `include/tcict/diagonal.h`: order 2, shape `{n, n}` and size `n * n`, checked before any element is read, then every element against the expected diagonal.
+Off-diagonal elements must be exactly zero, since V1 defines a diagonal tensor as one "whose off-diagonal elements are zero".
+The check takes any tensor type, with the context its input came with, because `sigma` and `eigh`'s `lambda_mat` are `real_ten_t<TenT>` and `eig`'s `lambda_mat` is `cplx_ten_t<TenT>`.
+V1 fixes the order of the diagonal for `svd` ("non-increasing order") and for `eigh` ("ascending order") but not for `trunc_svd` or `eig`, so the `trunc_svd` tests, and the `eig` tests wherever the eigenvalues are not all equal, compare the diagonal as a multiset, through `diag_order::any`.
+`eigvals` and `eigvalsh` return first-order lists, and their tests assert order 1.

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tcict/assertion.h>
+#include <tcict/diagonal.h>
 #include <tcict/elem_helper.h>
 #include <tcict/elem_sweep.h>
 #include <tcict/fixture.h>
@@ -785,13 +786,13 @@ template <typename TenT>
 void test_for_each_eye_traversal(tci_test_fixture<TenT> &fix) {
 #if !defined(TCICT_SKIP_FOR_EACH) && !defined(TCICT_SKIP_EYE)
   auto &ctx = fix.context();
-  auto elem_tol = tolerance(fix, tol_category::elementwise);
   auto sum_tol = tolerance(fix, tol_category::reduction, 9);
   using Elem = tci::elem_t<TenT>;
 
   auto identity = tci::template eye<TenT>(ctx, 3);
 
   const auto one = make_elem<TenT>(1.0);
+  const auto zero = make_elem<TenT>(0.0);
   std::size_t visits = 0;
   std::size_t ones = 0;
   std::size_t zeros = 0;
@@ -799,14 +800,16 @@ void test_for_each_eye_traversal(tci_test_fixture<TenT> &fix) {
 
   // Classifying on the whole element rather than its real part keeps the
   // counts meaningful for the complex instantiations: a backend returning a
-  // stray imaginary component would otherwise still be counted as a one.
+  // stray imaginary component would otherwise still be counted as a one. The
+  // comparison is exact: eye's elements are exact ones and zeros (see
+  // test_eye).
   tci::for_each(ctx, static_cast<const TenT &>(identity),
                 [&](const Elem &elem) {
                   ++visits;
                   sum = sum + elem;
-                  if (std::abs(elem - one) < elem_tol) {
+                  if (elem == one) {
                     ++ones;
-                  } else if (std::abs(elem) < elem_tol) {
+                  } else if (elem == zero) {
                     ++zeros;
                   }
                 });
@@ -1226,7 +1229,7 @@ void test_expand_outofplace(tci_test_fixture<TenT> &fix) {
 }
 
 #ifndef TCICT_SKIP_DIAG
-// expect_vector_3 and expect_diagonal_3x3 are called by the diag tests only.
+// expect_vector_3 is called by the diag tests only.
 
 // Asserts that a first-order tensor of length 3 holds `expected` in order.
 // `expected` is real, so for a complex element type the imaginary part is
@@ -1235,58 +1238,26 @@ template <typename TenT>
 void expect_vector_3(tci_test_fixture<TenT> &fix, const TenT &tensor,
                      const double (&expected)[3]) {
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
   TCICT_ASSERT(tci::order(ctx, tensor) == 1);
   TCICT_ASSERT(tci::size(ctx, tensor) == 3);
+  // The values are exactly representable and reach the tensor by assignment
+  // alone, through diag or set_elem, so they compare exactly.
   for (std::size_t i = 0; i < 3; ++i) {
     auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i));
-    TCICT_ASSERT_CLOSE(real_part<TenT>(elem), expected[i], tol);
+    TCICT_ASSERT(real_part<TenT>(elem) == expected[i]);
     if constexpr (is_complex_v<TenT>) {
-      TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, tol);
+      TCICT_ASSERT(imag_part<TenT>(elem) == 0.0);
     }
   }
 }
 
-// Asserts that a {3, 3} tensor holds `expected` on its main diagonal and zero
-// everywhere else. The off-diagonal check goes through the modulus, so it
-// covers both parts of a complex element in one assertion; `expected` is real,
-// so on the diagonal the imaginary part is expected to be zero and is checked
-// separately.
-template <typename TenT>
-void expect_diagonal_3x3(tci_test_fixture<TenT> &fix, const TenT &tensor,
-                         const double (&expected)[3]) {
-  auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
-  TCICT_ASSERT(tci::order(ctx, tensor) == 2);
-  auto tensor_shape = tci::shape(ctx, tensor);
-  TCICT_ASSERT(tensor_shape.size() == 2);
-  TCICT_ASSERT(tensor_shape[0] == 3 && tensor_shape[1] == 3);
-  // A diagonal tensor's off-diagonal zeros count as logical elements however
-  // few entries the backend stores, so the count is 3^2.
-  TCICT_ASSERT(tci::size(ctx, tensor) == 9);
-  for (std::size_t i = 0; i < 3; ++i) {
-    for (std::size_t j = 0; j < 3; ++j) {
-      if (i == j) {
-        auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i, j));
-        TCICT_ASSERT_CLOSE(real_part<TenT>(elem), expected[i], tol);
-        if constexpr (is_complex_v<TenT>) {
-          TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, tol);
-        }
-      } else {
-        TCICT_ASSERT_CLOSE(
-            std::abs(tci::get_elem(ctx, tensor, coors_of<TenT>(i, j))), 0.0,
-            tol);
-      }
-    }
-  }
-}
 #endif
 
 // --- diag: vector to matrix ---
 
 template <typename TenT>
 void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_DIAG
+#if !defined(TCICT_SKIP_DIAG) && defined(TCICT_HAS_DIAGONAL_CHECK)
   auto &ctx = fix.context();
   auto vector = tci::zeros<TenT>(ctx, {3});
   tci::set_elem(ctx, vector, {0}, make_elem<TenT>(1.0));
@@ -1296,7 +1267,8 @@ void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
   tci::diag(ctx, vector);
 
   const double expected[3] = {1.0, 2.0, 3.0};
-  expect_diagonal_3x3(fix, vector, expected);
+  TCICT_EXPECT_DIAGONAL(ctx, vector, expected,
+                        tolerance(fix, tol_category::exact));
 #else
   (void)fix;
 #endif
@@ -1323,7 +1295,7 @@ void test_diag_mat_to_vec(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_DIAG
+#if !defined(TCICT_SKIP_DIAG) && defined(TCICT_HAS_DIAGONAL_CHECK)
   auto &ctx = fix.context();
   const double expected[3] = {1.5, -2.5, 3.5};
 
@@ -1335,7 +1307,8 @@ void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
   TenT matrix;
   TCICT_ASSERT_NOTHROW(tci::diag(ctx, vector, matrix));
 
-  expect_diagonal_3x3(fix, matrix, expected);
+  TCICT_EXPECT_DIAGONAL(ctx, matrix, expected,
+                        tolerance(fix, tol_category::exact));
 
   // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
   expect_vector_3(fix, vector, expected);
@@ -1348,12 +1321,12 @@ void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_DIAG
+#if !defined(TCICT_SKIP_DIAG) && defined(TCICT_HAS_DIAGONAL_CHECK)
   auto &ctx = fix.context();
   // Distinct diagonal values rather than an identity: all-ones cannot tell a
   // correct extraction from a reordered one. Building the input with `zeros`
-  // also keeps this test under TCICT_SKIP_DIAG alone, so a backend that
-  // implements diag but skips eye can still run it.
+  // also keeps eye out of this test, so a backend that implements diag but
+  // skips eye can still run it.
   const double expected[3] = {4.5, -5.5, 6.5};
 
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});
@@ -1369,7 +1342,8 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
 
   // Input unchanged, values included, not just order and size; see
   // "Out-of-place inputs" in CONTRIBUTING.md.
-  expect_diagonal_3x3(fix, matrix, expected);
+  TCICT_EXPECT_DIAGONAL(ctx, matrix, expected,
+                        tolerance(fix, tol_category::exact));
 #else
   (void)fix;
 #endif

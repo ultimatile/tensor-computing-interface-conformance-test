@@ -59,9 +59,19 @@
 // TCICT_SKIP_ORDER or TCICT_SKIP_SIZE skips them as well. TCICT_HAS_ELEM_SWEEP,
 // defined below, holds exactly when none of the four is skipped, and
 // TCICT_HAS_ZEROTH_ORDER_SWEEP when in addition neither TCICT_SKIP_ORDER nor
-// TCICT_SKIP_SIZE is defined. Both are fixed when this file is first included,
-// so define those six before including any tcict header, for instance as
-// compile definitions (see "Usage" above).
+// TCICT_SKIP_SIZE is defined.
+//
+// The tests that check a diagonal tensor through TCICT_EXPECT_DIAGONAL in
+// include/tcict/diagonal.h, test_eye and the diag, svd, trunc_svd, eig and
+// eigh tests apart from test_diag_mat_to_vec, reach order, shape, size and
+// get_elem through it, and defining any of TCICT_SKIP_ORDER, TCICT_SKIP_SHAPE,
+// TCICT_SKIP_SIZE or TCICT_SKIP_GET_ELEM skips them too.
+// TCICT_HAS_DIAGONAL_CHECK, defined below, holds exactly when none of those
+// four is skipped.
+//
+// These macros are fixed when this file is first included, so define the skip
+// macros they read before including any tcict header, for instance as compile
+// definitions (see "Usage" above).
 //
 // Precision-conditional skip macros (factorization + iterative APIs):
 //
@@ -132,4 +142,12 @@
 #if defined(TCICT_HAS_ELEM_SWEEP) && !defined(TCICT_SKIP_ORDER) &&             \
     !defined(TCICT_SKIP_SIZE)
 #define TCICT_HAS_ZEROTH_ORDER_SWEEP
+#endif
+
+// Defined when the APIs the diagonal check in include/tcict/diagonal.h calls
+// are all available; see "Tests that build and check tensors element by
+// element" above.
+#if !defined(TCICT_SKIP_ORDER) && !defined(TCICT_SKIP_SHAPE) &&                \
+    !defined(TCICT_SKIP_SIZE) && !defined(TCICT_SKIP_GET_ELEM)
+#define TCICT_HAS_DIAGONAL_CHECK
 #endif
