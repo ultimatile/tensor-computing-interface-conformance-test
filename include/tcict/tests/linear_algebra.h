@@ -1038,9 +1038,12 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
   using RealTenT = tci::real_ten_t<TenT>;
   auto reconstruct = [&ctx](const TenT &u_in, const RealTenT &s_in, const TenT &v_in) {
     const auto u_shape = tci::shape(ctx, u_in);
-    // u's bond must be sigma's, already checked to be {2, 2}, before sigma is
-    // read along it.
-    TCICT_ASSERT(u_shape.size() == 2 && u_shape[1] == 2);
+    // u is {4, 2}: its rows are the fixture's and its bond is sigma's, already
+    // checked to be {2, 2}. Assert that before reading either along it.
+    TCICT_ASSERT(u_shape.size() == 2 &&
+                 u_shape[0] == static_cast<tci::bond_dim_t<TenT>>(
+                                   kTruncSvdFixtureRank) &&
+                 u_shape[1] == 2);
     auto scaled = tci::copy(ctx, u_in);
     for (tci::bond_dim_t<TenT> j = 0; j < u_shape[1]; ++j) {
       const auto cj_sigma = static_cast<tci::elem_coor_t<RealTenT>>(j);
@@ -1055,9 +1058,12 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
                                       imag_part<TenT>(elem) * sj));
       }
     }
-    // v's bond must be sigma's too before the contraction over it.
+    // v_dag is {2, 4}, sigma's bond and the fixture's columns, before the
+    // contraction over its bond.
     const auto v_shape = tci::shape(ctx, v_in);
-    TCICT_ASSERT(v_shape.size() == 2 && v_shape[0] == 2);
+    TCICT_ASSERT(v_shape.size() == 2 && v_shape[0] == 2 &&
+                 v_shape[1] == static_cast<tci::bond_dim_t<TenT>>(
+                                   kTruncSvdFixtureRank));
     TenT product;
     tci::contract(ctx, scaled, "ik", v_in, "kj", product, "ij");
     return product;
@@ -1669,9 +1675,9 @@ void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
   }
 
   // Reconstruct via contract: u_scaled[i,k] * v_dag[k,j] → reconstructed[i,j],
-  // after checking that v_dag's bond is sigma's too.
+  // after checking that v_dag is {2, 2} too.
   const auto v_shape = tci::shape(ctx, v_dag);
-  TCICT_ASSERT(v_shape.size() == 2 && v_shape[0] == 2);
+  TCICT_ASSERT(v_shape.size() == 2 && v_shape[0] == 2 && v_shape[1] == 2);
   TenT reconstructed;
   tci::contract(ctx, u_scaled, "ik", v_dag, "kj", reconstructed, "ij");
 

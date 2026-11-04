@@ -786,13 +786,13 @@ template <typename TenT>
 void test_for_each_eye_traversal(tci_test_fixture<TenT> &fix) {
 #if !defined(TCICT_SKIP_FOR_EACH) && !defined(TCICT_SKIP_EYE)
   auto &ctx = fix.context();
-  auto elem_tol = tolerance(fix, tol_category::elementwise);
   auto sum_tol = tolerance(fix, tol_category::reduction, 9);
   using Elem = tci::elem_t<TenT>;
 
   auto identity = tci::template eye<TenT>(ctx, 3);
 
   const auto one = make_elem<TenT>(1.0);
+  const auto zero = make_elem<TenT>(0.0);
   std::size_t visits = 0;
   std::size_t ones = 0;
   std::size_t zeros = 0;
@@ -800,14 +800,16 @@ void test_for_each_eye_traversal(tci_test_fixture<TenT> &fix) {
 
   // Classifying on the whole element rather than its real part keeps the
   // counts meaningful for the complex instantiations: a backend returning a
-  // stray imaginary component would otherwise still be counted as a one.
+  // stray imaginary component would otherwise still be counted as a one. The
+  // comparison is exact: eye's elements are exact ones and zeros (see
+  // test_eye).
   tci::for_each(ctx, static_cast<const TenT &>(identity),
                 [&](const Elem &elem) {
                   ++visits;
                   sum = sum + elem;
-                  if (std::abs(elem - one) < elem_tol) {
+                  if (elem == one) {
                     ++ones;
-                  } else if (std::abs(elem) < elem_tol) {
+                  } else if (elem == zero) {
                     ++zeros;
                   }
                 });
