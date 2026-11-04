@@ -5,6 +5,7 @@
 #include <tcict/fixture.h>
 #include <tcict/range_2d.h>
 #include <tcict/skip.h>
+#include <tcict/zeroth_order.h>
 
 #include <cstddef>
 #include <string>
@@ -43,6 +44,43 @@ void test_close_different(tci_test_fixture<TenT> &fix) {
 
   bool are_equal = tci::close(ctx, tensor1, tensor2, eps);
   TCICT_ASSERT(are_equal == false);
+#else
+  (void)fix;
+#endif
+}
+
+// --- close: zeroth-order ---
+
+// TCAPI V1: close is true "iff shapes match and `max(|a_i - b_i|) <= epsilon`".
+// Against a copy it is true; against another value, or for a complex element
+// type a difference in the imaginary part alone, it is false; and against a
+// shape-{1} tensor holding the same value it is false, since {} and {1} differ.
+template <typename TenT>
+void test_close_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_CLOSE) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  auto eps = fix.epsilon();
+  auto value = [](const tci::elem_coors_t<TenT> &) { return 1.5; };
+  auto a = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, a, value);
+
+  auto same = tci::copy(ctx, a);
+  TCICT_ASSERT(tci::close(ctx, a, same, eps));
+
+  auto other = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, other, [](const tci::elem_coors_t<TenT> &) { return 1.75; });
+  TCICT_ASSERT(!tci::close(ctx, a, other, eps));
+
+  if constexpr (is_complex_v<TenT>) {
+    const auto w = written<TenT>(1.5);
+    auto imag_off = tci::zeros<TenT>(ctx, {});
+    tci::set_elem(ctx, imag_off, {}, make_elem<TenT>(w.real(), w.imag() + 0.25));
+    TCICT_ASSERT(!tci::close(ctx, a, imag_off, eps));
+  }
+
+  auto one = tci::zeros<TenT>(ctx, {1});
+  TCICT_SET_ELEMS(fix, one, value);
+  TCICT_ASSERT(!tci::close(ctx, a, one, eps));
 #else
   (void)fix;
 #endif
@@ -88,6 +126,27 @@ template <typename TenT> void test_to_range(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// --- to_range: zeroth-order ---
+
+// The sole element goes to `*(first + coors2idx({}))`, here the one slot of a
+// range that starts out holding a sentinel.
+template <typename TenT>
+void test_to_range_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_TO_RANGE) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return 5.5; });
+
+  std::vector<tci::elem_t<TenT>> out(1, make_elem<TenT>(-99.0));
+  to_range_0d(ctx, tensor, out.begin());
+  const auto w = written<TenT>(5.5);
+  TCICT_ASSERT(real_part<TenT>(out[0]) == w.real());
+  TCICT_ASSERT(imag_part<TenT>(out[0]) == w.imag());
+#else
+  (void)fix;
+#endif
+}
+
 // --- show (does not throw) ---
 
 template <typename TenT> void test_show(tci_test_fixture<TenT> &fix) {
@@ -95,6 +154,22 @@ template <typename TenT> void test_show(tci_test_fixture<TenT> &fix) {
   auto &ctx = fix.context();
   auto a = tci::eye<TenT>(ctx, 2);
   TCICT_ASSERT_NOTHROW(tci::show(ctx, a));
+#else
+  (void)fix;
+#endif
+}
+
+// --- show: zeroth-order ---
+
+template <typename TenT>
+void test_show_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_SHOW) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  // The output format is implementation-defined; the call returning is what
+  // is asserted.
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return 2.5; });
+  TCICT_ASSERT_NOTHROW(tci::show(ctx, tensor));
 #else
   (void)fix;
 #endif
@@ -179,6 +254,27 @@ void test_convert_data_integrity(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// --- convert: zeroth-order ---
+
+// TCAPI V1: with Ten1T == Ten2T, convert is "equivalent to deep copy".
+template <typename TenT>
+void test_convert_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_CONVERT) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  auto a = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, a, [](const tci::elem_coors_t<TenT> &) { return 2.5; });
+
+  TenT b;
+  TCICT_ASSERT_NOTHROW(tci::convert(ctx, a, ctx, b));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, b, 2.5);
+
+  tci::set_elem(ctx, a, {}, written_elem<TenT>(-1.0));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, b, 2.5);
+#else
+  (void)fix;
+#endif
+}
+
 // --- version ---
 
 template <typename TenT> void test_version(tci_test_fixture<TenT> &fix) {
@@ -203,9 +299,13 @@ template <typename TenT> void test_version(tci_test_fixture<TenT> &fix) {
 #define TCICT_FOREACH_MISCELLANEOUS_TEST_ALL_TYPES(X, ...) \
   X(__VA_ARGS__, "miscellaneous", test_close_identical) \
   X(__VA_ARGS__, "miscellaneous", test_close_different) \
+  X(__VA_ARGS__, "miscellaneous", test_close_zeroth_order) \
   X(__VA_ARGS__, "miscellaneous", test_to_range) \
+  X(__VA_ARGS__, "miscellaneous", test_to_range_zeroth_order) \
   X(__VA_ARGS__, "miscellaneous", test_show) \
+  X(__VA_ARGS__, "miscellaneous", test_show_zeroth_order) \
   X(__VA_ARGS__, "miscellaneous", test_convert_same_context) \
   X(__VA_ARGS__, "miscellaneous", test_convert_different_context) \
   X(__VA_ARGS__, "miscellaneous", test_convert_data_integrity) \
+  X(__VA_ARGS__, "miscellaneous", test_convert_zeroth_order) \
   X(__VA_ARGS__, "miscellaneous", test_version)
