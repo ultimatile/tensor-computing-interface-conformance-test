@@ -852,6 +852,40 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+/// Verify trunc_svd on a non-diagonal input, so a backend that copied the
+/// input's diagonal into sigma fails. [[1, 2], [3, 4]] has the singular values
+/// sqrt(15 +- sqrt(221)): the eigenvalues of A^T A, which has trace 30 and
+/// determinant 4, are 15 +- sqrt(221). chi_max = 1 keeps the larger one, and
+/// epsilon(1) is the discarded square over the sum of squares, 30:
+/// (15 - sqrt(221)) / 30.
+template <typename TenT>
+void test_trunc_svd_non_diagonal_input(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
+#ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::factorization);
+  auto matrix = tci::zeros<TenT>(ctx, {2, 2});
+  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(1.0));
+  tci::set_elem(ctx, matrix, {0, 1}, make_elem<TenT>(2.0));
+  tci::set_elem(ctx, matrix, {1, 0}, make_elem<TenT>(3.0));
+  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(4.0));
+
+  TenT u, v_dag;
+  tci::real_ten_t<TenT> s_diag;
+  tci::real_t<TenT> trunc_err = -1.0;
+  tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
+                 static_cast<tci::bond_dim_t<TenT>>(1),
+                 static_cast<tci::real_t<TenT>>(0.0));
+
+  TCICT_EXPECT_DIAGONAL(ctx, s_diag, {std::sqrt(15.0 + std::sqrt(221.0))}, tol);
+  TCICT_ASSERT_CLOSE(trunc_err, (15.0 - std::sqrt(221.0)) / 30.0, tol);
+#else
+  (void)fix;
+#endif
+}
+
 // --- truncated SVD, overload (2): chi_min / chi_max / target_trunc_err / s_min ---
 //
 // V1's rule, with epsilon(chi) = sum_{i>=chi} s_i^2 / sum_{i<kappa} s_i^2:
@@ -986,27 +1020,11 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
 
   // Equivalence is a claim about the whole decomposition, so compare every
   // output the two calls produce, not just the retained count. The sigmas are
-  // compared with each other as multisets, through their sorted diagonals,
-  // since V1 fixes no order for trunc_svd's diagonal; both were checked above
-  // to hold finite values, so the sort is well defined.
+  // also compared with each other, as multisets, since V1 fixes no order for
+  // trunc_svd's diagonal.
   TCICT_ASSERT_CLOSE(err_general, err_simple, tol);
-
-  using RealTenT = tci::real_ten_t<TenT>;
-  auto sorted_diagonal = [&ctx](const RealTenT &s) {
-    const auto n = tci::shape(ctx, s)[0];
-    std::vector<double> d;
-    for (tci::bond_dim_t<RealTenT> i = 0; i < n; ++i) {
-      const auto c = static_cast<tci::elem_coor_t<RealTenT>>(i);
-      d.push_back(real_part<RealTenT>(tci::get_elem(ctx, s, {c, c})));
-    }
-    std::sort(d.begin(), d.end());
-    return d;
-  };
-  const auto d_general = sorted_diagonal(s_general);
-  const auto d_simple = sorted_diagonal(s_simple);
-  for (std::size_t k = 0; k < d_general.size(); ++k) {
-    TCICT_ASSERT_CLOSE(d_general[k], d_simple[k], tol);
-  }
+  TCICT_EXPECT_DIAGONAL(ctx, s_simple, TCICT_DIAGONAL_OF(ctx, s_general), tol,
+                        diag_order::any);
 
   // The factors are compared through the product they reconstruct rather than
   // elementwise: for a spectrum with distinct singular values the columns of u
@@ -1014,7 +1032,8 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
   // identically, so an elementwise comparison would assert more than the
   // equivalence claim. The reconstruction is invariant under that phase, and
   // unlike a shape comparison it does read the factors' values.
-  auto reconstruct =[&ctx](const TenT &u_in, const RealTenT &s_in, const TenT &v_in) {
+  using RealTenT = tci::real_ten_t<TenT>;
+  auto reconstruct = [&ctx](const TenT &u_in, const RealTenT &s_in, const TenT &v_in) {
     const auto u_shape = tci::shape(ctx, u_in);
     auto scaled = tci::copy(ctx, u_in);
     for (tci::bond_dim_t<TenT> j = 0; j < u_shape[1]; ++j) {
@@ -1741,6 +1760,7 @@ void test_eigvalsh_diagonal(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_value) \
   X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_no_truncation) \
   X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_bounded) \
+  X(__VA_ARGS__, "linear_algebra", test_trunc_svd_non_diagonal_input) \
   X(__VA_ARGS__, "linear_algebra", test_trunc_svd_target_err_selects_chi) \
   X(__VA_ARGS__, "linear_algebra", test_trunc_svd_target_err_scale_invariant) \
   X(__VA_ARGS__, "linear_algebra", test_trunc_svd_target_err_chi_min_floor) \

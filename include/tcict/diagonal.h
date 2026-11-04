@@ -30,8 +30,8 @@ enum class diag_order {
   any,
 };
 
-// Guarded by TCICT_HAS_DIAGONAL_CHECK (include/tcict/skip.h), the APIs it calls,
-// which every test calling it also requires.
+// Guarded by TCICT_HAS_DIAGONAL_CHECK (include/tcict/skip.h), the APIs it
+// calls, which every test calling it also requires.
 #if defined(TCICT_HAS_DIAGONAL_CHECK)
 
 /// Asserts that `tensor`, of any tensor type, is a diagonal tensor holding
@@ -47,8 +47,9 @@ enum class diag_order {
 /// caller's location.
 template <typename Ctx, typename DiagT>
 void expect_diagonal_at(const char *file, int line, Ctx &ctx,
-                        const DiagT &tensor, const std::vector<double> &expected,
-                        double tol, diag_order order = diag_order::as_listed) {
+                        const DiagT &tensor,
+                        const std::vector<double> &expected, double tol,
+                        diag_order order = diag_order::as_listed) {
   const std::size_t n = expected.size();
   if (n == 0) {
     detail::fail_at(file, line, "expect_diagonal_at: no expected values given");
@@ -161,6 +162,30 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
   }
 }
 
+/// The real parts of the diagonal of `tensor`, of any tensor type, read at
+/// {i, i}, after asserting that it is square and second-order; for comparing
+/// two diagonal tensors with each other through expect_diagonal_at. A
+/// std::exception from shape or get_elem is reported at `file`:`line`. Call it
+/// through TCICT_DIAGONAL_OF, which passes the caller's location.
+template <typename Ctx, typename DiagT>
+std::vector<double> diagonal_of_at(const char *file, int line, Ctx &ctx,
+                                   const DiagT &tensor) {
+  const auto shape =
+      detail::nothrow_call(file, line, [&] { return tci::shape(ctx, tensor); });
+  if (shape.size() != 2 || shape[0] != shape[1]) {
+    detail::fail_at(file, line,
+                    "diagonal_of_at: not a square second-order tensor");
+  }
+  const auto n = static_cast<std::size_t>(shape[0]);
+  std::vector<double> diagonal(n);
+  for (std::size_t i = 0; i < n; ++i) {
+    diagonal[i] = real_part<DiagT>(detail::nothrow_call(file, line, [&] {
+      return tci::get_elem(ctx, tensor, coors_of<DiagT>(i, i));
+    }));
+  }
+  return diagonal;
+}
+
 /// expect_diagonal_at with the expected values in an array, as the diag tests
 /// hold them; a braced list such as {3.0, 1.0} also binds here.
 template <typename Ctx, typename DiagT, std::size_t N>
@@ -180,3 +205,8 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
 /// braced list of expected values passes through the preprocessor.
 #define TCICT_EXPECT_DIAGONAL(...)                                             \
   ::tcict::expect_diagonal_at(__FILE__, __LINE__, __VA_ARGS__)
+
+/// diagonal_of_at with the caller's file and line:
+/// TCICT_DIAGONAL_OF(ctx, tensor).
+#define TCICT_DIAGONAL_OF(...)                                                 \
+  ::tcict::diagonal_of_at(__FILE__, __LINE__, __VA_ARGS__)
