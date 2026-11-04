@@ -1037,6 +1037,9 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
   using RealTenT = tci::real_ten_t<TenT>;
   auto reconstruct = [&ctx](const TenT &u_in, const RealTenT &s_in, const TenT &v_in) {
     const auto u_shape = tci::shape(ctx, u_in);
+    // u's bond must be sigma's, already checked to be {2, 2}, before sigma is
+    // read along it.
+    TCICT_ASSERT(u_shape.size() == 2 && u_shape[1] == 2);
     auto scaled = tci::copy(ctx, u_in);
     for (tci::bond_dim_t<TenT> j = 0; j < u_shape[1]; ++j) {
       const auto cj_sigma = static_cast<tci::elem_coor_t<RealTenT>>(j);
@@ -1663,7 +1666,7 @@ void test_eigvals_diagonal(tci_test_fixture<TenT> &fix) {
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::factorization);
 
   // diag(1, 2, 3) → eigenvalues {1, 2, 3}
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});
@@ -1688,12 +1691,12 @@ void test_eigvals_diagonal(tci_test_fixture<TenT> &fix) {
     TCICT_ASSERT(!std::isnan(ev_real[i]));
     // Imaginary parts should be ~0 for real diagonal matrix
     TCICT_ASSERT_CLOSE(
-        imag_part<CplxTenT>(tci::get_elem(ctx, eigenvalues, {i})), 0.0, eps);
+        imag_part<CplxTenT>(tci::get_elem(ctx, eigenvalues, {i})), 0.0, tol);
   }
   std::sort(ev_real.begin(), ev_real.end());
-  TCICT_ASSERT_CLOSE(ev_real[0], 1.0, eps);
-  TCICT_ASSERT_CLOSE(ev_real[1], 2.0, eps);
-  TCICT_ASSERT_CLOSE(ev_real[2], 3.0, eps);
+  TCICT_ASSERT_CLOSE(ev_real[0], 1.0, tol);
+  TCICT_ASSERT_CLOSE(ev_real[1], 2.0, tol);
+  TCICT_ASSERT_CLOSE(ev_real[2], 3.0, tol);
 #else
   (void)fix;
 #endif
@@ -1708,7 +1711,7 @@ void test_eigvalsh_diagonal(tci_test_fixture<TenT> &fix) {
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
+  auto tol = tolerance(fix, tol_category::factorization);
 
   // diag(1, 2, 3) → eigenvalues {1, 2, 3} (real, ascending)
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});
@@ -1725,11 +1728,11 @@ void test_eigvalsh_diagonal(tci_test_fixture<TenT> &fix) {
 
   using RealTenT = tci::real_ten_t<TenT>;
   TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, eigenvalues, {0})),
-                     1.0, eps);
+                     1.0, tol);
   TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, eigenvalues, {1})),
-                     2.0, eps);
+                     2.0, tol);
   TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, eigenvalues, {2})),
-                     3.0, eps);
+                     3.0, tol);
 #else
   (void)fix;
 #endif

@@ -55,6 +55,13 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
   if (n == 0) {
     detail::fail_at(file, line, "expect_diagonal_at: no expected values given");
   }
+  for (std::size_t i = 0; i < n; ++i) {
+    if (std::isnan(expected[i])) {
+      detail::fail_at(file, line,
+                      "expect_diagonal_at: expected value " +
+                          std::to_string(i) + " is NaN");
+    }
+  }
   auto text = [](double v) {
     std::ostringstream oss;
     oss << std::setprecision(std::numeric_limits<double>::max_digits10) << v;
@@ -136,16 +143,12 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
   }
 
   if (order == diag_order::any) {
-    // A NaN breaks the strict weak ordering std::sort requires, on either
-    // side of the comparison.
+    // A NaN breaks the strict weak ordering std::sort requires; the expected
+    // values were checked for one on entry.
     for (std::size_t i = 0; i < n; ++i) {
       if (std::isnan(diagonal[i])) {
         detail::fail_at(file, line,
                         "real part at " + coors_text(i, i) + " is NaN");
-      }
-      if (std::isnan(expected[i])) {
-        detail::fail_at(file, line, "expected value " + std::to_string(i) +
-                                        " is NaN");
       }
     }
     auto wanted = expected;
