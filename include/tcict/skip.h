@@ -50,15 +50,18 @@
 // The tests that build or check tensors through the helpers in
 // include/tcict/elem_sweep.h and include/tcict/zeroth_order.h, among them the
 // concatenate, stack and linear_combine tests and most zeroth-order tests,
-// reach zeros, set_elem, shape and get_elem through them. Defining any of
+// reach set_elem, shape and get_elem through them and build their inputs with
+// zeros. Defining any of
 // TCICT_SKIP_ZEROS, TCICT_SKIP_SET_ELEM, TCICT_SKIP_GET_ELEM or
 // TCICT_SKIP_SHAPE therefore skips those tests too, so a gap in one of those
 // four APIs is not reported as a failure of the API a test is about. The
 // tests using the zeroth-order checks also reach order and size, and
 // TCICT_SKIP_ORDER or TCICT_SKIP_SIZE skips them as well. TCICT_HAS_ELEM_SWEEP,
-// defined below, holds exactly when none of the four is skipped. It is fixed
-// when this file is first included, so define those four before including any
-// tcict header, for instance as compile definitions (see "Usage" above).
+// defined below, holds exactly when none of the four is skipped, and
+// TCICT_HAS_ZEROTH_ORDER_SWEEP when in addition neither TCICT_SKIP_ORDER nor
+// TCICT_SKIP_SIZE is defined. Both are fixed when this file is first included,
+// so define those six before including any tcict header, for instance as
+// compile definitions (see "Usage" above).
 //
 // Precision-conditional skip macros (factorization + iterative APIs):
 //
@@ -124,8 +127,8 @@
 #endif
 
 // Defined when, in addition, order and size are available: the zeroth-order
-// checks in include/tcict/zeroth_order.h call them, and so do the tests that
-// use those checks.
+// checks in include/tcict/zeroth_order.h call them, so every test using those
+// checks needs them.
 #if defined(TCICT_HAS_ELEM_SWEEP) && !defined(TCICT_SKIP_ORDER) &&             \
     !defined(TCICT_SKIP_SIZE)
 #define TCICT_HAS_ZEROTH_ORDER_SWEEP
