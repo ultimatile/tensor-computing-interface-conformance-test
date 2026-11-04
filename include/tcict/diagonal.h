@@ -177,6 +177,9 @@ std::vector<double> diagonal_of_at(const char *file, int line, Ctx &ctx,
                     "diagonal_of_at: not a square second-order tensor");
   }
   const auto n = static_cast<std::size_t>(shape[0]);
+  if (n == 0) {
+    detail::fail_at(file, line, "diagonal_of_at: the tensor has shape {0, 0}");
+  }
   std::vector<double> diagonal(n);
   for (std::size_t i = 0; i < n; ++i) {
     diagonal[i] = real_part<DiagT>(detail::nothrow_call(file, line, [&] {

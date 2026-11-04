@@ -856,8 +856,7 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
 /// input's diagonal into sigma fails. [[1, 2], [3, 4]] has the singular values
 /// sqrt(15 +- sqrt(221)): the eigenvalues of A^T A, which has trace 30 and
 /// determinant 4, are 15 +- sqrt(221). chi_max = 1 keeps the larger one, and
-/// epsilon(1) is the discarded square over the sum of squares, 30:
-/// (15 - sqrt(221)) / 30.
+/// epsilon(1) is the spec's ratio for discarding the smaller.
 template <typename TenT>
 void test_trunc_svd_non_diagonal_input(tci_test_fixture<TenT> &fix) {
 #if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
@@ -879,8 +878,11 @@ void test_trunc_svd_non_diagonal_input(tci_test_fixture<TenT> &fix) {
                  static_cast<tci::bond_dim_t<TenT>>(1),
                  static_cast<tci::real_t<TenT>>(0.0));
 
-  TCICT_EXPECT_DIAGONAL(ctx, s_diag, {std::sqrt(15.0 + std::sqrt(221.0))}, tol);
-  TCICT_ASSERT_CLOSE(trunc_err, (15.0 - std::sqrt(221.0)) / 30.0, tol);
+  const double svs[] = {std::sqrt(15.0 + std::sqrt(221.0)),
+                        std::sqrt(15.0 - std::sqrt(221.0))};
+  TCICT_EXPECT_DIAGONAL(ctx, s_diag, {svs[0]}, tol, diag_order::any);
+  TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon_from<TenT>(svs, 2, 1),
+                     tol);
 #else
   (void)fix;
 #endif
