@@ -600,6 +600,11 @@ template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
 }
 
 // --- truncated SVD ---
+//
+// V1 calls sigma "a **real second-order diagonal tensor** of the retained
+// singular values with shape `{chi, chi}`". Unlike its svd entry, it does not
+// say in which order the diagonal holds them, so these tests compare sigma's
+// diagonal as a multiset, through diag_order::any.
 
 #ifndef TCICT_SKIP_TRUNC_SVD
 // The singular values the trunc_svd fixture matrix is built from. Shared with
@@ -670,8 +675,8 @@ template <typename TenT> tci::real_t<TenT> trunc_svd_expected_epsilon(int chi) {
 // spec's epsilon for the expected chi.
 //
 // The strategy tests below differ only in the four strategy arguments, the
-// fixture scale, and the expected chi, so the call and its two assertions live
-// here once. They stay separate test functions: the registration macro expands
+// fixture scale, and the expected chi, so the call and its assertions live here
+// once. They stay separate test functions: the registration macro expands
 // one consumer test case per function, and merging them would collapse the
 // per-case reporting and skip granularity that buys.
 //
@@ -697,7 +702,7 @@ void trunc_svd_expect_retained_chi(tci_test_fixture<TenT> &fix, double scale,
                  static_cast<tci::real_t<TenT>>(s_min));
 
   // The fixture matrix is diagonal with non-negative, non-increasing entries,
-  // so its singular values are those entries, and sigma holds the first
+  // so its singular values are those entries, and sigma holds the largest
   // expected_chi of them, scaled.
   TCICT_ASSERT(expected_chi >= 1 && expected_chi <= kTruncSvdFixtureRank);
   std::vector<double> expected_svs(kTruncSvdFixtureSvs,
@@ -705,7 +710,7 @@ void trunc_svd_expect_retained_chi(tci_test_fixture<TenT> &fix, double scale,
   for (auto &s : expected_svs) {
     s *= scale;
   }
-  TCICT_EXPECT_DIAGONAL(ctx, s_diag, expected_svs, tol);
+  TCICT_EXPECT_DIAGONAL(ctx, s_diag, expected_svs, tol, diag_order::any);
   TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(expected_chi), tol);
 }
 #endif
@@ -728,7 +733,8 @@ template <typename TenT> void test_trunc_svd(tci_test_fixture<TenT> &fix) {
 
   // s_min = 0.5 discards 0.1, and chi_max = 2 keeps 3 and 2 of the rest.
   TCICT_EXPECT_DIAGONAL(ctx, s_diag, {3.0, 2.0},
-                        tolerance(fix, tol_category::factorization));
+                        tolerance(fix, tol_category::factorization),
+                        diag_order::any);
   TCICT_ASSERT(trunc_err >= 0.0);
 #else
   (void)fix;
@@ -757,7 +763,8 @@ void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
                  static_cast<tci::bond_dim_t<TenT>>(2), 0.0);
 
   TCICT_EXPECT_DIAGONAL(ctx, s_diag, {3.0, 2.0},
-                        tolerance(fix, tol_category::factorization));
+                        tolerance(fix, tol_category::factorization),
+                        diag_order::any);
   TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(2), eps);
 #else
   (void)fix;
@@ -784,7 +791,8 @@ void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
                  static_cast<tci::bond_dim_t<TenT>>(10), 0.0);
 
   TCICT_EXPECT_DIAGONAL(ctx, s_diag, {3.0, 2.0, 1.0, 0.1},
-                        tolerance(fix, tol_category::factorization));
+                        tolerance(fix, tol_category::factorization),
+                        diag_order::any);
   TCICT_ASSERT_CLOSE(trunc_err, 0.0, eps);
 #else
   (void)fix;
@@ -811,7 +819,8 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
                  static_cast<tci::bond_dim_t<TenT>>(1), 0.0);
 
   TCICT_EXPECT_DIAGONAL(ctx, s_diag, {3.0},
-                        tolerance(fix, tol_category::factorization));
+                        tolerance(fix, tol_category::factorization),
+                        diag_order::any);
   TCICT_ASSERT(trunc_err >= 0.0);
   TCICT_ASSERT(trunc_err <= 1.0);
 
@@ -947,8 +956,8 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
   // against the spec first: it is what the differential assertions below
   // cannot supply on their own. Both sigmas are checked here, before any of
   // their elements is read below.
-  TCICT_EXPECT_DIAGONAL(ctx, s_general, {3.0, 2.0}, tol);
-  TCICT_EXPECT_DIAGONAL(ctx, s_simple, {3.0, 2.0}, tol);
+  TCICT_EXPECT_DIAGONAL(ctx, s_general, {3.0, 2.0}, tol, diag_order::any);
+  TCICT_EXPECT_DIAGONAL(ctx, s_simple, {3.0, 2.0}, tol, diag_order::any);
   TCICT_ASSERT_CLOSE(err_general, trunc_svd_expected_epsilon<TenT>(2), tol);
 
   // Equivalence is a claim about the whole decomposition, so compare every
@@ -1078,7 +1087,7 @@ void test_trunc_svd_target_err_boundary_is_inclusive(tci_test_fixture<TenT> &fix
   tci::trunc_svd(ctx, matrix_pinned, 1, u_pinned, s_pinned, v_dag_pinned, epsilon_at_one,
                  static_cast<tci::bond_dim_t<TenT>>(1), static_cast<tci::real_t<TenT>>(0.0));
 
-  TCICT_EXPECT_DIAGONAL(ctx, s_pinned, {5.0}, tol);
+  TCICT_EXPECT_DIAGONAL(ctx, s_pinned, {5.0}, tol, diag_order::any);
   TCICT_ASSERT_CLOSE(epsilon_at_one, trunc_svd_expected_epsilon_from<TenT>(kSvs, kRank, 1),
                      tol);
 
@@ -1093,7 +1102,7 @@ void test_trunc_svd_target_err_boundary_is_inclusive(tci_test_fixture<TenT> &fix
                  static_cast<tci::bond_dim_t<TenT>>(3), epsilon_at_one,
                  static_cast<tci::real_t<TenT>>(0.0));
 
-  TCICT_EXPECT_DIAGONAL(ctx, s_diag, {5.0}, tol);
+  TCICT_EXPECT_DIAGONAL(ctx, s_diag, {5.0}, tol, diag_order::any);
 #else
   (void)fix;
 #endif
@@ -1122,27 +1131,31 @@ template <typename TenT> void test_eig_identity(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
-// --- eig: distinct eigenvalues ---
+// --- eig: distinct eigenvalues of a non-diagonal matrix ---
 
-// diag(3, 1, 2) has the eigenvalues 3, 1 and 2, its diagonal entries. Unlike
-// the identity above, this lambda_mat differs from the input, and V1 fixes no
-// order for eig's eigenvalues, so the diagonal is compared as a multiset.
+// [[0, 1], [2, 1]] has the characteristic polynomial
+// lambda^2 - lambda - 2 = (lambda - 2)(lambda + 1), so its eigenvalues are -1
+// and 2, real and distinct. The input is not diagonal and its diagonal (0, 1)
+// holds neither, so a backend that returned the input or its diagonal fails.
+// V1 fixes no order for eig's eigenvalues, so the diagonal is compared as a
+// multiset.
 template <typename TenT> void test_eig_distinct(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EIG
 #ifdef TCICT_SKIP_EIG_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
-  auto matrix = tci::zeros<TenT>(ctx, {3, 3});
-  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(3.0));
+  auto matrix = tci::zeros<TenT>(ctx, {2, 2});
+  tci::set_elem(ctx, matrix, {0, 1}, make_elem<TenT>(1.0));
+  tci::set_elem(ctx, matrix, {1, 0}, make_elem<TenT>(2.0));
   tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, matrix, {2, 2}, make_elem<TenT>(2.0));
 
   tci::cplx_ten_t<TenT> eigenvals, eigenvecs;
   tci::eig(ctx, matrix, 1, eigenvals, eigenvecs);
 
-  TCICT_EXPECT_DIAGONAL(ctx, eigenvals, {1.0, 2.0, 3.0}, eps, diag_order::any);
+  TCICT_EXPECT_DIAGONAL(ctx, eigenvals, {-1.0, 2.0},
+                        tolerance(fix, tol_category::factorization),
+                        diag_order::any);
 #else
   (void)fix;
 #endif
@@ -1172,9 +1185,9 @@ template <typename TenT> void test_eigh_identity(tci_test_fixture<TenT> &fix) {
 
 // --- eigh: distinct eigenvalues in ascending order ---
 
-// diag(3, 1, 2) has the eigenvalues 3, 1 and 2, its diagonal entries; V1 has
-// eigh hold them "in ascending order", so lambda_mat is diag(1, 2, 3). The
-// input's diagonal is deliberately not sorted.
+// The symmetric [[2, 1], [1, 2]] has det(A - lambda I) = (2 - lambda)^2 - 1,
+// so its eigenvalues are 1 and 3; V1 has eigh hold them "in ascending order",
+// so lambda_mat is diag(1, 3). The input's diagonal (2, 2) holds neither.
 template <typename TenT>
 void test_eigh_ascending(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_EIGH
@@ -1182,17 +1195,18 @@ void test_eigh_ascending(tci_test_fixture<TenT> &fix) {
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
-  auto matrix = tci::zeros<TenT>(ctx, {3, 3});
-  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(3.0));
-  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(1.0));
-  tci::set_elem(ctx, matrix, {2, 2}, make_elem<TenT>(2.0));
+  auto matrix = tci::zeros<TenT>(ctx, {2, 2});
+  tci::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(2.0));
+  tci::set_elem(ctx, matrix, {0, 1}, make_elem<TenT>(1.0));
+  tci::set_elem(ctx, matrix, {1, 0}, make_elem<TenT>(1.0));
+  tci::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(2.0));
 
   tci::real_ten_t<TenT> eigenvals;
   TenT eigenvecs;
   tci::eigh(ctx, matrix, 1, eigenvals, eigenvecs);
 
-  TCICT_EXPECT_DIAGONAL(ctx, eigenvals, {1.0, 2.0, 3.0}, eps);
+  TCICT_EXPECT_DIAGONAL(ctx, eigenvals, {1.0, 3.0},
+                        tolerance(fix, tol_category::factorization));
 #else
   (void)fix;
 #endif

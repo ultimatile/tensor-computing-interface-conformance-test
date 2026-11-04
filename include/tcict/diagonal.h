@@ -132,11 +132,16 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
   }
 
   if (order == diag_order::any) {
-    // A NaN breaks the strict weak ordering std::sort requires.
+    // A NaN breaks the strict weak ordering std::sort requires, on either
+    // side of the comparison.
     for (std::size_t i = 0; i < n; ++i) {
       if (std::isnan(diagonal[i])) {
         detail::fail_at(file, line,
                         "real part at " + coors_text(i, i) + " is NaN");
+      }
+      if (std::isnan(expected[i])) {
+        detail::fail_at(file, line, "expected value " + std::to_string(i) +
+                                        " is NaN");
       }
     }
     auto wanted = expected;
