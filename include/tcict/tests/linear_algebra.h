@@ -317,11 +317,13 @@ void test_contract_dot_product(tci_test_fixture<TenT> &fix) {
   TenT c;
   tci::contract(ctx, a, "i", b, "i", c, "");
 
+  // TCAPI V1: a contract with an empty output label list yields a zeroth-order
+  // tensor (order 0, shape {}, size 1), read at the empty coordinate {}.
   // dot = 1*4 + 2*5 + 3*6 = 32
-  auto c_shape = tci::shape(ctx, c);
-  TCICT_ASSERT(c_shape.size() == 1);
-  TCICT_ASSERT(c_shape[0] == 1);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {0})), 32.0, tol);
+  TCICT_ASSERT(tci::order(ctx, c) == 0);
+  TCICT_ASSERT(tci::shape(ctx, c).empty());
+  TCICT_ASSERT(tci::size(ctx, c) == 1);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {})), 32.0, tol);
 #else
   (void)fix;
 #endif
