@@ -102,13 +102,14 @@ template <typename TenT> tci::elem_t<TenT> written_elem(double v) {
 
 /// Asserts that `tensor` is zeroth-order: order 0 and size 1, then, through
 /// expect_elems_at, shape {} and the sole element `value` within
-/// `tolerance(fix, cat)`. A real `value` stands for `written<TenT>(value)`; a
+/// `tolerance(fix, cat, n)`. A real `value` stands for `written<TenT>(value)`; a
 /// `std::complex<double>` one is compared as it is. Call it through
 /// TCICT_EXPECT_ZEROTH_ORDER, which passes the caller's location.
 template <typename TenT, typename V>
 void expect_zeroth_order_at(const char *file, int line,
                             tci_test_fixture<TenT> &fix, const TenT &tensor,
-                            V value, tol_category cat = tol_category::exact) {
+                            V value, tol_category cat = tol_category::exact,
+                            std::size_t n = 1) {
   auto &ctx = fix.context();
   const auto order =
       detail::nothrow_call(file, line, [&] { return tci::order(ctx, tensor); });
@@ -126,7 +127,7 @@ void expect_zeroth_order_at(const char *file, int line,
   }
   expect_elems_at(
       file, line, fix, tensor, tci::shape_t<TenT>{},
-      [value](const tci::elem_coors_t<TenT> &) { return value; }, cat);
+      [value](const tci::elem_coors_t<TenT> &) { return value; }, cat, n);
 }
 
 #endif
@@ -134,7 +135,7 @@ void expect_zeroth_order_at(const char *file, int line,
 } // namespace tcict
 
 /// expect_zeroth_order_at with the caller's file and line:
-/// TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, value[, cat]), the line chosen as for
+/// TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, value[, cat[, n]]), the line chosen as for
 /// TCICT_EXPECT_ELEMS.
 #define TCICT_EXPECT_ZEROTH_ORDER(...)                                         \
   ::tcict::expect_zeroth_order_at(__FILE__, __LINE__, __VA_ARGS__)

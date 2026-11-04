@@ -5,6 +5,7 @@
 #include <tcict/elem_sweep.h>
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
+#include <tcict/zeroth_order.h>
 
 #include <algorithm>
 #include <cmath>
@@ -158,6 +159,43 @@ void test_linear_combine_single(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// --- linear_combine: zeroth-order inputs ---
+
+// Both overloads on two zeroth-order inputs; the result is zeroth-order. See
+// "Inputs to multi-input operations" in CONTRIBUTING.md for the named list, the
+// distinct input values and the read-back.
+template <typename TenT>
+void test_linear_combine_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_LINEAR_COMBINE) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  auto tensor_a = tci::zeros<TenT>(ctx, {});
+  auto tensor_b = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, tensor_a, [](const tci::elem_coors_t<TenT> &) { return 1.25; });
+  TCICT_SET_ELEMS(fix, tensor_b, [](const tci::elem_coors_t<TenT> &) { return -3.5; });
+
+  tci::List<tci::CRef<TenT>> ins = {std::cref(tensor_a), std::cref(tensor_b)};
+  auto sum = TCICT_NOTHROW_VALUE(tci::linear_combine<TenT>(ctx, ins));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, sum, written<TenT>(1.25) + written<TenT>(-3.5),
+                            tol_category::reduction, 2);
+
+  const std::complex<double> s_a(0.5, is_complex_v<TenT> ? 0.25 : 0.0);
+  const std::complex<double> s_b(2.0, is_complex_v<TenT> ? -1.0 : 0.0);
+  tci::List<tci::elem_t<TenT>> coefficients = {
+      make_elem<TenT>(s_a.real(), s_a.imag()),
+      make_elem<TenT>(s_b.real(), s_b.imag())};
+  auto weighted =
+      TCICT_NOTHROW_VALUE(tci::linear_combine<TenT>(ctx, ins, coefficients));
+  TCICT_EXPECT_ZEROTH_ORDER(
+      fix, weighted, s_a * written<TenT>(1.25) + s_b * written<TenT>(-3.5),
+      tol_category::reduction, 2);
+
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor_a, 1.25);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor_b, -3.5);
+#else
+  (void)fix;
+#endif
+}
+
 // --- normalize: in-place ---
 
 template <typename TenT>
@@ -249,6 +287,38 @@ void test_normalize_edge_cases(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// --- normalize: zeroth-order ---
+
+// The original norm of one element v is |v|, and normalizing leaves v / |v|.
+template <typename TenT>
+void test_normalize_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_NORMALIZE) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::reduction);
+
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return -2.0; });
+  const auto w = written<TenT>(-2.0);
+  const auto original = tci::normalize(ctx, tensor);
+  TCICT_ASSERT_CLOSE(original, std::abs(w), tol);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, w / std::abs(w), tol_category::reduction);
+
+  // Out of place; the input is read back, see "Out-of-place inputs" in
+  // CONTRIBUTING.md.
+  auto input = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, input, [](const tci::elem_coors_t<TenT> &) { return 3.0; });
+  const auto w_in = written<TenT>(3.0);
+  TenT output;
+  const auto original_in = tci::normalize(ctx, input, output);
+  TCICT_ASSERT_CLOSE(original_in, std::abs(w_in), tol);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, output, w_in / std::abs(w_in),
+                            tol_category::reduction);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, input, 3.0);
+#else
+  (void)fix;
+#endif
+}
+
 // --- norm: 2x2 identity ---
 
 template <typename TenT> void test_norm_2x2(tci_test_fixture<TenT> &fix) {
@@ -258,6 +328,22 @@ template <typename TenT> void test_norm_2x2(tci_test_fixture<TenT> &fix) {
   auto identity = tci::eye<TenT>(ctx, 2);
   auto norm_val = tci::norm(ctx, identity);
   TCICT_ASSERT_CLOSE(norm_val, std::sqrt(2.0), tol);
+#else
+  (void)fix;
+#endif
+}
+
+// --- norm: zeroth-order ---
+
+// The Frobenius norm of one element v is |v|.
+template <typename TenT>
+void test_norm_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_NORM) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::reduction);
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return -2.0; });
+  TCICT_ASSERT_CLOSE(tci::norm(ctx, tensor), std::abs(written<TenT>(-2.0)), tol);
 #else
   (void)fix;
 #endif
@@ -300,9 +386,8 @@ void test_contract_matmul(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_contract_dot_product(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_CONTRACT
+#if !defined(TCICT_SKIP_CONTRACT) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::reduction, 3);
   auto a = tci::zeros<TenT>(ctx, {3});
   auto b = tci::zeros<TenT>(ctx, {3});
 
@@ -320,10 +405,79 @@ void test_contract_dot_product(tci_test_fixture<TenT> &fix) {
   // TCAPI V1: a contract with an empty output label list yields a zeroth-order
   // tensor (order 0, shape {}, size 1), read at the empty coordinate {}.
   // dot = 1*4 + 2*5 + 3*6 = 32
-  TCICT_ASSERT(tci::order(ctx, c) == 0);
-  TCICT_ASSERT(tci::shape(ctx, c).empty());
-  TCICT_ASSERT(tci::size(ctx, c) == 1);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, c, {})), 32.0, tol);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, c, std::complex<double>(32.0, 0.0),
+                            tol_category::reduction);
+#else
+  (void)fix;
+#endif
+}
+
+// --- contract: dot product, integer labels ---
+
+// The same full contraction through the integer-label overload. The inputs
+// carry imaginary parts for a complex element type, so a backend conjugating
+// either operand fails.
+template <typename TenT>
+void test_contract_dot_product_int_labels(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_CONTRACT) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  auto a_at = ramp_over<TenT>({3}, 1.0);
+  auto b_at = ramp_over<TenT>({3}, 4.0);
+  auto a = tci::zeros<TenT>(ctx, {3});
+  auto b = tci::zeros<TenT>(ctx, {3});
+  TCICT_SET_ELEMS(fix, a, a_at);
+  TCICT_SET_ELEMS(fix, b, b_at);
+
+  const tci::List<tci::bond_label_t<TenT>> labels_a = {7};
+  const tci::List<tci::bond_label_t<TenT>> labels_b = {7};
+  const tci::List<tci::bond_label_t<TenT>> labels_c = {};
+  TenT c;
+  tci::contract(ctx, a, labels_a, b, labels_b, c, labels_c);
+
+  std::complex<double> dot = 0.0;
+  for (std::size_t i = 0; i < 3; ++i) {
+    const auto coors = coors_of<TenT>(i);
+    dot += written<TenT>(a_at(coors)) * written<TenT>(b_at(coors));
+  }
+  TCICT_EXPECT_ZEROTH_ORDER(fix, c, dot, tol_category::reduction);
+#else
+  (void)fix;
+#endif
+}
+
+// --- contract: zeroth-order operands ---
+
+// A zeroth-order operand has no labels, so nothing is contracted against it:
+// against a vector the result is the vector scaled by its element, on either
+// side, and against another zeroth-order operand with no output labels it is
+// the zeroth-order product.
+template <typename TenT>
+void test_contract_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_CONTRACT) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  auto v_at = ramp_over<TenT>({3}, 1.0);
+  auto s = tci::zeros<TenT>(ctx, {});
+  auto t = tci::zeros<TenT>(ctx, {});
+  auto v = tci::zeros<TenT>(ctx, {3});
+  TCICT_SET_ELEMS(fix, s, [](const tci::elem_coors_t<TenT> &) { return 1.5; });
+  TCICT_SET_ELEMS(fix, t, [](const tci::elem_coors_t<TenT> &) { return -2.0; });
+  TCICT_SET_ELEMS(fix, v, v_at);
+  auto scaled = [&](const tci::elem_coors_t<TenT> &x) {
+    return written<TenT>(1.5) * written<TenT>(v_at(x));
+  };
+
+  TenT sv;
+  tci::contract(ctx, s, "", v, "i", sv, "i");
+  TCICT_EXPECT_ELEMS(fix, sv, {3}, scaled, tol_category::reduction);
+
+  TenT vs;
+  tci::contract(ctx, v, "i", s, "", vs, "i");
+  TCICT_EXPECT_ELEMS(fix, vs, {3}, scaled, tol_category::reduction);
+
+  TenT st;
+  tci::contract(ctx, s, "", t, "", st, "");
+  TCICT_EXPECT_ZEROTH_ORDER(fix, st, written<TenT>(1.5) * written<TenT>(-2.0),
+                            tol_category::reduction);
 #else
   (void)fix;
 #endif
@@ -1212,12 +1366,42 @@ template <typename TenT> void test_scale_by_zero(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// --- scale: zeroth-order ---
+
+// A complex scalar for a complex element type, so a backend conjugating it or
+// dropping its imaginary part fails.
+template <typename TenT>
+void test_scale_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_SCALE) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  const std::complex<double> s(-1.5, is_complex_v<TenT> ? 0.5 : 0.0);
+  const auto s_elem = make_elem<TenT>(s.real(), s.imag());
+
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return 2.0; });
+  tci::scale(ctx, tensor, s_elem);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, written<TenT>(2.0) * s,
+                            tol_category::elementwise);
+
+  // Out of place; the input is read back, see "Out-of-place inputs" in
+  // CONTRIBUTING.md.
+  auto input = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, input, [](const tci::elem_coors_t<TenT> &) { return -0.5; });
+  TenT output;
+  tci::scale(ctx, input, s_elem, output);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, output, written<TenT>(-0.5) * s,
+                            tol_category::elementwise);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, input, -0.5);
+#else
+  (void)fix;
+#endif
+}
+
 // --- trace: 2x2 matrix ---
 
 template <typename TenT> void test_trace_partial(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_TRACE
+#if !defined(TCICT_SKIP_TRACE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::reduction, 2);
 
   // 2x2 diagonal matrix [[1,0],[0,4]] → trace over {0,1} = 1+4 = 5
   auto matrix = tci::zeros<TenT>(ctx, {2, 2});
@@ -1227,9 +1411,38 @@ template <typename TenT> void test_trace_partial(tci_test_fixture<TenT> &fix) {
   TenT result;
   tci::trace(ctx, matrix, {{0, 1}}, result);
 
-  // TCI spec: all bonds paired yields a scalar (order 0)
-  TCICT_ASSERT(tci::order(ctx, result) == 0);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(tci::get_elem(ctx, result, {})), 5.0, tol);
+  // TCAPI V1: "All bonds paired yields a scalar (zeroth-order)": order 0,
+  // shape {}, size 1, read at {}.
+  TCICT_EXPECT_ZEROTH_ORDER(fix, result, std::complex<double>(5.0, 0.0),
+                            tol_category::reduction, 2);
+#else
+  (void)fix;
+#endif
+}
+
+// --- trace: a bond left over ---
+
+// A trace that pairs some bonds but not all keeps the unpaired ones, so a
+// backend that makes every trace zeroth-order fails here. The {2, 3, 2} ramp
+// gives element (i, j, k) the real part 1 + 6i + 2j + k; pairing bonds 0 and 2
+// leaves bond 1, with element j the sum over i of element (i, j, i).
+template <typename TenT>
+void test_trace_leaving_bond(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_TRACE) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  auto at = ramp_over<TenT>({2, 3, 2}, 1.0);
+  auto tensor = tci::zeros<TenT>(ctx, {2, 3, 2});
+  TCICT_SET_ELEMS(fix, tensor, at);
+
+  tci::trace(ctx, tensor, {{0, 2}});
+
+  TCICT_EXPECT_ELEMS(
+      fix, tensor, {3},
+      [&](const tci::elem_coors_t<TenT> &x) {
+        const auto j = static_cast<std::size_t>(x[0]);
+        return at(coors_of<TenT>(0, j, 0)) + at(coors_of<TenT>(1, j, 1));
+      },
+      tol_category::reduction, 2);
 #else
   (void)fix;
 #endif
@@ -1412,12 +1625,17 @@ void test_eigvalsh_diagonal(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "linear_algebra", test_linear_combine_uniform) \
   X(__VA_ARGS__, "linear_algebra", test_linear_combine_weighted) \
   X(__VA_ARGS__, "linear_algebra", test_linear_combine_single) \
+  X(__VA_ARGS__, "linear_algebra", test_linear_combine_zeroth_order) \
   X(__VA_ARGS__, "linear_algebra", test_normalize_inplace) \
   X(__VA_ARGS__, "linear_algebra", test_normalize_outofplace) \
   X(__VA_ARGS__, "linear_algebra", test_normalize_edge_cases) \
+  X(__VA_ARGS__, "linear_algebra", test_normalize_zeroth_order) \
   X(__VA_ARGS__, "linear_algebra", test_norm_2x2) \
+  X(__VA_ARGS__, "linear_algebra", test_norm_zeroth_order) \
   X(__VA_ARGS__, "linear_algebra", test_contract_matmul) \
   X(__VA_ARGS__, "linear_algebra", test_contract_dot_product) \
+  X(__VA_ARGS__, "linear_algebra", test_contract_dot_product_int_labels) \
+  X(__VA_ARGS__, "linear_algebra", test_contract_zeroth_order) \
   X(__VA_ARGS__, "linear_algebra", test_contract_outer_product) \
   X(__VA_ARGS__, "linear_algebra", test_qr) \
   X(__VA_ARGS__, "linear_algebra", test_lq) \
@@ -1442,7 +1660,9 @@ void test_eigvalsh_diagonal(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "linear_algebra", test_scale_inplace) \
   X(__VA_ARGS__, "linear_algebra", test_scale_outofplace) \
   X(__VA_ARGS__, "linear_algebra", test_scale_by_zero) \
+  X(__VA_ARGS__, "linear_algebra", test_scale_zeroth_order) \
   X(__VA_ARGS__, "linear_algebra", test_trace_partial) \
+  X(__VA_ARGS__, "linear_algebra", test_trace_leaving_bond) \
   X(__VA_ARGS__, "linear_algebra", test_svd_basic) \
   X(__VA_ARGS__, "linear_algebra", test_svd_reconstruction) \
   X(__VA_ARGS__, "linear_algebra", test_eigvals_diagonal) \
