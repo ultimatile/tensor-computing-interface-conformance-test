@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tcict/assertion.h>
+#include <tcict/diagonal.h>
 #include <tcict/elem_helper.h>
 #include <tcict/elem_sweep.h>
 #include <tcict/fixture.h>
@@ -1226,7 +1227,7 @@ void test_expand_outofplace(tci_test_fixture<TenT> &fix) {
 }
 
 #ifndef TCICT_SKIP_DIAG
-// expect_vector_3 and expect_diagonal_3x3 are called by the diag tests only.
+// expect_vector_3 is called by the diag tests only.
 
 // Asserts that a first-order tensor of length 3 holds `expected` in order.
 // `expected` is real, so for a complex element type the imaginary part is
@@ -1247,39 +1248,6 @@ void expect_vector_3(tci_test_fixture<TenT> &fix, const TenT &tensor,
   }
 }
 
-// Asserts that a {3, 3} tensor holds `expected` on its main diagonal and zero
-// everywhere else. The off-diagonal check goes through the modulus, so it
-// covers both parts of a complex element in one assertion; `expected` is real,
-// so on the diagonal the imaginary part is expected to be zero and is checked
-// separately.
-template <typename TenT>
-void expect_diagonal_3x3(tci_test_fixture<TenT> &fix, const TenT &tensor,
-                         const double (&expected)[3]) {
-  auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
-  TCICT_ASSERT(tci::order(ctx, tensor) == 2);
-  auto tensor_shape = tci::shape(ctx, tensor);
-  TCICT_ASSERT(tensor_shape.size() == 2);
-  TCICT_ASSERT(tensor_shape[0] == 3 && tensor_shape[1] == 3);
-  // A diagonal tensor's off-diagonal zeros count as logical elements however
-  // few entries the backend stores, so the count is 3^2.
-  TCICT_ASSERT(tci::size(ctx, tensor) == 9);
-  for (std::size_t i = 0; i < 3; ++i) {
-    for (std::size_t j = 0; j < 3; ++j) {
-      if (i == j) {
-        auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i, j));
-        TCICT_ASSERT_CLOSE(real_part<TenT>(elem), expected[i], tol);
-        if constexpr (is_complex_v<TenT>) {
-          TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, tol);
-        }
-      } else {
-        TCICT_ASSERT_CLOSE(
-            std::abs(tci::get_elem(ctx, tensor, coors_of<TenT>(i, j))), 0.0,
-            tol);
-      }
-    }
-  }
-}
 #endif
 
 // --- diag: vector to matrix ---
@@ -1296,7 +1264,8 @@ void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
   tci::diag(ctx, vector);
 
   const double expected[3] = {1.0, 2.0, 3.0};
-  expect_diagonal_3x3(fix, vector, expected);
+  TCICT_EXPECT_DIAGONAL(ctx, vector, expected,
+                        tolerance(fix, tol_category::elementwise));
 #else
   (void)fix;
 #endif
@@ -1335,7 +1304,8 @@ void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
   TenT matrix;
   TCICT_ASSERT_NOTHROW(tci::diag(ctx, vector, matrix));
 
-  expect_diagonal_3x3(fix, matrix, expected);
+  TCICT_EXPECT_DIAGONAL(ctx, matrix, expected,
+                        tolerance(fix, tol_category::elementwise));
 
   // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
   expect_vector_3(fix, vector, expected);
@@ -1369,7 +1339,8 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
 
   // Input unchanged, values included, not just order and size; see
   // "Out-of-place inputs" in CONTRIBUTING.md.
-  expect_diagonal_3x3(fix, matrix, expected);
+  TCICT_EXPECT_DIAGONAL(ctx, matrix, expected,
+                        tolerance(fix, tol_category::elementwise));
 #else
   (void)fix;
 #endif
