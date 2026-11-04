@@ -5,6 +5,7 @@
 #include <tcict/fixture.h>
 #include <tcict/range_2d.h>
 #include <tcict/skip.h>
+#include <tcict/zeroth_order.h>
 
 #include <cmath>
 #include <cstddef>
@@ -44,6 +45,22 @@ void test_zeros(tci_test_fixture<TenT>& fix) {
 #endif
 }
 
+// --- zeros: zeroth-order ---
+
+// TCAPI V1: "The empty shape is valid and yields a zeroth-order tensor whose
+// sole element is zero."
+template <typename TenT>
+void test_zeros_zeroth_order(tci_test_fixture<TenT>& fix) {
+#if !defined(TCICT_SKIP_ZEROS) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto& ctx = fix.context();
+  TenT tensor;
+  TCICT_ASSERT_NOTHROW(tensor = tci::template zeros<TenT>(ctx, {}));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, 0.0);
+#else
+  (void)fix;
+#endif
+}
+
 // --- fill ---
 
 template <typename TenT>
@@ -69,6 +86,23 @@ void test_fill(tci_test_fixture<TenT>& fix) {
       }
     }
   }
+#else
+  (void)fix;
+#endif
+}
+
+// --- fill: zeroth-order ---
+
+// TCAPI V1: "The empty shape is valid and yields a zeroth-order tensor whose
+// sole element is `v`."
+template <typename TenT>
+void test_fill_zeroth_order(tci_test_fixture<TenT>& fix) {
+#if !defined(TCICT_SKIP_FILL) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto& ctx = fix.context();
+  TenT tensor;
+  TCICT_ASSERT_NOTHROW(
+      tensor = tci::template fill<TenT>(ctx, {}, written_elem<TenT>(2.5)));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, 2.5);
 #else
   (void)fix;
 #endif
@@ -243,6 +277,43 @@ void test_random_outofplace(tci_test_fixture<TenT>& fix) {
 #endif
 }
 
+// --- random: zeroth-order ---
+
+// TCAPI V1 fills the tensor "by repeatedly invoking `gen()`" and fixes no call
+// count, so the test asserts at least one call and that the sole element is a
+// value the generator returned, each call returning a different one.
+template <typename TenT>
+void test_random_zeroth_order(tci_test_fixture<TenT>& fix) {
+#if !defined(TCICT_SKIP_RANDOM) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto& ctx = fix.context();
+  std::size_t calls = 0;
+  auto gen = [&calls]() -> tci::elem_t<TenT> {
+    ++calls;
+    return written_elem<TenT>(10.0 + static_cast<double>(calls));
+  };
+
+  TenT tensor;
+  TCICT_ASSERT_NOTHROW(tensor = tci::template random<TenT>(ctx, {}, gen));
+  TCICT_ASSERT(tci::order(ctx, tensor) == 0);
+  TCICT_ASSERT(tci::shape(ctx, tensor).empty());
+  TCICT_ASSERT(tci::size(ctx, tensor) == 1);
+  TCICT_ASSERT(calls > 0);
+
+  const auto elem = tci::get_elem(ctx, tensor, {});
+  bool returned_by_gen = false;
+  for (std::size_t k = 1; k <= calls; ++k) {
+    const auto w = written<TenT>(10.0 + static_cast<double>(k));
+    returned_by_gen = returned_by_gen ||
+                      (real_part<TenT>(elem) == w.real() &&
+                       imag_part<TenT>(elem) == w.imag());
+  }
+  TCICT_ASSERT_MSG(returned_by_gen,
+                   "the sole element is none of the values gen() returned");
+#else
+  (void)fix;
+#endif
+}
+
 // --- copy (in-place) ---
 
 template <typename TenT>
@@ -379,6 +450,29 @@ void test_copy_large(tci_test_fixture<TenT>& fix) {
 #endif
 }
 
+// --- copy: zeroth-order ---
+
+// TCAPI V1: copy's result "matches `orig` in shape and values without sharing
+// storage", so a write to the copy leaves the original as it was.
+template <typename TenT>
+void test_copy_zeroth_order(tci_test_fixture<TenT>& fix) {
+#if !defined(TCICT_SKIP_COPY) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto& ctx = fix.context();
+  auto orig = tci::template zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, orig, [](const tci::elem_coors_t<TenT>&) { return 3.5; });
+
+  TenT copied;
+  TCICT_ASSERT_NOTHROW(copied = tci::copy(ctx, orig));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, copied, 3.5);
+
+  tci::set_elem(ctx, copied, {}, written_elem<TenT>(-4.0));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, copied, -4.0);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, orig, 3.5);
+#else
+  (void)fix;
+#endif
+}
+
 // --- assign_from_range (row-major) ---
 
 template <typename TenT>
@@ -444,6 +538,22 @@ void test_assign_from_range_column_major(tci_test_fixture<TenT>& fix) {
       }
     }
   }
+#else
+  (void)fix;
+#endif
+}
+
+// --- assign_from_range: zeroth-order ---
+
+// TCAPI V1: "For coordinates `coors`, element = `*(first + coors2idx(coors))`".
+// The only coordinate of shape {} is {}, which the map sends to index 0.
+template <typename TenT>
+void test_assign_from_range_zeroth_order(tci_test_fixture<TenT>& fix) {
+#if !defined(TCICT_SKIP_ASSIGN_FROM_RANGE) && defined(TCICT_HAS_ELEM_SWEEP)
+  std::vector<tci::elem_t<TenT>> source = {written_elem<TenT>(7.5)};
+  TenT tensor;
+  assign_from_range_0d(fix.context(), source.begin(), tensor);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, 7.5);
 #else
   (void)fix;
 #endif
@@ -527,6 +637,27 @@ void test_allocate_1d(tci_test_fixture<TenT>& fix) {
   if constexpr (is_complex_v<TenT>) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(got), imag_part<TenT>(val), tol);
   }
+#else
+  (void)fix;
+#endif
+}
+
+// --- allocate: zeroth-order ---
+
+// TCAPI V1: "The empty shape is valid and yields a zeroth-order tensor whose
+// sole element is uninitialized." The element is read only after it is set.
+template <typename TenT>
+void test_allocate_zeroth_order(tci_test_fixture<TenT>& fix) {
+#if !defined(TCICT_SKIP_ALLOCATE) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto& ctx = fix.context();
+  TenT tensor;
+  TCICT_ASSERT_NOTHROW(tensor = tci::template allocate<TenT>(ctx, {}));
+  TCICT_ASSERT(tci::order(ctx, tensor) == 0);
+  TCICT_ASSERT(tci::shape(ctx, tensor).empty());
+  TCICT_ASSERT(tci::size(ctx, tensor) == 1);
+
+  tci::set_elem(ctx, tensor, {}, written_elem<TenT>(-1.25));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, -1.25);
 #else
   (void)fix;
 #endif
@@ -681,31 +812,57 @@ void test_move_preserves_values(tci_test_fixture<TenT>& fix) {
 #endif
 }
 
+// --- move: zeroth-order ---
+
+// The result carries the zeroth-order tensor. TCAPI V1 leaves `from` as
+// `TenT{}`, whose queries it does not define, so nothing is asserted on it.
+template <typename TenT>
+void test_move_zeroth_order(tci_test_fixture<TenT>& fix) {
+#if !defined(TCICT_SKIP_MOVE) && defined(TCICT_HAS_ELEM_SWEEP)
+  auto& ctx = fix.context();
+  auto source = tci::template zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, source, [](const tci::elem_coors_t<TenT>&) { return 4.5; });
+
+  TenT moved;
+  TCICT_ASSERT_NOTHROW(moved = tci::move(ctx, source));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, moved, 4.5);
+#else
+  (void)fix;
+#endif
+}
+
 }}  // namespace tcict::tests
 
 // Bulk registration helper: invokes X(..., "category", test_fn) once per test.
 // See include/tcict/adapters/doctest.h for usage.
 #define TCICT_FOREACH_CONSTRUCTION_TEST_ALL_TYPES(X, ...) \
   X(__VA_ARGS__, "construction", test_zeros) \
+  X(__VA_ARGS__, "construction", test_zeros_zeroth_order) \
   X(__VA_ARGS__, "construction", test_fill) \
+  X(__VA_ARGS__, "construction", test_fill_zeroth_order) \
   X(__VA_ARGS__, "construction", test_eye) \
   X(__VA_ARGS__, "construction", test_eye_to_range) \
   X(__VA_ARGS__, "construction", test_random_inplace) \
   X(__VA_ARGS__, "construction", test_random_outofplace) \
+  X(__VA_ARGS__, "construction", test_random_zeroth_order) \
   X(__VA_ARGS__, "construction", test_copy_inplace) \
   X(__VA_ARGS__, "construction", test_copy_outofplace) \
   X(__VA_ARGS__, "construction", test_copy_independence) \
   X(__VA_ARGS__, "construction", test_copy_single_element) \
   X(__VA_ARGS__, "construction", test_copy_large) \
+  X(__VA_ARGS__, "construction", test_copy_zeroth_order) \
   X(__VA_ARGS__, "construction", test_assign_from_range_row_major) \
   X(__VA_ARGS__, "construction", test_assign_from_range_column_major) \
+  X(__VA_ARGS__, "construction", test_assign_from_range_zeroth_order) \
   X(__VA_ARGS__, "construction", test_allocate_3d) \
   X(__VA_ARGS__, "construction", test_allocate_2d) \
   X(__VA_ARGS__, "construction", test_allocate_1d) \
+  X(__VA_ARGS__, "construction", test_allocate_zeroth_order) \
   X(__VA_ARGS__, "construction", test_clear_basic) \
   X(__VA_ARGS__, "construction", test_clear_empty) \
   X(__VA_ARGS__, "construction", test_clear_and_reallocate) \
   X(__VA_ARGS__, "construction", test_move_inplace) \
   X(__VA_ARGS__, "construction", test_move_outofplace) \
   X(__VA_ARGS__, "construction", test_move_empty) \
-  X(__VA_ARGS__, "construction", test_move_preserves_values)
+  X(__VA_ARGS__, "construction", test_move_preserves_values) \
+  X(__VA_ARGS__, "construction", test_move_zeroth_order)
