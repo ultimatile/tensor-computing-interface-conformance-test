@@ -1238,7 +1238,8 @@ void expect_vector_3(tci_test_fixture<TenT> &fix, const TenT &tensor,
   auto &ctx = fix.context();
   TCICT_ASSERT(tci::order(ctx, tensor) == 1);
   TCICT_ASSERT(tci::size(ctx, tensor) == 3);
-  // diag copies the values, so they compare exactly (tol_category::exact).
+  // The values are exactly representable and reach the tensor by assignment
+  // alone, through diag or set_elem, so they compare exactly.
   for (std::size_t i = 0; i < 3; ++i) {
     auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i));
     TCICT_ASSERT(real_part<TenT>(elem) == expected[i]);

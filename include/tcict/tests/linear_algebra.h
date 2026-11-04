@@ -1055,6 +1055,9 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
                                       imag_part<TenT>(elem) * sj));
       }
     }
+    // v's bond must be sigma's too before the contraction over it.
+    const auto v_shape = tci::shape(ctx, v_in);
+    TCICT_ASSERT(v_shape.size() == 2 && v_shape[0] == 2);
     TenT product;
     tci::contract(ctx, scaled, "ik", v_in, "kj", product, "ij");
     return product;
@@ -1588,13 +1591,14 @@ template <typename TenT> void test_svd_basic(tci_test_fixture<TenT> &fix) {
   TCICT_EXPECT_DIAGONAL(ctx, s_diag, {3.0, 1.0},
                         tolerance(fix, tol_category::factorization));
 
-  // U shape: (2, 2), V† shape: (2, 2)
+  // U and V† are (2, 2): their outer bonds are the input's, and their bond
+  // with sigma is sigma's, {2, 2} as checked above.
   auto u_shape = tci::shape(ctx, u);
   auto v_shape = tci::shape(ctx, v_dag);
   TCICT_ASSERT(u_shape.size() == 2);
-  TCICT_ASSERT(u_shape[0] == 2);
+  TCICT_ASSERT(u_shape[0] == 2 && u_shape[1] == 2);
   TCICT_ASSERT(v_shape.size() == 2);
-  TCICT_ASSERT(v_shape[1] == 2);
+  TCICT_ASSERT(v_shape[0] == 2 && v_shape[1] == 2);
 #else
   (void)fix;
 #endif
@@ -1649,7 +1653,10 @@ void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
     }
   }
 
-  // Reconstruct via contract: u_scaled[i,k] * v_dag[k,j] → reconstructed[i,j]
+  // Reconstruct via contract: u_scaled[i,k] * v_dag[k,j] → reconstructed[i,j],
+  // after checking that v_dag's bond is sigma's too.
+  const auto v_shape = tci::shape(ctx, v_dag);
+  TCICT_ASSERT(v_shape.size() == 2 && v_shape[0] == 2);
   TenT reconstructed;
   tci::contract(ctx, u_scaled, "ik", v_dag, "kj", reconstructed, "ij");
 
