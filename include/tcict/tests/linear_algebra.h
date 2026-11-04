@@ -1030,10 +1030,11 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
 
   // The factors are compared through the product they reconstruct rather than
   // elementwise: for a spectrum with distinct singular values the columns of u
-  // are fixed only up to a phase, which the two calls are not obliged to choose
-  // identically, so an elementwise comparison would assert more than the
-  // equivalence claim. The reconstruction is invariant under that phase, and
-  // unlike a shape comparison it does read the factors' values.
+  // are fixed only up to a phase, and, since V1 fixes no order for sigma's
+  // diagonal, up to a permutation shared with sigma, neither of which the two
+  // calls are obliged to choose identically, so an elementwise comparison would
+  // assert more than the equivalence claim. The reconstruction is invariant
+  // under both, and unlike a shape comparison it does read the factors' values.
   using RealTenT = tci::real_ten_t<TenT>;
   auto reconstruct = [&ctx](const TenT &u_in, const RealTenT &s_in, const TenT &v_in) {
     const auto u_shape = tci::shape(ctx, u_in);
@@ -1633,6 +1634,10 @@ void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
   // with V†: u_scaled[i,j] = u[i,j] * sigma[j,j]
   using RealTenT = tci::real_ten_t<TenT>;
   const auto bond = tci::shape(ctx, s_diag)[0];
+  // u's bond must be sigma's, checked above to be {2, 2}, before u is read
+  // along it.
+  const auto u_shape = tci::shape(ctx, u);
+  TCICT_ASSERT(u_shape.size() == 2 && u_shape[1] == 2);
   auto u_scaled = tci::copy(ctx, u);
   for (tci::bond_dim_t<RealTenT> b = 0; b < bond; ++b) {
     const auto j = static_cast<tci::elem_coor_t<TenT>>(b);

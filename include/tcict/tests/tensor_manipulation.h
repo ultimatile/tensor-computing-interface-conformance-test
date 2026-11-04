@@ -1236,14 +1236,14 @@ template <typename TenT>
 void expect_vector_3(tci_test_fixture<TenT> &fix, const TenT &tensor,
                      const double (&expected)[3]) {
   auto &ctx = fix.context();
-  auto tol = tolerance(fix, tol_category::elementwise);
   TCICT_ASSERT(tci::order(ctx, tensor) == 1);
   TCICT_ASSERT(tci::size(ctx, tensor) == 3);
+  // diag copies the values, so they compare exactly (tol_category::exact).
   for (std::size_t i = 0; i < 3; ++i) {
     auto elem = tci::get_elem(ctx, tensor, coors_of<TenT>(i));
-    TCICT_ASSERT_CLOSE(real_part<TenT>(elem), expected[i], tol);
+    TCICT_ASSERT(real_part<TenT>(elem) == expected[i]);
     if constexpr (is_complex_v<TenT>) {
-      TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, tol);
+      TCICT_ASSERT(imag_part<TenT>(elem) == 0.0);
     }
   }
 }

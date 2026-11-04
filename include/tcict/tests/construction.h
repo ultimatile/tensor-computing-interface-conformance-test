@@ -118,9 +118,10 @@ void test_eye(tci_test_fixture<TenT>& fix) {
   TenT identity;
   TCICT_ASSERT_NOTHROW(identity = tci::eye<TenT>(ctx, 3));
   // Order 2, shape {3, 3} and size 9, since a diagonal tensor's off-diagonal
-  // zeros are logical elements however few the backend stores, then ones on
-  // the diagonal and exact zeros off it. See "Diagonal tensors" in
-  // CONTRIBUTING.md.
+  // zeros are logical elements however few the backend stores, then exact
+  // ones on the diagonal (tol_category::exact: eye does no floating-point
+  // arithmetic) and exact zeros off it (see "Diagonal tensors" in
+  // CONTRIBUTING.md).
   TCICT_EXPECT_DIAGONAL(ctx, identity, {1.0, 1.0, 1.0},
                         tolerance(fix, tol_category::exact));
 #else
@@ -152,18 +153,12 @@ void test_eye_to_range(tci_test_fixture<TenT>& fix) {
       // Unwritten slot, as distinct from a slot written with a wrong value.
       TCICT_ASSERT(std::abs(real_part<TenT>(elem) - real_part<TenT>(sentinel))
                    > tol);
-      // eye's elements are exact, ones on the diagonal and zeros off it; see
-      // "Diagonal tensors" in CONTRIBUTING.md.
-      if (i == j) {
-        TCICT_ASSERT(real_part<TenT>(elem) == 1.0);
-        if constexpr (is_complex_v<TenT>) {
-          TCICT_ASSERT(imag_part<TenT>(elem) == 0.0);
-        }
-      } else {
-        TCICT_ASSERT(real_part<TenT>(elem) == 0.0);
-        if constexpr (is_complex_v<TenT>) {
-          TCICT_ASSERT(imag_part<TenT>(elem) == 0.0);
-        }
+      // eye's elements are exact: eye does no floating-point arithmetic
+      // (tol_category::exact in fixture.h), and its off-diagonal zeros are
+      // exact as "Diagonal tensors" in CONTRIBUTING.md says.
+      TCICT_ASSERT(real_part<TenT>(elem) == (i == j ? 1.0 : 0.0));
+      if constexpr (is_complex_v<TenT>) {
+        TCICT_ASSERT(imag_part<TenT>(elem) == 0.0);
       }
     }
   }

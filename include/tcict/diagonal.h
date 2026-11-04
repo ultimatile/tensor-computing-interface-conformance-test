@@ -41,7 +41,7 @@ enum class diag_order {
 /// then every element. An off-diagonal element must be exactly zero in both
 /// parts. A diagonal element's real part must differ from the expected value
 /// by less than `tol`, or equal it when `tol` is zero, and its imaginary part,
-/// for a complex element type, must likewise be zero. `order` says which
+/// for a complex element type, must likewise be zero. `arrangement` says which
 /// diagonal element each expected value is compared with. A mismatch, or a
 /// std::exception from order, shape, size or get_elem, is reported at
 /// `file`:`line`. Call it through TCICT_EXPECT_DIAGONAL, which passes the
@@ -50,7 +50,7 @@ template <typename Ctx, typename DiagT>
 void expect_diagonal_at(const char *file, int line, Ctx &ctx,
                         const DiagT &tensor,
                         const std::vector<double> &expected, double tol,
-                        diag_order order = diag_order::as_listed) {
+                        diag_order arrangement = diag_order::as_listed) {
   const std::size_t n = expected.size();
   if (n == 0) {
     detail::fail_at(file, line, "expect_diagonal_at: no expected values given");
@@ -135,14 +135,14 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
       if (!close(im, 0.0)) {
         fail_part("imaginary", i, i, im, 0.0);
       }
-      if (order == diag_order::as_listed && !close(re, expected[i])) {
+      if (arrangement == diag_order::as_listed && !close(re, expected[i])) {
         fail_part("real", i, i, re, expected[i]);
       }
       diagonal[i] = re;
     }
   }
 
-  if (order == diag_order::any) {
+  if (arrangement == diag_order::any) {
     // A NaN breaks the strict weak ordering std::sort requires; the expected
     // values were checked for one on entry.
     for (std::size_t i = 0; i < n; ++i) {
@@ -199,9 +199,11 @@ std::vector<double> real_diagonal_of_at(const char *file, int line, Ctx &ctx,
 template <typename Ctx, typename DiagT, std::size_t N>
 void expect_diagonal_at(const char *file, int line, Ctx &ctx,
                         const DiagT &tensor, const double (&expected)[N],
-                        double tol, diag_order order = diag_order::as_listed) {
+                        double tol,
+                        diag_order arrangement = diag_order::as_listed) {
   expect_diagonal_at(file, line, ctx, tensor,
-                     std::vector<double>(expected, expected + N), tol, order);
+                     std::vector<double>(expected, expected + N), tol,
+                     arrangement);
 }
 
 #endif
@@ -209,8 +211,9 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
 } // namespace tcict
 
 /// expect_diagonal_at with the caller's file and line:
-/// TCICT_EXPECT_DIAGONAL(ctx, tensor, expected, tol[, order]). Variadic so a
-/// braced list of expected values passes through the preprocessor.
+/// TCICT_EXPECT_DIAGONAL(ctx, tensor, expected, tol[, arrangement]).
+/// Variadic so a braced list of expected values passes through the
+/// preprocessor.
 #define TCICT_EXPECT_DIAGONAL(...)                                             \
   ::tcict::expect_diagonal_at(__FILE__, __LINE__, __VA_ARGS__)
 
