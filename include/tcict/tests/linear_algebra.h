@@ -606,13 +606,40 @@ template <typename TenT> void test_lq(tci_test_fixture<TenT> &fix) {
 // say in which order the diagonal holds them, so these tests compare sigma's
 // diagonal as a multiset, through diag_order::any.
 
-#ifndef TCICT_SKIP_TRUNC_SVD
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 // The singular values the trunc_svd fixture matrix is built from. Shared with
 // trunc_svd_expected_epsilon below so the matrix and the expected values cannot
 // drift apart.
 inline constexpr double kTruncSvdFixtureSvs[] = {3.0, 2.0, 1.0, 0.1};
 inline constexpr int kTruncSvdFixtureRank =
     static_cast<int>(sizeof(kTruncSvdFixtureSvs) / sizeof(kTruncSvdFixtureSvs[0]));
+
+// The tests take the singular values trunc_svd retains on the fixture matrix
+// to be a prefix of the table, which holds only while the table is
+// non-increasing and non-negative.
+constexpr bool trunc_svd_fixture_is_sorted() {
+  for (int i = 0; i < kTruncSvdFixtureRank; ++i) {
+    if (kTruncSvdFixtureSvs[i] < 0.0 ||
+        (i > 0 && kTruncSvdFixtureSvs[i] > kTruncSvdFixtureSvs[i - 1])) {
+      return false;
+    }
+  }
+  return true;
+}
+static_assert(trunc_svd_fixture_is_sorted(),
+              "kTruncSvdFixtureSvs must be non-increasing and non-negative");
+
+// Helper: the singular values trunc_svd retains at `chi` on the fixture matrix
+// built with `scale`, the first `chi` entries of the table, scaled.
+inline std::vector<double> trunc_svd_fixture_svs(int chi, double scale = 1.0) {
+  TCICT_ASSERT(chi >= 1 && chi <= kTruncSvdFixtureRank);
+  TCICT_ASSERT(scale > 0.0);
+  std::vector<double> svs(kTruncSvdFixtureSvs, kTruncSvdFixtureSvs + chi);
+  for (auto &s : svs) {
+    s *= scale;
+  }
+  return svs;
+}
 
 // Helper: build a diagonal matrix whose singular values are the fixture
 // spectrum scaled by `scale`.
@@ -681,8 +708,9 @@ template <typename TenT> tci::real_t<TenT> trunc_svd_expected_epsilon(int chi) {
 // per-case reporting and skip granularity that buys.
 //
 // Guarded with the tests it serves, and for the same reason the fixture builder
-// above is: it calls both of them, so leaving it outside would break the header
-// for a backend that defines TCICT_SKIP_TRUNC_SVD.
+// above is: it calls both of them, and the diagonal check, so leaving it outside
+// would break the header for a backend that defines TCICT_SKIP_TRUNC_SVD or
+// skips an API that TCICT_HAS_DIAGONAL_CHECK requires.
 template <typename TenT>
 void trunc_svd_expect_retained_chi(tci_test_fixture<TenT> &fix, double scale,
                                    int chi_min, int chi_max, double target_trunc_err,
@@ -701,23 +729,16 @@ void trunc_svd_expect_retained_chi(tci_test_fixture<TenT> &fix, double scale,
                  static_cast<tci::real_t<TenT>>(target_trunc_err),
                  static_cast<tci::real_t<TenT>>(s_min));
 
-  // The fixture matrix is diagonal with non-negative, non-increasing entries,
-  // so its singular values are those entries, and sigma holds the largest
-  // expected_chi of them, scaled.
-  TCICT_ASSERT(scale > 0.0);
-  TCICT_ASSERT(expected_chi >= 1 && expected_chi <= kTruncSvdFixtureRank);
-  std::vector<double> expected_svs(kTruncSvdFixtureSvs,
-                                   kTruncSvdFixtureSvs + expected_chi);
-  for (auto &s : expected_svs) {
-    s *= scale;
-  }
-  TCICT_EXPECT_DIAGONAL(ctx, s_diag, expected_svs, tol, diag_order::any);
+  // The tolerance is absolute, so it scales with the values it bounds; epsilon,
+  // a ratio, keeps the unscaled one.
+  TCICT_EXPECT_DIAGONAL(ctx, s_diag, trunc_svd_fixture_svs(expected_chi, scale),
+                        tol * scale, diag_order::any);
   TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(expected_chi), tol);
 }
 #endif
 
 template <typename TenT> void test_trunc_svd(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_TRUNC_SVD
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -733,7 +754,7 @@ template <typename TenT> void test_trunc_svd(tci_test_fixture<TenT> &fix) {
                      static_cast<tci::bond_dim_t<TenT>>(2), 0.5));
 
   // s_min = 0.5 discards 0.1, and chi_max = 2 keeps 3 and 2 of the rest.
-  TCICT_EXPECT_DIAGONAL(ctx, s_diag, {3.0, 2.0},
+  TCICT_EXPECT_DIAGONAL(ctx, s_diag, trunc_svd_fixture_svs(2),
                         tolerance(fix, tol_category::factorization),
                         diag_order::any);
   TCICT_ASSERT(trunc_err >= 0.0);
@@ -748,7 +769,7 @@ template <typename TenT> void test_trunc_svd(tci_test_fixture<TenT> &fix) {
 ///         = 1.01 / 14.01 ≈ 0.07209
 template <typename TenT>
 void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_TRUNC_SVD
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -763,7 +784,7 @@ void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
   tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
                  static_cast<tci::bond_dim_t<TenT>>(2), 0.0);
 
-  TCICT_EXPECT_DIAGONAL(ctx, s_diag, {3.0, 2.0},
+  TCICT_EXPECT_DIAGONAL(ctx, s_diag, trunc_svd_fixture_svs(2),
                         tolerance(fix, tol_category::factorization),
                         diag_order::any);
   TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(2), eps);
@@ -775,7 +796,7 @@ void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
 /// Verify trunc_err == 0 when no truncation occurs (chi_max >= kappa).
 template <typename TenT>
 void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_TRUNC_SVD
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -791,7 +812,7 @@ void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
   tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
                  static_cast<tci::bond_dim_t<TenT>>(10), 0.0);
 
-  TCICT_EXPECT_DIAGONAL(ctx, s_diag, {3.0, 2.0, 1.0, 0.1},
+  TCICT_EXPECT_DIAGONAL(ctx, s_diag, trunc_svd_fixture_svs(4),
                         tolerance(fix, tol_category::factorization),
                         diag_order::any);
   TCICT_ASSERT_CLOSE(trunc_err, 0.0, eps);
@@ -803,7 +824,7 @@ void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
 /// Verify trunc_err is in [0, 1] (relative error is bounded).
 template <typename TenT>
 void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_TRUNC_SVD
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -819,7 +840,7 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
   tci::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
                  static_cast<tci::bond_dim_t<TenT>>(1), 0.0);
 
-  TCICT_EXPECT_DIAGONAL(ctx, s_diag, {3.0},
+  TCICT_EXPECT_DIAGONAL(ctx, s_diag, trunc_svd_fixture_svs(1),
                         tolerance(fix, tol_category::factorization),
                         diag_order::any);
   TCICT_ASSERT(trunc_err >= 0.0);
@@ -856,7 +877,7 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
 /// epsilon(2) ≈ 0.07209 <= 0.1 < epsilon(1) ≈ 0.3576, so chi must be 2.
 template <typename TenT>
 void test_trunc_svd_target_err_selects_chi(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_TRUNC_SVD
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -874,7 +895,7 @@ void test_trunc_svd_target_err_selects_chi(tci_test_fixture<TenT> &fix) {
 /// applied to the raw singular values moves with the scale.
 template <typename TenT>
 void test_trunc_svd_target_err_scale_invariant(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_TRUNC_SVD
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -890,7 +911,7 @@ void test_trunc_svd_target_err_scale_invariant(tci_test_fixture<TenT> &fix) {
 /// chi = 1, but chi_min = 3 forbids it.
 template <typename TenT>
 void test_trunc_svd_target_err_chi_min_floor(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_TRUNC_SVD
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -906,7 +927,7 @@ void test_trunc_svd_target_err_chi_min_floor(tci_test_fixture<TenT> &fix) {
 /// the growth stops at chi_max rather than continuing to satisfy the target.
 template <typename TenT>
 void test_trunc_svd_target_err_chi_max_cap(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_TRUNC_SVD
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -929,7 +950,7 @@ void test_trunc_svd_target_err_chi_max_cap(tci_test_fixture<TenT> &fix) {
 /// test able to fail on such a backend.
 template <typename TenT>
 void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_TRUNC_SVD
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -957,20 +978,18 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
   // against the spec first: it is what the differential assertions below
   // cannot supply on their own. Both sigmas are checked here, before any of
   // their elements is read below.
-  TCICT_EXPECT_DIAGONAL(ctx, s_general, {3.0, 2.0}, tol, diag_order::any);
-  TCICT_EXPECT_DIAGONAL(ctx, s_simple, {3.0, 2.0}, tol, diag_order::any);
+  TCICT_EXPECT_DIAGONAL(ctx, s_general, trunc_svd_fixture_svs(2), tol,
+                        diag_order::any);
+  TCICT_EXPECT_DIAGONAL(ctx, s_simple, trunc_svd_fixture_svs(2), tol,
+                        diag_order::any);
   TCICT_ASSERT_CLOSE(err_general, trunc_svd_expected_epsilon<TenT>(2), tol);
 
   // Equivalence is a claim about the whole decomposition, so compare every
-  // output the two calls produce, not just the retained count.
+  // output the two calls produce, not just the retained count: both sigmas
+  // were checked against the same values above, the errors are compared here,
+  // and the factors below. The sigmas are not compared position by position,
+  // since V1 fixes no order for trunc_svd's diagonal.
   TCICT_ASSERT_CLOSE(err_general, err_simple, tol);
-
-  const auto chi = tci::shape(ctx, s_general)[0];
-  for (tci::bond_dim_t<TenT> i = 0; i < chi; ++i) {
-    const auto coor = static_cast<tci::elem_coor_t<tci::real_ten_t<TenT>>>(i);
-    TCICT_ASSERT_CLOSE(tci::get_elem(ctx, s_general, {coor, coor}),
-                       tci::get_elem(ctx, s_simple, {coor, coor}), tol);
-  }
 
   // The factors are compared through the product they reconstruct rather than
   // elementwise: for a spectrum with distinct singular values the columns of u
@@ -1013,7 +1032,7 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
 /// met, so chi must be 3 rather than 4.
 template <typename TenT>
 void test_trunc_svd_chi_min_not_restored_below_s_min(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_TRUNC_SVD
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -1060,7 +1079,7 @@ void test_trunc_svd_chi_min_not_restored_below_s_min(tci_test_fixture<TenT> &fix
 /// plausibly carry lets chi = 2 satisfy the target and blur the two operators.
 template <typename TenT>
 void test_trunc_svd_target_err_boundary_is_inclusive(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_TRUNC_SVD
+#if !defined(TCICT_SKIP_TRUNC_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -1112,7 +1131,7 @@ void test_trunc_svd_target_err_boundary_is_inclusive(tci_test_fixture<TenT> &fix
 // --- eig (general eigendecomposition of identity) ---
 
 template <typename TenT> void test_eig_identity(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_EIG
+#if !defined(TCICT_SKIP_EIG) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_EIG_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -1141,7 +1160,7 @@ template <typename TenT> void test_eig_identity(tci_test_fixture<TenT> &fix) {
 // V1 fixes no order for eig's eigenvalues, so the diagonal is compared as a
 // multiset.
 template <typename TenT> void test_eig_distinct(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_EIG
+#if !defined(TCICT_SKIP_EIG) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_EIG_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -1165,7 +1184,7 @@ template <typename TenT> void test_eig_distinct(tci_test_fixture<TenT> &fix) {
 // --- eigh (Hermitian eigendecomposition of identity) ---
 
 template <typename TenT> void test_eigh_identity(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_EIGH
+#if !defined(TCICT_SKIP_EIGH) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_EIGH_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -1191,7 +1210,7 @@ template <typename TenT> void test_eigh_identity(tci_test_fixture<TenT> &fix) {
 // so lambda_mat is diag(1, 3). The input's diagonal (2, 2) holds neither.
 template <typename TenT>
 void test_eigh_ascending(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_EIGH
+#if !defined(TCICT_SKIP_EIGH) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_EIGH_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -1508,7 +1527,7 @@ void test_trace_leaving_bond(tci_test_fixture<TenT> &fix) {
 // --- svd: basic singular values and shapes ---
 
 template <typename TenT> void test_svd_basic(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_SVD
+#if !defined(TCICT_SKIP_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
@@ -1544,7 +1563,7 @@ template <typename TenT> void test_svd_basic(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_SVD
+#if !defined(TCICT_SKIP_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
 #ifdef TCICT_SKIP_SVD_SINGLE_PRECISION
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif

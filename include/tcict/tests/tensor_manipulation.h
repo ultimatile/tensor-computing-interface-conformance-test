@@ -1254,7 +1254,7 @@ void expect_vector_3(tci_test_fixture<TenT> &fix, const TenT &tensor,
 
 template <typename TenT>
 void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_DIAG
+#if !defined(TCICT_SKIP_DIAG) && defined(TCICT_HAS_DIAGONAL_CHECK)
   auto &ctx = fix.context();
   auto vector = tci::zeros<TenT>(ctx, {3});
   tci::set_elem(ctx, vector, {0}, make_elem<TenT>(1.0));
@@ -1292,7 +1292,7 @@ void test_diag_mat_to_vec(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_DIAG
+#if !defined(TCICT_SKIP_DIAG) && defined(TCICT_HAS_DIAGONAL_CHECK)
   auto &ctx = fix.context();
   const double expected[3] = {1.5, -2.5, 3.5};
 
@@ -1318,12 +1318,12 @@ void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
-#ifndef TCICT_SKIP_DIAG
+#if !defined(TCICT_SKIP_DIAG) && defined(TCICT_HAS_DIAGONAL_CHECK)
   auto &ctx = fix.context();
   // Distinct diagonal values rather than an identity: all-ones cannot tell a
   // correct extraction from a reordered one. Building the input with `zeros`
-  // also keeps this test under TCICT_SKIP_DIAG alone, so a backend that
-  // implements diag but skips eye can still run it.
+  // also keeps eye out of this test, so a backend that implements diag but
+  // skips eye can still run it.
   const double expected[3] = {4.5, -5.5, 6.5};
 
   auto matrix = tci::zeros<TenT>(ctx, {3, 3});

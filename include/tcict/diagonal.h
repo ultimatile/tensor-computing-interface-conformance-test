@@ -30,11 +30,9 @@ enum class diag_order {
   any,
 };
 
-// Compiled exactly when at least one of its callers is: the diag tests and the
-// svd, trunc_svd, eig and eigh tests.
-#if !defined(TCICT_SKIP_DIAG) || !defined(TCICT_SKIP_SVD) ||                    \
-    !defined(TCICT_SKIP_TRUNC_SVD) || !defined(TCICT_SKIP_EIG) ||              \
-    !defined(TCICT_SKIP_EIGH)
+// Guarded by TCICT_HAS_DIAGONAL_CHECK (include/tcict/skip.h), the APIs it calls,
+// which every test calling it also requires.
+#if defined(TCICT_HAS_DIAGONAL_CHECK)
 
 /// Asserts that `tensor`, of any tensor type, is a diagonal tensor holding
 /// `expected` on its diagonal, with n = expected.size(): order 2, shape
@@ -115,10 +113,13 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
         // V1: a diagonal tensor's off-diagonal elements are zero, so no
         // tolerance applies.
         if (re != 0.0 || im != 0.0) {
+          std::string value = text(re);
+          if constexpr (is_complex_v<DiagT>) {
+            value = "(" + value + ", " + text(im) + ")";
+          }
           detail::fail_at(file, line,
                           "off-diagonal element at " + coors_text(i, j) +
-                              " is " + text(re) + " + " + text(im) +
-                              "i, not exactly zero");
+                              " is " + value + ", not exactly zero");
         }
         continue;
       }
