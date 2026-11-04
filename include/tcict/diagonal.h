@@ -20,12 +20,13 @@
 
 namespace tcict {
 
-/// How expect_diagonal_at compares the diagonal with the expected values.
+/// How expect_diagonal_at compares the diagonal with the expected values, each
+/// comparison within its tolerance.
 enum class diag_order {
-  /// The element at {i, i} is expected[i].
+  /// The element at {i, i} is compared with expected[i].
   as_listed,
-  /// The real parts of the diagonal, sorted, equal the expected values,
-  /// sorted. For outputs whose order V1 leaves open, such as eig's.
+  /// The real parts of the diagonal, sorted, are compared with the expected
+  /// values, sorted. For outputs whose order V1 leaves open, such as eig's.
   any,
 };
 

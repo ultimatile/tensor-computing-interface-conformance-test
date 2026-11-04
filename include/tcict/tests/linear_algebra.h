@@ -704,6 +704,7 @@ void trunc_svd_expect_retained_chi(tci_test_fixture<TenT> &fix, double scale,
   // The fixture matrix is diagonal with non-negative, non-increasing entries,
   // so its singular values are those entries, and sigma holds the largest
   // expected_chi of them, scaled.
+  TCICT_ASSERT(scale > 0.0);
   TCICT_ASSERT(expected_chi >= 1 && expected_chi <= kTruncSvdFixtureRank);
   std::vector<double> expected_svs(kTruncSvdFixtureSvs,
                                    kTruncSvdFixtureSvs + expected_chi);
