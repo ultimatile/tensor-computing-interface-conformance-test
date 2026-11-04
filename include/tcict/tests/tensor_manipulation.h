@@ -5,6 +5,7 @@
 #include <tcict/elem_sweep.h>
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
+#include <tcict/zeroth_order.h>
 
 #include <algorithm>
 #include <cmath>
@@ -187,6 +188,60 @@ void test_imag_extraction(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// --- real / imag extraction: zeroth-order ---
+
+// Their results have type real_ten_t<TenT>, which is not TenT when TenT is
+// complex, so TCICT_EXPECT_ZEROTH_ORDER cannot take them with this test's
+// fixture; they are checked through TCICT_EXPECT_ZEROTH_ORDER_SHAPE and
+// get_elem, as the extraction tests above check theirs.
+template <typename TenT>
+void test_real_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_REAL) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::elementwise);
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 4.0);
+
+  auto real_tensor = tci::real(ctx, tensor);
+
+  using RealTenT = tci::real_ten_t<TenT>;
+  TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, real_tensor);
+  TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, real_tensor, {})),
+                     4.0, tol);
+
+  // V1: "Deep copy if already real", so for a real TenT a write to the input
+  // afterwards leaves the result as it was.
+  if constexpr (!is_complex_v<TenT>) {
+    TCICT_SET_ZEROTH_ORDER(fix, tensor, -7.0);
+    TCICT_ASSERT_CLOSE(
+        real_part<RealTenT>(tci::get_elem(ctx, real_tensor, {})), 4.0, tol);
+  }
+#else
+  (void)fix;
+#endif
+}
+
+template <typename TenT>
+void test_imag_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_IMAG) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::elementwise);
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 4.0);
+
+  auto imag_tensor = tci::imag(ctx, tensor);
+
+  // written<TenT>(4.0) has imaginary part -2.0 for a complex TenT and none
+  // for a real one, whose imag is a zero tensor.
+  using RealTenT = tci::real_ten_t<TenT>;
+  TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, imag_tensor);
+  TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, imag_tensor, {})),
+                     written<TenT>(4.0).imag(), tol);
+#else
+  (void)fix;
+#endif
+}
+
 // --- cplx_conj (in-place) ---
 
 template <typename TenT>
@@ -264,6 +319,39 @@ void test_cplx_conj_outofplace(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// --- cplx_conj: zeroth-order ---
+
+template <typename TenT>
+void test_cplx_conj_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_CPLX_CONJ) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
+  auto &ctx = fix.context();
+  auto conj_of = [](double v) { return std::conj(written<TenT>(v)); };
+
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 2.0);
+  tci::cplx_conj(ctx, tensor);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, conj_of(2.0), tol_category::elementwise);
+
+  // Out of place; the input is read back, see "Out-of-place inputs" in
+  // CONTRIBUTING.md.
+  auto input = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ZEROTH_ORDER(fix, input, -3.0);
+  TenT output;
+  tci::cplx_conj(ctx, input, output);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, output, conj_of(-3.0), tol_category::elementwise);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, input, -3.0);
+
+  // V1: the out-of-place overload is a "deep copy for real", so for a real
+  // TenT a write to the input afterwards leaves the output as it was.
+  if constexpr (!is_complex_v<TenT>) {
+    TCICT_SET_ZEROTH_ORDER(fix, input, 5.0);
+    TCICT_EXPECT_ZEROTH_ORDER(fix, output, conj_of(-3.0), tol_category::elementwise);
+  }
+#else
+  (void)fix;
+#endif
+}
+
 // --- to_cplx (out-of-place, from real type) ---
 // NOTE: TenT here should be a real tensor type (e.g., CytnxTensor<double>)
 
@@ -321,6 +409,42 @@ void test_to_cplx_complex_to_complex(tci_test_fixture<TenT> &fix) {
     TCICT_ASSERT_CLOSE(imag_part<TenT>(elem00), 2.71, tol);
     TCICT_ASSERT_CLOSE(real_part<TenT>(elem11), -1.41, tol);
     TCICT_ASSERT_CLOSE(imag_part<TenT>(elem11), 1.73, tol);
+  }
+#else
+  (void)fix;
+#endif
+}
+
+// --- to_cplx: zeroth-order ---
+
+// Registered for every TenT: V1 embeds a real input as real parts and gives a
+// deep copy of a complex one. The result has type cplx_ten_t<TenT>, which is
+// not TenT when TenT is real, so it is checked through
+// TCICT_EXPECT_ZEROTH_ORDER_SHAPE and get_elem.
+template <typename TenT>
+void test_to_cplx_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_TO_CPLX) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::elementwise);
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, -2.5);
+
+  auto complex_tensor = tci::to_cplx(ctx, tensor);
+
+  using CplxTenT = tci::cplx_ten_t<TenT>;
+  const auto expected = written<TenT>(-2.5);
+  TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, complex_tensor);
+  const auto elem = tci::get_elem(ctx, complex_tensor, {});
+  TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem), expected.real(), tol);
+  TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem), expected.imag(), tol);
+
+  // V1: "complex inputs yield a deep copy", so for a complex TenT a write to
+  // the input afterwards leaves the result as it was.
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_SET_ZEROTH_ORDER(fix, tensor, 9.0);
+    const auto after = tci::get_elem(ctx, complex_tensor, {});
+    TCICT_ASSERT_CLOSE(real_part<CplxTenT>(after), expected.real(), tol);
+    TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(after), expected.imag(), tol);
   }
 #else
   (void)fix;
@@ -459,6 +583,41 @@ void test_for_each_inversion(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// --- for_each: zeroth-order ---
+
+// "Visits every element exactly once", and a zeroth-order tensor has one.
+template <typename TenT>
+void test_for_each_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_FOR_EACH) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::elementwise);
+  using Elem = tci::elem_t<TenT>;
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 1.5);
+
+  std::size_t visits = 0;
+  Elem passed = make_elem<TenT>(0.0);
+  tci::for_each(ctx, static_cast<const TenT &>(tensor),
+                [&visits, &passed](const Elem elem) {
+                  ++visits;
+                  passed = elem;
+                });
+  TCICT_ASSERT(visits == 1);
+  TCICT_ASSERT_CLOSE(real_part<TenT>(passed), written<TenT>(1.5).real(), tol);
+  TCICT_ASSERT_CLOSE(imag_part<TenT>(passed), written<TenT>(1.5).imag(), tol);
+
+  visits = 0;
+  tci::for_each(ctx, tensor, [&visits](Elem &elem) {
+    ++visits;
+    elem = elem * make_elem<TenT>(2.0);
+  });
+  TCICT_ASSERT(visits == 1);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, 3.0, tol_category::elementwise);
+#else
+  (void)fix;
+#endif
+}
+
 // --- for_each_with_coors ---
 
 // The coordinates a traversal of a 2x2 tensor visits: record() runs in the
@@ -572,6 +731,45 @@ void test_for_each_with_coors_const(tci_test_fixture<TenT> &fix) {
       }
     }
   }
+#else
+  (void)fix;
+#endif
+}
+
+// --- for_each_with_coors: zeroth-order ---
+
+// One visit, whose coordinate is the empty sequence.
+template <typename TenT>
+void test_for_each_with_coors_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_FOR_EACH_WITH_COORS) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::elementwise);
+  using Elem = tci::elem_t<TenT>;
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 1.5);
+
+  Elem passed = make_elem<TenT>(0.0);
+  visit_record_0d read_only;
+  tci::for_each_with_coors(
+      ctx, static_cast<const TenT &>(tensor),
+      [&](const Elem &elem, const tci::elem_coors_t<TenT> &coors) {
+        if (read_only.record(coors)) {
+          passed = elem;
+        }
+      });
+  read_only.check();
+  TCICT_ASSERT_CLOSE(real_part<TenT>(passed), written<TenT>(1.5).real(), tol);
+  TCICT_ASSERT_CLOSE(imag_part<TenT>(passed), written<TenT>(1.5).imag(), tol);
+
+  visit_record_0d mutating;
+  tci::for_each_with_coors(
+      ctx, tensor, [&](Elem &elem, const tci::elem_coors_t<TenT> &coors) {
+        if (mutating.record(coors)) {
+          elem = elem * make_elem<TenT>(2.0);
+        }
+      });
+  mutating.check();
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, 3.0, tol_category::elementwise);
 #else
   (void)fix;
 #endif
@@ -731,6 +929,47 @@ template <typename TenT> void test_reshape(tci_test_fixture<TenT> &fix) {
   for (std::size_t n = 0; n < observed.size(); ++n) {
     TCICT_ASSERT_CLOSE(observed[n], static_cast<double>(n + 1), tol);
   }
+#else
+  (void)fix;
+#endif
+}
+
+// --- reshape: zeroth-order ---
+
+// TCAPI V1: reshape "converts between the empty shape (zeroth-order) and any
+// total-size-1 shape such as {1} or {1, 1}" with no value change. One element
+// has one position, so its value is assertable at every shape.
+template <typename TenT>
+void test_reshape_zeroth_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_RESHAPE) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
+  auto &ctx = fix.context();
+  auto value = [](const tci::elem_coors_t<TenT> &) { return 2.75; };
+
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 2.75);
+  TCICT_ASSERT_NOTHROW(tci::reshape(ctx, tensor, {1}));
+  TCICT_EXPECT_ELEMS(fix, tensor, {1}, value, tol_category::exact);
+  TCICT_ASSERT_NOTHROW(tci::reshape(ctx, tensor, {1, 1}));
+  TCICT_EXPECT_ELEMS(fix, tensor, {1, 1}, value, tol_category::exact);
+  TCICT_ASSERT_NOTHROW(tci::reshape(ctx, tensor, {}));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, 2.75);
+
+  // From a tensor built at shape {1}.
+  auto one = tci::zeros<TenT>(ctx, {1});
+  TCICT_SET_ELEMS(fix, one, [](const tci::elem_coors_t<TenT> &) { return 0.5; });
+  TCICT_ASSERT_NOTHROW(tci::reshape(ctx, one, {}));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, one, 0.5);
+
+  // Out of place; the input is read back, see "Out-of-place inputs" in
+  // CONTRIBUTING.md.
+  auto input = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ZEROTH_ORDER(fix, input, -1.5);
+  TenT output;
+  TCICT_ASSERT_NOTHROW(tci::reshape(ctx, input, {1}, output));
+  TCICT_EXPECT_ELEMS(
+      fix, output, {1}, [](const tci::elem_coors_t<TenT> &) { return -1.5; },
+      tol_category::exact);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, input, -1.5);
 #else
   (void)fix;
 #endif
@@ -1235,17 +1474,24 @@ void test_stack_last_axis(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "tensor_manipulation", test_shrink_complex_values) \
   X(__VA_ARGS__, "tensor_manipulation", test_real_extraction) \
   X(__VA_ARGS__, "tensor_manipulation", test_imag_extraction) \
+  X(__VA_ARGS__, "tensor_manipulation", test_real_zeroth_order) \
+  X(__VA_ARGS__, "tensor_manipulation", test_imag_zeroth_order) \
   X(__VA_ARGS__, "tensor_manipulation", test_cplx_conj_inplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_cplx_conj_outofplace) \
+  X(__VA_ARGS__, "tensor_manipulation", test_cplx_conj_zeroth_order) \
+  X(__VA_ARGS__, "tensor_manipulation", test_to_cplx_zeroth_order) \
   X(__VA_ARGS__, "tensor_manipulation", test_for_each_doubling) \
   X(__VA_ARGS__, "tensor_manipulation", test_for_each_summation) \
   X(__VA_ARGS__, "tensor_manipulation", test_for_each_capture) \
   X(__VA_ARGS__, "tensor_manipulation", test_for_each_const) \
   X(__VA_ARGS__, "tensor_manipulation", test_for_each_inversion) \
+  X(__VA_ARGS__, "tensor_manipulation", test_for_each_zeroth_order) \
   X(__VA_ARGS__, "tensor_manipulation", test_for_each_with_coors) \
   X(__VA_ARGS__, "tensor_manipulation", test_for_each_with_coors_const) \
+  X(__VA_ARGS__, "tensor_manipulation", test_for_each_with_coors_zeroth_order) \
   X(__VA_ARGS__, "tensor_manipulation", test_for_each_eye_traversal) \
   X(__VA_ARGS__, "tensor_manipulation", test_reshape) \
+  X(__VA_ARGS__, "tensor_manipulation", test_reshape_zeroth_order) \
   X(__VA_ARGS__, "tensor_manipulation", test_transpose) \
   X(__VA_ARGS__, "tensor_manipulation", test_concatenate_basic) \
   X(__VA_ARGS__, "tensor_manipulation", test_concatenate_values) \

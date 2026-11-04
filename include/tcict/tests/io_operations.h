@@ -4,6 +4,7 @@
 #include <tcict/elem_helper.h>
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
+#include <tcict/zeroth_order.h>
 
 #include <cstdio>
 #include <string>
@@ -69,10 +70,35 @@ void test_load_data_integrity(tci_test_fixture<TenT>& fix) {
 #endif
 }
 
+// --- save/load roundtrip: zeroth-order ---
+
+template <typename TenT>
+void test_save_load_zeroth_order(tci_test_fixture<TenT>& fix) {
+#if !defined(TCICT_SKIP_SAVE) && !defined(TCICT_SKIP_LOAD) && \
+    defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
+  auto& ctx = fix.context();
+  auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, -6.5);
+
+  std::string filepath = "/tmp/tcict_test_zeroth_order_roundtrip";
+  // Remove stale file to ensure save actually writes
+  std::remove(filepath.c_str());
+  TCICT_ASSERT_NOTHROW(tci::save(ctx, tensor, filepath));
+
+  TenT loaded;
+  TCICT_ASSERT_NOTHROW(loaded = tci::load<TenT>(ctx, filepath));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, loaded, -6.5);
+  std::remove(filepath.c_str());
+#else
+  (void)fix;
+#endif
+}
+
 }}  // namespace tcict::tests
 
 // Bulk registration helper: invokes X(..., "category", test_fn) once per test.
 // See include/tcict/adapters/doctest.h for usage.
 #define TCICT_FOREACH_IO_OPERATIONS_TEST_ALL_TYPES(X, ...) \
   X(__VA_ARGS__, "io_operations", test_save_load_roundtrip) \
-  X(__VA_ARGS__, "io_operations", test_load_data_integrity)
+  X(__VA_ARGS__, "io_operations", test_load_data_integrity) \
+  X(__VA_ARGS__, "io_operations", test_save_load_zeroth_order)
