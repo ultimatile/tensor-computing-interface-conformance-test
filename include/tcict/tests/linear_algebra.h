@@ -617,7 +617,7 @@ inline constexpr int kTruncSvdFixtureRank =
 // The tests take the singular values trunc_svd retains on the fixture matrix
 // to be a prefix of the table, which holds only while the table is
 // non-increasing and non-negative.
-constexpr bool trunc_svd_fixture_is_sorted() {
+constexpr bool trunc_svd_fixture_is_non_increasing_and_non_negative() {
   for (int i = 0; i < kTruncSvdFixtureRank; ++i) {
     if (kTruncSvdFixtureSvs[i] < 0.0 ||
         (i > 0 && kTruncSvdFixtureSvs[i] > kTruncSvdFixtureSvs[i - 1])) {
@@ -626,7 +626,7 @@ constexpr bool trunc_svd_fixture_is_sorted() {
   }
   return true;
 }
-static_assert(trunc_svd_fixture_is_sorted(),
+static_assert(trunc_svd_fixture_is_non_increasing_and_non_negative(),
               "kTruncSvdFixtureSvs must be non-increasing and non-negative");
 
 // Helper: the singular values trunc_svd retains at `chi` on the fixture matrix
@@ -1025,8 +1025,8 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
   // also compared with each other, as multisets, since V1 fixes no order for
   // trunc_svd's diagonal.
   TCICT_ASSERT_CLOSE(err_general, err_simple, tol);
-  TCICT_EXPECT_DIAGONAL(ctx, s_simple, TCICT_DIAGONAL_OF(ctx, s_general), tol,
-                        diag_order::any);
+  TCICT_EXPECT_DIAGONAL(ctx, s_simple, TCICT_REAL_DIAGONAL_OF(ctx, s_general),
+                        tol, diag_order::any);
 
   // The factors are compared through the product they reconstruct rather than
   // elementwise: for a spectrum with distinct singular values the columns of u
@@ -1596,7 +1596,7 @@ template <typename TenT> void test_svd_basic(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
-// --- svd: reconstruction U * diag(S) * V† ≈ A ---
+// --- svd: reconstruction U * sigma * V† ≈ A ---
 
 template <typename TenT>
 void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
@@ -1628,11 +1628,12 @@ void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
 
   // Reconstruct: scale column j of U by sigma's {j, j} element, then contract
   // with V†: u_scaled[i,j] = u[i,j] * sigma[j,j]
-  auto bond = tci::shape(ctx, s_diag)[0];
   using RealTenT = tci::real_ten_t<TenT>;
+  const auto bond = tci::shape(ctx, s_diag)[0];
   auto u_scaled = tci::copy(ctx, u);
-  for (tci::elem_coor_t<TenT> j = 0; j < bond; ++j) {
-    const auto cj = static_cast<tci::elem_coor_t<RealTenT>>(j);
+  for (tci::bond_dim_t<RealTenT> b = 0; b < bond; ++b) {
+    const auto j = static_cast<tci::elem_coor_t<TenT>>(b);
+    const auto cj = static_cast<tci::elem_coor_t<RealTenT>>(b);
     auto sj = real_part<RealTenT>(tci::get_elem(ctx, s_diag, {cj, cj}));
     for (tci::elem_coor_t<TenT> i = 0; i < 2; ++i) {
       auto elem = tci::get_elem(ctx, u, {i, j});

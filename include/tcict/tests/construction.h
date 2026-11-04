@@ -152,14 +152,14 @@ void test_eye_to_range(tci_test_fixture<TenT>& fix) {
       // Unwritten slot, as distinct from a slot written with a wrong value.
       TCICT_ASSERT(std::abs(real_part<TenT>(elem) - real_part<TenT>(sentinel))
                    > tol);
+      // eye's elements are exact, ones on the diagonal and zeros off it; see
+      // "Diagonal tensors" in CONTRIBUTING.md.
       if (i == j) {
-        TCICT_ASSERT_CLOSE(real_part<TenT>(elem), 1.0, tol);
+        TCICT_ASSERT(real_part<TenT>(elem) == 1.0);
         if constexpr (is_complex_v<TenT>) {
-          TCICT_ASSERT_CLOSE(imag_part<TenT>(elem), 0.0, tol);
+          TCICT_ASSERT(imag_part<TenT>(elem) == 0.0);
         }
       } else {
-        // Off-diagonal zeros are exact; see "Diagonal tensors" in
-        // CONTRIBUTING.md.
         TCICT_ASSERT(real_part<TenT>(elem) == 0.0);
         if constexpr (is_complex_v<TenT>) {
           TCICT_ASSERT(imag_part<TenT>(elem) == 0.0);

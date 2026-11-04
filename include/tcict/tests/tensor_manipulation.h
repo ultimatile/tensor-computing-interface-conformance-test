@@ -1265,7 +1265,7 @@ void test_diag_vec_to_mat(tci_test_fixture<TenT> &fix) {
 
   const double expected[3] = {1.0, 2.0, 3.0};
   TCICT_EXPECT_DIAGONAL(ctx, vector, expected,
-                        tolerance(fix, tol_category::elementwise));
+                        tolerance(fix, tol_category::exact));
 #else
   (void)fix;
 #endif
@@ -1305,7 +1305,7 @@ void test_diag_vec_to_mat_outofplace(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT_NOTHROW(tci::diag(ctx, vector, matrix));
 
   TCICT_EXPECT_DIAGONAL(ctx, matrix, expected,
-                        tolerance(fix, tol_category::elementwise));
+                        tolerance(fix, tol_category::exact));
 
   // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
   expect_vector_3(fix, vector, expected);
@@ -1340,7 +1340,7 @@ void test_diag_mat_to_vec_outofplace(tci_test_fixture<TenT> &fix) {
   // Input unchanged, values included, not just order and size; see
   // "Out-of-place inputs" in CONTRIBUTING.md.
   TCICT_EXPECT_DIAGONAL(ctx, matrix, expected,
-                        tolerance(fix, tol_category::elementwise));
+                        tolerance(fix, tol_category::exact));
 #else
   (void)fix;
 #endif

@@ -167,19 +167,20 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
 /// {i, i}, after asserting that it is square and second-order; for comparing
 /// two diagonal tensors with each other through expect_diagonal_at. A
 /// std::exception from shape or get_elem is reported at `file`:`line`. Call it
-/// through TCICT_DIAGONAL_OF, which passes the caller's location.
+/// through TCICT_REAL_DIAGONAL_OF, which passes the caller's location.
 template <typename Ctx, typename DiagT>
-std::vector<double> diagonal_of_at(const char *file, int line, Ctx &ctx,
-                                   const DiagT &tensor) {
+std::vector<double> real_diagonal_of_at(const char *file, int line, Ctx &ctx,
+                                        const DiagT &tensor) {
   const auto shape =
       detail::nothrow_call(file, line, [&] { return tci::shape(ctx, tensor); });
   if (shape.size() != 2 || shape[0] != shape[1]) {
     detail::fail_at(file, line,
-                    "diagonal_of_at: not a square second-order tensor");
+                    "real_diagonal_of_at: not a square second-order tensor");
   }
   const auto n = static_cast<std::size_t>(shape[0]);
   if (n == 0) {
-    detail::fail_at(file, line, "diagonal_of_at: the tensor has shape {0, 0}");
+    detail::fail_at(file, line,
+                    "real_diagonal_of_at: the tensor has shape {0, 0}");
   }
   std::vector<double> diagonal(n);
   for (std::size_t i = 0; i < n; ++i) {
@@ -210,7 +211,7 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
 #define TCICT_EXPECT_DIAGONAL(...)                                             \
   ::tcict::expect_diagonal_at(__FILE__, __LINE__, __VA_ARGS__)
 
-/// diagonal_of_at with the caller's file and line:
-/// TCICT_DIAGONAL_OF(ctx, tensor).
-#define TCICT_DIAGONAL_OF(...)                                                 \
-  ::tcict::diagonal_of_at(__FILE__, __LINE__, __VA_ARGS__)
+/// real_diagonal_of_at with the caller's file and line:
+/// TCICT_REAL_DIAGONAL_OF(ctx, tensor).
+#define TCICT_REAL_DIAGONAL_OF(...)                                            \
+  ::tcict::real_diagonal_of_at(__FILE__, __LINE__, __VA_ARGS__)
