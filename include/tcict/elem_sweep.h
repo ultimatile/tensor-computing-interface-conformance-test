@@ -110,6 +110,13 @@ template <typename TenT> std::complex<double> written(double v) {
   return {v, is_complex_v<TenT> ? -0.5 * v : 0.0};
 }
 
+/// `written<TenT>(v)` as an element: the element `TCICT_SET_ELEMS` writes for
+/// the real value `v`.
+template <typename TenT> tci::elem_t<TenT> written_elem(double v) {
+  const auto w = written<TenT>(v);
+  return make_elem<TenT>(w.real(), w.imag());
+}
+
 /// Sets the element at every coordinate `coors` of `tensor` to the value with
 /// real part `v = value_at(coors)` and, for a complex element type, imaginary
 /// part `-0.5 * v`, so that an operation losing or conjugating imaginary parts
@@ -127,12 +134,10 @@ void set_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
       file, line, [&] { return tci::shape(ctx, tensor); });
   detail::for_each_coors<TenT>(
       shape, [&](const tci::elem_coors_t<TenT> &coors) {
-        const auto w = written<TenT>(static_cast<double>(
+        const auto elem = written_elem<TenT>(static_cast<double>(
             detail::nothrow_call(file, line, [&] { return value_at(coors); })));
-        detail::nothrow_call(file, line, [&] {
-          tci::set_elem(ctx, tensor, coors,
-                        make_elem<TenT>(w.real(), w.imag()));
-        });
+        detail::nothrow_call(file, line,
+                             [&] { tci::set_elem(ctx, tensor, coors, elem); });
       });
 }
 

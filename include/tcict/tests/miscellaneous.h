@@ -52,9 +52,10 @@ void test_close_different(tci_test_fixture<TenT> &fix) {
 // --- close: zeroth-order ---
 
 // TCAPI V1: close is true "iff shapes match and `max(|a_i - b_i|) <= epsilon`".
-// Against a copy it is true; against another value, or for a complex element
-// type a difference in the imaginary part alone, it is false; and against a
-// shape-{1} tensor holding the same value it is false, since {} and {1} differ.
+// Against an equal tensor it is true; against another value, or for a complex
+// element type a difference in the imaginary part alone, it is false; and
+// against a shape-{1} tensor holding the same value it is false, since {} and
+// {1} differ.
 template <typename TenT>
 void test_close_zeroth_order(tci_test_fixture<TenT> &fix) {
 #if !defined(TCICT_SKIP_CLOSE) && defined(TCICT_HAS_ELEM_SWEEP)
@@ -64,7 +65,8 @@ void test_close_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto a = tci::zeros<TenT>(ctx, {});
   TCICT_SET_ELEMS(fix, a, value);
 
-  auto same = tci::copy(ctx, a);
+  auto same = tci::zeros<TenT>(ctx, {});
+  TCICT_SET_ELEMS(fix, same, value);
   TCICT_ASSERT(tci::close(ctx, a, same, eps));
 
   auto other = tci::zeros<TenT>(ctx, {});

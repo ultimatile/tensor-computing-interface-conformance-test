@@ -406,7 +406,7 @@ void test_contract_dot_product(tci_test_fixture<TenT> &fix) {
   // tensor (order 0, shape {}, size 1), read at the empty coordinate {}.
   // dot = 1*4 + 2*5 + 3*6 = 32
   TCICT_EXPECT_ZEROTH_ORDER(fix, c, std::complex<double>(32.0, 0.0),
-                            tol_category::reduction);
+                            tol_category::reduction, 3);
 #else
   (void)fix;
 #endif
@@ -439,7 +439,7 @@ void test_contract_dot_product_int_labels(tci_test_fixture<TenT> &fix) {
     const auto coors = coors_of<TenT>(i);
     dot += written<TenT>(a_at(coors)) * written<TenT>(b_at(coors));
   }
-  TCICT_EXPECT_ZEROTH_ORDER(fix, c, dot, tol_category::reduction);
+  TCICT_EXPECT_ZEROTH_ORDER(fix, c, dot, tol_category::reduction, 3);
 #else
   (void)fix;
 #endif

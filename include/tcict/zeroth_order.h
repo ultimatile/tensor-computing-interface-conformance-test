@@ -93,17 +93,6 @@ void assign_from_range_0d(tci::context_handle_t<TenT> &ctx, RandomIt first,
 }
 #endif
 
-#if defined(TCICT_HAS_ELEM_SWEEP)
-
-/// The element `TCICT_SET_ELEMS` writes for the real value `v`, as
-/// `written<TenT>` gives it.
-template <typename TenT> tci::elem_t<TenT> written_elem(double v) {
-  const auto w = written<TenT>(v);
-  return make_elem<TenT>(w.real(), w.imag());
-}
-
-#endif
-
 #if defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
 
 /// Asserts that `tensor` has order 0, shape {} and size 1, whatever its tensor
