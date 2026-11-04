@@ -47,12 +47,14 @@
 //
 // Tests that build and check tensors element by element:
 //
-// The concatenate, stack and linear_combine tests build every input with
-// zeros and set_elem and check every element with shape and get_elem (see
-// include/tcict/elem_sweep.h). Defining any of TCICT_SKIP_ZEROS,
+// The concatenate, stack and linear_combine tests, and the zeroth-order
+// tests, build their inputs with zeros and set_elem and check every element
+// with shape and get_elem (see include/tcict/elem_sweep.h and
+// include/tcict/zeroth_order.h); the tests of a constructor build with that
+// constructor instead. Defining any of TCICT_SKIP_ZEROS,
 // TCICT_SKIP_SET_ELEM, TCICT_SKIP_GET_ELEM or TCICT_SKIP_SHAPE therefore
 // skips those tests too, so a gap in one of those four APIs is not reported
-// as a concatenate, stack or linear_combine failure. TCICT_HAS_ELEM_SWEEP,
+// as a failure of the API a test is about. TCICT_HAS_ELEM_SWEEP,
 // defined below, holds exactly when none of the four is skipped. It is fixed
 // when this file is first included, so define those four before including any
 // tcict header, for instance as compile definitions (see "Usage" above).

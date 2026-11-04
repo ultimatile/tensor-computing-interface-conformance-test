@@ -116,3 +116,17 @@ So they neither assert, nor allocate, nor read a coordinate's components before 
 Whatever a callback observes for the test, such as a flag for a malformed coordinate, a visit count or a running sum, it keeps in variables the test reads after the call returns, and the test asserts on those.
 A callback that receives a second-order coordinate makes that check with `coors_2d` in `include/tcict/elem_helper.h` before reading its components, and records a coordinate `coors_2d` rejects in a flag the test asserts is clear.
 Tests call `to_range` and `assign_from_range` on second-order tensors through `to_range_2d` and `assign_from_range_2d` in `include/tcict/range_2d.h`.
+
+### Zeroth-order tensors
+
+TCAPI V1, under "Zeroth-Order and Diagonal Tensor Semantics": "TCAPI represents a scalar-valued **tensor** result as a zeroth-order tensor: empty shape `{}`, `size == 1`, and a single empty coordinate sequence."
+Where a test knows the element a zeroth-order `TenT` should hold, it checks the tensor through `TCICT_EXPECT_ZEROTH_ORDER` in `include/tcict/zeroth_order.h`: order 0 and size 1, then shape `{}` and the sole element read at `{}`.
+The results of `real`, `imag` and `to_cplx` have another tensor type and are checked directly, and so is the result of `random`, whose element is one of the values the generator returned.
+A callback that receives a coordinate of a zeroth-order tensor expects the empty one and flags any other, under "Callbacks the backend invokes", through `to_range_0d`, `assign_from_range_0d` or `visit_record_0d` in the same header.
+
+V1 goes on: "Operations whose definitions require selecting, reordering, inserting, removing, slicing, or partitioning bonds (`transpose`, `svd`, `qr`, `eig`, `expand`, `shrink`, `extract_sub`, `replace_sub`, ...) are not applicable to zeroth-order tensors."
+V1 defines no exception for them, so nothing about calling them on a zeroth-order tensor is assertable, and no test does.
+The same sentence also leaves out `concatenate`, which selects a bond, `stack`, which inserts one, and the operations that matricize, which partition bonds into rows and columns (`trunc_svd`, `lq`, `eigh`, `eigvals`, `eigvalsh`, `exp`, `inverse`); `diag` V1 requires to be first- or second-order.
+
+The zeroth-order tests assert nothing about `TenT{}`, the state `clear` and `move` leave, since V1 does not say what queries return on it.
+Of `size_bytes` they assert only that it returns, as the tests of the other ranks do.

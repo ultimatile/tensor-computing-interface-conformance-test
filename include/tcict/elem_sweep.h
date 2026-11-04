@@ -17,7 +17,8 @@ namespace tcict {
 
 // Guarded by TCICT_HAS_ELEM_SWEEP (include/tcict/skip.h), the element-API
 // condition every test using these helpers also requires: the helpers call
-// set_elem, shape and get_elem, and those tests build their inputs with zeros.
+// set_elem, shape and get_elem, and those tests build their inputs with zeros,
+// apart from the tests of another constructor, which build with that one.
 #if defined(TCICT_HAS_ELEM_SWEEP)
 
 namespace detail {
