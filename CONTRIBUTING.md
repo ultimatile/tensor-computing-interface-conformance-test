@@ -136,9 +136,7 @@ Of `size_bytes` they assert only that it returns, as the tests of the other rank
 
 TCAPI V1, under "Zeroth-Order and Diagonal Tensor Semantics": "A diagonal tensor's logical elements — including off-diagonal zeros — define its behavior regardless of storage."
 It names the tensors this covers: "`eye`, `diag` (order 1 → 2), and the `sigma`/`lambda_mat` outputs of `svd`/`trunc_svd`/`eig`/`eigh` are diagonal tensors."
-The tests of `diag`, `svd`, `trunc_svd`, `eig` and `eigh` check each diagonal tensor they produce through `TCICT_EXPECT_DIAGONAL` in `include/tcict/diagonal.h`: order 2, shape `{n, n}` and size `n * n`, checked before any element is read, then every element against the expected diagonal.
-Off-diagonal elements must be exactly zero, since V1 defines a diagonal tensor as one "whose off-diagonal elements are zero".
-`eye` is the one listed tensor checked without it: `test_eye` reads each element itself and compares the off-diagonal ones with zero within the elementwise tolerance, and `test_eye_to_range` checks the elements `to_range` writes.
-The check takes any tensor type, with the context its input came with, because `sigma` and `eigh`'s `lambda_mat` are `real_ten_t<TenT>` and `eig`'s `lambda_mat` is `cplx_ten_t<TenT>`.
+`test_eye` and the tests of `diag`, `svd`, `trunc_svd`, `eig` and `eigh` check each diagonal tensor they produce, and `test_diag_mat_to_vec_outofplace` the diagonal input it reads back, through `TCICT_EXPECT_DIAGONAL` in `include/tcict/diagonal.h`: order 2, shape `{n, n}` and size `n * n`, checked before any element is read, then every element against the expected diagonal.
+Off-diagonal elements must be exactly zero, since V1 defines a diagonal tensor as one "whose off-diagonal elements are zero".The check takes any tensor type, with the context its input came with, because `sigma` and `eigh`'s `lambda_mat` are `real_ten_t<TenT>` and `eig`'s `lambda_mat` is `cplx_ten_t<TenT>`.
 V1 fixes the order of the diagonal for `svd` ("non-increasing order") and for `eigh` ("ascending order") but not for `trunc_svd` or `eig`, so the `trunc_svd` tests, and the `eig` tests wherever the eigenvalues are not all equal, compare the diagonal as a multiset, through `diag_order::any`.
 `eigvals` and `eigvalsh` return first-order lists, and their tests assert order 1.

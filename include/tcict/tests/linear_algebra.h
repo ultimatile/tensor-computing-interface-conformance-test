@@ -985,11 +985,28 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
   TCICT_ASSERT_CLOSE(err_general, trunc_svd_expected_epsilon<TenT>(2), tol);
 
   // Equivalence is a claim about the whole decomposition, so compare every
-  // output the two calls produce, not just the retained count: both sigmas
-  // were checked against the same values above, the errors are compared here,
-  // and the factors below. The sigmas are not compared position by position,
-  // since V1 fixes no order for trunc_svd's diagonal.
+  // output the two calls produce, not just the retained count. The sigmas are
+  // compared with each other as multisets, through their sorted diagonals,
+  // since V1 fixes no order for trunc_svd's diagonal; both were checked above
+  // to hold finite values, so the sort is well defined.
   TCICT_ASSERT_CLOSE(err_general, err_simple, tol);
+
+  using RealTenT = tci::real_ten_t<TenT>;
+  auto sorted_diagonal = [&ctx](const RealTenT &s) {
+    const auto n = tci::shape(ctx, s)[0];
+    std::vector<double> d;
+    for (tci::bond_dim_t<RealTenT> i = 0; i < n; ++i) {
+      const auto c = static_cast<tci::elem_coor_t<RealTenT>>(i);
+      d.push_back(real_part<RealTenT>(tci::get_elem(ctx, s, {c, c})));
+    }
+    std::sort(d.begin(), d.end());
+    return d;
+  };
+  const auto d_general = sorted_diagonal(s_general);
+  const auto d_simple = sorted_diagonal(s_simple);
+  for (std::size_t k = 0; k < d_general.size(); ++k) {
+    TCICT_ASSERT_CLOSE(d_general[k], d_simple[k], tol);
+  }
 
   // The factors are compared through the product they reconstruct rather than
   // elementwise: for a spectrum with distinct singular values the columns of u
@@ -997,8 +1014,7 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
   // identically, so an elementwise comparison would assert more than the
   // equivalence claim. The reconstruction is invariant under that phase, and
   // unlike a shape comparison it does read the factors' values.
-  using RealTenT = tci::real_ten_t<TenT>;
-  auto reconstruct = [&ctx](const TenT &u_in, const RealTenT &s_in, const TenT &v_in) {
+  auto reconstruct =[&ctx](const TenT &u_in, const RealTenT &s_in, const TenT &v_in) {
     const auto u_shape = tci::shape(ctx, u_in);
     auto scaled = tci::copy(ctx, u_in);
     for (tci::bond_dim_t<TenT> j = 0; j < u_shape[1]; ++j) {

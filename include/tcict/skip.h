@@ -62,8 +62,8 @@
 // TCICT_SKIP_SIZE is defined.
 //
 // The tests that check a diagonal tensor through TCICT_EXPECT_DIAGONAL in
-// include/tcict/diagonal.h, the diag, svd, trunc_svd, eig and eigh tests apart
-// from test_diag_mat_to_vec, reach order, shape, size and get_elem through it,
+// include/tcict/diagonal.h, test_eye and the diag, svd, trunc_svd, eig and
+// eigh tests apart from test_diag_mat_to_vec, reach order, shape, size and get_elem through it,
 // and defining any of TCICT_SKIP_ORDER, TCICT_SKIP_SHAPE, TCICT_SKIP_SIZE or
 // TCICT_SKIP_GET_ELEM skips them too. TCICT_HAS_DIAGONAL_CHECK, defined below,
 // holds exactly when none of those four is skipped.
