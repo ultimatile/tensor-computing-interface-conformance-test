@@ -56,9 +56,11 @@ struct visit_record_0d {
 };
 
 // Each wrapper is guarded by the skip macro of the API it wraps, as in
-// include/tcict/range_2d.h.
+// include/tcict/range_2d.h, and by TCICT_HAS_ELEM_SWEEP, which every test
+// calling it also requires: the wrappers call tci::shape, which a backend
+// defining TCICT_SKIP_SHAPE need not declare.
 
-#ifndef TCICT_SKIP_TO_RANGE
+#if !defined(TCICT_SKIP_TO_RANGE) && defined(TCICT_HAS_ELEM_SWEEP)
 /// `to_range` of a zeroth-order `a` into a one-element range at `first`.
 /// Asserts that `a` has shape {} before the call, then that the call throws no
 /// std::exception and that the backend passed only the empty coordinate.
@@ -74,7 +76,7 @@ void to_range_0d(tci::context_handle_t<TenT> &ctx, const TenT &a,
 }
 #endif
 
-#ifndef TCICT_SKIP_ASSIGN_FROM_RANGE
+#if !defined(TCICT_SKIP_ASSIGN_FROM_RANGE) && defined(TCICT_HAS_ELEM_SWEEP)
 /// `assign_from_range` at shape {} from the one-element range at `first`, into
 /// `out`. Asserts that the call throws no std::exception, that the backend
 /// passed only the empty coordinate, and that `out` has shape {}.
