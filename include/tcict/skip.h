@@ -50,8 +50,8 @@
 // The tests that build or check tensors through the helpers in
 // include/tcict/elem_sweep.h and include/tcict/zeroth_order.h, among them the
 // concatenate, stack and linear_combine tests and most zeroth-order tests,
-// reach set_elem, shape and get_elem through them and build their inputs with
-// zeros. Defining any of
+// reach set_elem, shape and get_elem through them and, apart from the tests of
+// the other constructors, build their inputs with zeros. Defining any of
 // TCICT_SKIP_ZEROS, TCICT_SKIP_SET_ELEM, TCICT_SKIP_GET_ELEM or
 // TCICT_SKIP_SHAPE therefore skips those tests too, so a gap in one of those
 // four APIs is not reported as a failure of the API a test is about. The

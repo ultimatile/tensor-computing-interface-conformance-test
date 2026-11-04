@@ -200,7 +200,7 @@ void test_real_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return 4.0; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 4.0);
 
   auto real_tensor = tci::real(ctx, tensor);
 
@@ -219,7 +219,7 @@ void test_imag_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return 4.0; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 4.0);
 
   auto imag_tensor = tci::imag(ctx, tensor);
 
@@ -320,14 +320,14 @@ void test_cplx_conj_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto conj_of = [](double v) { return std::conj(written<TenT>(v)); };
 
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return 2.0; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 2.0);
   tci::cplx_conj(ctx, tensor);
   TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, conj_of(2.0), tol_category::elementwise);
 
   // Out of place; the input is read back, see "Out-of-place inputs" in
   // CONTRIBUTING.md.
   auto input = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, input, [](const tci::elem_coors_t<TenT> &) { return -3.0; });
+  TCICT_SET_ZEROTH_ORDER(fix, input, -3.0);
   TenT output;
   tci::cplx_conj(ctx, input, output);
   TCICT_EXPECT_ZEROTH_ORDER(fix, output, conj_of(-3.0), tol_category::elementwise);
@@ -412,7 +412,7 @@ void test_to_cplx_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::elementwise);
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return -2.5; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, -2.5);
 
   auto complex_tensor = tci::to_cplx(ctx, tensor);
 
@@ -569,7 +569,7 @@ void test_for_each_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto tol = tolerance(fix, tol_category::elementwise);
   using Elem = tci::elem_t<TenT>;
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return 1.5; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 1.5);
 
   std::size_t visits = 0;
   Elem passed = make_elem<TenT>(0.0);
@@ -722,7 +722,7 @@ void test_for_each_with_coors_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto tol = tolerance(fix, tol_category::elementwise);
   using Elem = tci::elem_t<TenT>;
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return 1.5; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 1.5);
 
   Elem passed = make_elem<TenT>(0.0);
   visit_record_0d read_only;
@@ -922,7 +922,7 @@ void test_reshape_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto value = [](const tci::elem_coors_t<TenT> &) { return 2.75; };
 
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, value);
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 2.75);
   TCICT_ASSERT_NOTHROW(tci::reshape(ctx, tensor, {1}));
   TCICT_EXPECT_ELEMS(fix, tensor, {1}, value, tol_category::exact);
   TCICT_ASSERT_NOTHROW(tci::reshape(ctx, tensor, {1, 1}));
@@ -939,7 +939,7 @@ void test_reshape_zeroth_order(tci_test_fixture<TenT> &fix) {
   // Out of place; the input is read back, see "Out-of-place inputs" in
   // CONTRIBUTING.md.
   auto input = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, input, [](const tci::elem_coors_t<TenT> &) { return -1.5; });
+  TCICT_SET_ZEROTH_ORDER(fix, input, -1.5);
   TenT output;
   TCICT_ASSERT_NOTHROW(tci::reshape(ctx, input, {1}, output));
   TCICT_EXPECT_ELEMS(

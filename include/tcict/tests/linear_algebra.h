@@ -170,8 +170,8 @@ void test_linear_combine_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto &ctx = fix.context();
   auto tensor_a = tci::zeros<TenT>(ctx, {});
   auto tensor_b = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor_a, [](const tci::elem_coors_t<TenT> &) { return 1.25; });
-  TCICT_SET_ELEMS(fix, tensor_b, [](const tci::elem_coors_t<TenT> &) { return -3.5; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor_a, 1.25);
+  TCICT_SET_ZEROTH_ORDER(fix, tensor_b, -3.5);
 
   tci::List<tci::CRef<TenT>> ins = {std::cref(tensor_a), std::cref(tensor_b)};
   auto sum = TCICT_NOTHROW_VALUE(tci::linear_combine<TenT>(ctx, ins));
@@ -297,7 +297,7 @@ void test_normalize_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto tol = tolerance(fix, tol_category::reduction);
 
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return -2.0; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, -2.0);
   const auto w = written<TenT>(-2.0);
   const auto original = tci::normalize(ctx, tensor);
   TCICT_ASSERT_CLOSE(original, std::abs(w), tol);
@@ -306,7 +306,7 @@ void test_normalize_zeroth_order(tci_test_fixture<TenT> &fix) {
   // Out of place; the input is read back, see "Out-of-place inputs" in
   // CONTRIBUTING.md.
   auto input = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, input, [](const tci::elem_coors_t<TenT> &) { return 3.0; });
+  TCICT_SET_ZEROTH_ORDER(fix, input, 3.0);
   const auto w_in = written<TenT>(3.0);
   TenT output;
   const auto original_in = tci::normalize(ctx, input, output);
@@ -342,7 +342,7 @@ void test_norm_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::reduction);
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return -2.0; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, -2.0);
   TCICT_ASSERT_CLOSE(tci::norm(ctx, tensor), std::abs(written<TenT>(-2.0)), tol);
 #else
   (void)fix;
@@ -459,8 +459,8 @@ void test_contract_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto s = tci::zeros<TenT>(ctx, {});
   auto t = tci::zeros<TenT>(ctx, {});
   auto v = tci::zeros<TenT>(ctx, {3});
-  TCICT_SET_ELEMS(fix, s, [](const tci::elem_coors_t<TenT> &) { return 1.5; });
-  TCICT_SET_ELEMS(fix, t, [](const tci::elem_coors_t<TenT> &) { return -2.0; });
+  TCICT_SET_ZEROTH_ORDER(fix, s, 1.5);
+  TCICT_SET_ZEROTH_ORDER(fix, t, -2.0);
   TCICT_SET_ELEMS(fix, v, v_at);
   auto scaled = [&](const tci::elem_coors_t<TenT> &x) {
     return written<TenT>(1.5) * written<TenT>(v_at(x));
@@ -1378,7 +1378,7 @@ void test_scale_zeroth_order(tci_test_fixture<TenT> &fix) {
   const auto s_elem = make_elem<TenT>(s.real(), s.imag());
 
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return 2.0; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 2.0);
   tci::scale(ctx, tensor, s_elem);
   TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, written<TenT>(2.0) * s,
                             tol_category::elementwise);
@@ -1386,7 +1386,7 @@ void test_scale_zeroth_order(tci_test_fixture<TenT> &fix) {
   // Out of place; the input is read back, see "Out-of-place inputs" in
   // CONTRIBUTING.md.
   auto input = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, input, [](const tci::elem_coors_t<TenT> &) { return -0.5; });
+  TCICT_SET_ZEROTH_ORDER(fix, input, -0.5);
   TenT output;
   tci::scale(ctx, input, s_elem, output);
   TCICT_EXPECT_ZEROTH_ORDER(fix, output, written<TenT>(-0.5) * s,

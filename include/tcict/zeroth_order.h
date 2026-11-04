@@ -93,6 +93,33 @@ void assign_from_range_0d(tci::context_handle_t<TenT> &ctx, RandomIt first,
 }
 #endif
 
+#if defined(TCICT_HAS_ELEM_SWEEP)
+
+/// Sets the sole element of `tensor`, which the caller built at shape {}, to
+/// `written_elem<TenT>(v)`, after asserting that its shape is {}. A constructor
+/// that ignores the empty shape is then reported here, as the input it built,
+/// rather than as a failure of the operation the test is about. A
+/// std::exception from shape or set_elem is reported at `file`:`line` as
+/// detail::nothrow_call reports it; call it through TCICT_SET_ZEROTH_ORDER,
+/// which passes the caller's location.
+template <typename TenT>
+void set_zeroth_order_at(const char *file, int line,
+                         tci_test_fixture<TenT> &fix, TenT &tensor, double v) {
+  auto &ctx = fix.context();
+  const auto shape =
+      detail::nothrow_call(file, line, [&] { return tci::shape(ctx, tensor); });
+  if (!shape.empty()) {
+    std::ostringstream oss;
+    oss << "a tensor built at shape {} has " << shape.size() << " bonds";
+    detail::fail_at(file, line, oss.str());
+  }
+  const auto elem = written_elem<TenT>(v);
+  detail::nothrow_call(file, line,
+                       [&] { tci::set_elem(ctx, tensor, {}, elem); });
+}
+
+#endif
+
 #if defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
 
 /// Asserts that `tensor` has order 0, shape {} and size 1, whatever its tensor
@@ -151,6 +178,11 @@ void expect_zeroth_order_at(const char *file, int line,
 /// TCICT_EXPECT_ELEMS.
 #define TCICT_EXPECT_ZEROTH_ORDER(...)                                         \
   ::tcict::expect_zeroth_order_at(__FILE__, __LINE__, __VA_ARGS__)
+
+/// set_zeroth_order_at with the caller's file and line:
+/// TCICT_SET_ZEROTH_ORDER(fix, tensor, v).
+#define TCICT_SET_ZEROTH_ORDER(...)                                            \
+  ::tcict::set_zeroth_order_at(__FILE__, __LINE__, __VA_ARGS__)
 
 /// expect_zeroth_order_shape_at with the caller's file and line:
 /// TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, tensor).

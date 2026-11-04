@@ -63,14 +63,14 @@ void test_close_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto eps = fix.epsilon();
   auto value = [](const tci::elem_coors_t<TenT> &) { return 1.5; };
   auto a = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, a, value);
+  TCICT_SET_ZEROTH_ORDER(fix, a, 1.5);
 
   auto same = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, same, value);
+  TCICT_SET_ZEROTH_ORDER(fix, same, 1.5);
   TCICT_ASSERT(tci::close(ctx, a, same, eps));
 
   auto other = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, other, [](const tci::elem_coors_t<TenT> &) { return 1.75; });
+  TCICT_SET_ZEROTH_ORDER(fix, other, 1.75);
   TCICT_ASSERT(!tci::close(ctx, a, other, eps));
 
   if constexpr (is_complex_v<TenT>) {
@@ -137,7 +137,7 @@ void test_to_range_zeroth_order(tci_test_fixture<TenT> &fix) {
 #if !defined(TCICT_SKIP_TO_RANGE) && defined(TCICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return 5.5; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 5.5);
 
   std::vector<tci::elem_t<TenT>> out(1, make_elem<TenT>(-99.0));
   to_range_0d(ctx, tensor, out.begin());
@@ -170,7 +170,7 @@ void test_show_zeroth_order(tci_test_fixture<TenT> &fix) {
   // The output format is implementation-defined; the call returning is what
   // is asserted.
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT> &) { return 2.5; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, 2.5);
   TCICT_ASSERT_NOTHROW(tci::show(ctx, tensor));
 #else
   (void)fix;
@@ -264,7 +264,7 @@ void test_convert_zeroth_order(tci_test_fixture<TenT> &fix) {
 #if !defined(TCICT_SKIP_CONVERT) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto &ctx = fix.context();
   auto a = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, a, [](const tci::elem_coors_t<TenT> &) { return 2.5; });
+  TCICT_SET_ZEROTH_ORDER(fix, a, 2.5);
 
   TenT b;
   TCICT_ASSERT_NOTHROW(tci::convert(ctx, a, ctx, b));

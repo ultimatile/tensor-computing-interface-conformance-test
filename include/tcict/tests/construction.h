@@ -457,7 +457,7 @@ void test_copy_zeroth_order(tci_test_fixture<TenT>& fix) {
 #if !defined(TCICT_SKIP_COPY) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
   auto orig = tci::template zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, orig, [](const tci::elem_coors_t<TenT>&) { return 3.5; });
+  TCICT_SET_ZEROTH_ORDER(fix, orig, 3.5);
 
   TenT copied;
   TCICT_ASSERT_NOTHROW(copied = tci::copy(ctx, orig));
@@ -817,7 +817,7 @@ void test_move_zeroth_order(tci_test_fixture<TenT>& fix) {
 #if !defined(TCICT_SKIP_MOVE) && defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
   auto source = tci::template zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, source, [](const tci::elem_coors_t<TenT>&) { return 4.5; });
+  TCICT_SET_ZEROTH_ORDER(fix, source, 4.5);
 
   TenT moved;
   TCICT_ASSERT_NOTHROW(moved = tci::move(ctx, source));

@@ -78,7 +78,7 @@ void test_save_load_zeroth_order(tci_test_fixture<TenT>& fix) {
     defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
   auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ELEMS(fix, tensor, [](const tci::elem_coors_t<TenT>&) { return -6.5; });
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, -6.5);
 
   std::string filepath = "/tmp/tcict_test_zeroth_order_roundtrip";
   // Remove stale file to ensure save actually writes

@@ -62,8 +62,9 @@ void test_size_bytes(tci_test_fixture<TenT>& fix) {
   auto tensor = tci::zeros<TenT>(ctx, {2, 3, 4});
   // V1's entry for it is "Reports memory consumption in bytes": no formula, no
   // lower bound. Callable-and-returns is the whole of what is portably
-  // assertable, so what this test and its second-order counterpart below give
-  // between them is that neither rank makes the call fail.
+  // assertable, so what this test and its second-order and zeroth-order
+  // counterparts below give between them is that none of the three ranks makes
+  // the call fail.
   TCICT_ASSERT_NOTHROW(tci::size_bytes(ctx, tensor));
 #else
   (void)fix;
@@ -119,7 +120,7 @@ template <typename TenT>
 void test_size_bytes_2x2(tci_test_fixture<TenT>& fix) {
 #ifndef TCICT_SKIP_SIZE_BYTES
   auto& ctx = fix.context();
-  // The second-order half of the pair; see the third-order test above for what
+  // The second-order one of the three; see the third-order test above for what
   // V1 leaves assertable.
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
   TCICT_ASSERT_NOTHROW(tci::size_bytes(ctx, tensor));
@@ -132,11 +133,13 @@ void test_size_bytes_2x2(tci_test_fixture<TenT>& fix) {
 
 template <typename TenT>
 void test_size_bytes_zeroth_order(tci_test_fixture<TenT>& fix) {
-#ifndef TCICT_SKIP_SIZE_BYTES
+#if !defined(TCICT_SKIP_SIZE_BYTES) && !defined(TCICT_SKIP_SHAPE)
   auto& ctx = fix.context();
   // As for the third-order test above, the call returning is all V1 leaves
-  // assertable; this adds the zeroth order to the ranks it is made on.
+  // assertable; this adds the zeroth order to the ranks it is made on. The
+  // shape check keeps the test from passing on a tensor that is not one.
   auto tensor = tci::zeros<TenT>(ctx, {});
+  TCICT_ASSERT(tci::shape(ctx, tensor).empty());
   TCICT_ASSERT_NOTHROW(tci::size_bytes(ctx, tensor));
 #else
   (void)fix;
