@@ -208,6 +208,14 @@ void test_real_zeroth_order(tci_test_fixture<TenT> &fix) {
   TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, real_tensor);
   TCICT_ASSERT_CLOSE(real_part<RealTenT>(tci::get_elem(ctx, real_tensor, {})),
                      4.0, tol);
+
+  // V1: "Deep copy if already real", so for a real TenT a write to the input
+  // afterwards leaves the result as it was.
+  if constexpr (!is_complex_v<TenT>) {
+    TCICT_SET_ZEROTH_ORDER(fix, tensor, -7.0);
+    TCICT_ASSERT_CLOSE(
+        real_part<RealTenT>(tci::get_elem(ctx, real_tensor, {})), 4.0, tol);
+  }
 #else
   (void)fix;
 #endif
@@ -332,6 +340,13 @@ void test_cplx_conj_zeroth_order(tci_test_fixture<TenT> &fix) {
   tci::cplx_conj(ctx, input, output);
   TCICT_EXPECT_ZEROTH_ORDER(fix, output, conj_of(-3.0), tol_category::elementwise);
   TCICT_EXPECT_ZEROTH_ORDER(fix, input, -3.0);
+
+  // V1: the out-of-place overload is a "deep copy for real", so for a real
+  // TenT a write to the input afterwards leaves the output as it was.
+  if constexpr (!is_complex_v<TenT>) {
+    TCICT_SET_ZEROTH_ORDER(fix, input, 5.0);
+    TCICT_EXPECT_ZEROTH_ORDER(fix, output, conj_of(-3.0), tol_category::elementwise);
+  }
 #else
   (void)fix;
 #endif
@@ -422,6 +437,15 @@ void test_to_cplx_zeroth_order(tci_test_fixture<TenT> &fix) {
   const auto elem = tci::get_elem(ctx, complex_tensor, {});
   TCICT_ASSERT_CLOSE(real_part<CplxTenT>(elem), expected.real(), tol);
   TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem), expected.imag(), tol);
+
+  // V1: "complex inputs yield a deep copy", so for a complex TenT a write to
+  // the input afterwards leaves the result as it was.
+  if constexpr (is_complex_v<TenT>) {
+    TCICT_SET_ZEROTH_ORDER(fix, tensor, 9.0);
+    const auto after = tci::get_elem(ctx, complex_tensor, {});
+    TCICT_ASSERT_CLOSE(real_part<CplxTenT>(after), expected.real(), tol);
+    TCICT_ASSERT_CLOSE(imag_part<CplxTenT>(after), expected.imag(), tol);
+  }
 #else
   (void)fix;
 #endif

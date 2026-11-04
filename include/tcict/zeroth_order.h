@@ -95,10 +95,11 @@ void assign_from_range_0d(tci::context_handle_t<TenT> &ctx, RandomIt first,
 
 #if defined(TCICT_HAS_ELEM_SWEEP)
 
-/// Sets the sole element of `tensor`, which the caller built at shape {}, to
-/// `written_elem<TenT>(v)`, after asserting that its shape is {}. A constructor
-/// that ignores the empty shape is then reported here, as the input it built,
-/// rather than as a failure of the operation the test is about. A
+/// Sets the sole element of the zeroth-order `tensor` to
+/// `written_elem<TenT>(v)`, after asserting that its shape is {}. On an input
+/// the caller just built at shape {}, a constructor that ignores the empty
+/// shape is then reported here, as the input it built, rather than as a
+/// failure of the operation the test is about. A
 /// std::exception from shape or set_elem is reported at `file`:`line` as
 /// detail::nothrow_call reports it; call it through TCICT_SET_ZEROTH_ORDER,
 /// which passes the caller's location.
@@ -110,7 +111,7 @@ void set_zeroth_order_at(const char *file, int line,
       detail::nothrow_call(file, line, [&] { return tci::shape(ctx, tensor); });
   if (!shape.empty()) {
     std::ostringstream oss;
-    oss << "a tensor built at shape {} has " << shape.size() << " bonds";
+    oss << "a tensor expected to be zeroth-order has " << shape.size() << " bonds";
     detail::fail_at(file, line, oss.str());
   }
   const auto elem = written_elem<TenT>(v);

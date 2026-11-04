@@ -463,7 +463,7 @@ void test_copy_zeroth_order(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_NOTHROW(copied = tci::copy(ctx, orig));
   TCICT_EXPECT_ZEROTH_ORDER(fix, copied, 3.5);
 
-  tci::set_elem(ctx, copied, {}, written_elem<TenT>(-4.0));
+  TCICT_SET_ZEROTH_ORDER(fix, copied, -4.0);
   TCICT_EXPECT_ZEROTH_ORDER(fix, copied, -4.0);
   TCICT_EXPECT_ZEROTH_ORDER(fix, orig, 3.5);
 #else
@@ -652,7 +652,7 @@ void test_allocate_zeroth_order(tci_test_fixture<TenT>& fix) {
   TCICT_ASSERT_NOTHROW(tensor = tci::template allocate<TenT>(ctx, {}));
   TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, tensor);
 
-  tci::set_elem(ctx, tensor, {}, written_elem<TenT>(-1.25));
+  TCICT_SET_ZEROTH_ORDER(fix, tensor, -1.25);
   TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, -1.25);
 #else
   (void)fix;

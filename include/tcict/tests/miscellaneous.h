@@ -271,7 +271,7 @@ void test_convert_zeroth_order(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT_NOTHROW(tci::convert(ctx, a, ctx, b));
   TCICT_EXPECT_ZEROTH_ORDER(fix, b, 2.5);
 
-  tci::set_elem(ctx, a, {}, written_elem<TenT>(-1.0));
+  TCICT_SET_ZEROTH_ORDER(fix, a, -1.0);
   TCICT_EXPECT_ZEROTH_ORDER(fix, b, 2.5);
 #else
   (void)fix;
