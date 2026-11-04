@@ -1066,6 +1066,21 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tci_test_fixture<Te
   auto reconstructed_general = reconstruct(u_general, s_general, v_dag_general);
   auto reconstructed_simple = reconstruct(u_simple, s_simple, v_dag_simple);
   TCICT_ASSERT(tci::close(ctx, reconstructed_general, reconstructed_simple, tol));
+
+  // The two products agreeing does not show that sigma is paired with the
+  // right columns of u and v, since sigma's order is free: a shared route
+  // could pair them wrongly in both. So the product is also compared with the
+  // input's best rank-2 approximation. The fixture is diag(3, 2, 1, 0.1), whose
+  // singular vectors are the unit vectors, so that approximation is
+  // diag(3, 2, 0, 0).
+  auto rank2 =
+      tci::zeros<TenT>(ctx, {kTruncSvdFixtureRank, kTruncSvdFixtureRank});
+  for (int i = 0; i < 2; ++i) {
+    const auto coor = static_cast<tci::elem_coor_t<TenT>>(i);
+    tci::set_elem(ctx, rank2, {coor, coor},
+                  make_elem<TenT>(kTruncSvdFixtureSvs[i]));
+  }
+  TCICT_ASSERT(tci::close(ctx, reconstructed_general, rank2, tol));
 #else
   (void)fix;
 #endif
