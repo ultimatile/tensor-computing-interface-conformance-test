@@ -774,7 +774,6 @@ void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
 
   TenT u, v_dag;
@@ -787,7 +786,8 @@ void test_trunc_svd_trunc_err_value(tci_test_fixture<TenT> &fix) {
   TCICT_EXPECT_DIAGONAL(ctx, s_diag, trunc_svd_fixture_svs(2),
                         tolerance(fix, tol_category::factorization),
                         diag_order::any);
-  TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(2), eps);
+  TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(2),
+                     tolerance(fix, tol_category::factorization));
 #else
   (void)fix;
 #endif
@@ -801,7 +801,6 @@ void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
 
   TenT u, v_dag;
@@ -815,7 +814,8 @@ void test_trunc_svd_trunc_err_no_truncation(tci_test_fixture<TenT> &fix) {
   TCICT_EXPECT_DIAGONAL(ctx, s_diag, trunc_svd_fixture_svs(4),
                         tolerance(fix, tol_category::factorization),
                         diag_order::any);
-  TCICT_ASSERT_CLOSE(trunc_err, 0.0, eps);
+  TCICT_ASSERT_CLOSE(trunc_err, 0.0,
+                     tolerance(fix, tol_category::factorization));
 #else
   (void)fix;
 #endif
@@ -829,7 +829,6 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
   auto matrix = trunc_svd_test_matrix<TenT>(ctx);
 
   TenT u, v_dag;
@@ -846,7 +845,8 @@ void test_trunc_svd_trunc_err_bounded(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT(trunc_err >= 0.0);
   TCICT_ASSERT(trunc_err <= 1.0);
 
-  TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(1), eps);
+  TCICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(1),
+                     tolerance(fix, tol_category::factorization));
 #else
   (void)fix;
 #endif
@@ -1633,15 +1633,13 @@ void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
   // Reconstruct: scale column j of U by sigma's {j, j} element, then contract
   // with V†: u_scaled[i,j] = u[i,j] * sigma[j,j]
   using RealTenT = tci::real_ten_t<TenT>;
-  const auto bond = tci::shape(ctx, s_diag)[0];
-  // u's bond must be sigma's, checked above to be {2, 2}, before u is read
-  // along it.
+  // u is {2, 2}: its rows are the input's and its bond is sigma's, checked
+  // above to be {2, 2}. Assert that before reading u.
   const auto u_shape = tci::shape(ctx, u);
-  TCICT_ASSERT(u_shape.size() == 2 && u_shape[1] == 2);
+  TCICT_ASSERT(u_shape.size() == 2 && u_shape[0] == 2 && u_shape[1] == 2);
   auto u_scaled = tci::copy(ctx, u);
-  for (tci::bond_dim_t<RealTenT> b = 0; b < bond; ++b) {
-    const auto j = static_cast<tci::elem_coor_t<TenT>>(b);
-    const auto cj = static_cast<tci::elem_coor_t<RealTenT>>(b);
+  for (tci::elem_coor_t<TenT> j = 0; j < 2; ++j) {
+    const auto cj = static_cast<tci::elem_coor_t<RealTenT>>(j);
     auto sj = real_part<RealTenT>(tci::get_elem(ctx, s_diag, {cj, cj}));
     for (tci::elem_coor_t<TenT> i = 0; i < 2; ++i) {
       auto elem = tci::get_elem(ctx, u, {i, j});
