@@ -1173,14 +1173,14 @@ template <typename TenT> void test_eig_identity(tci_test_fixture<TenT> &fix) {
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
   auto matrix = tci::eye<TenT>(ctx, 2);
 
   using CplxTenT = tci::cplx_ten_t<TenT>;
   CplxTenT eigenvals, eigenvecs;
   tci::eig(ctx, matrix, 1, eigenvals, eigenvecs);
 
-  TCICT_EXPECT_DIAGONAL(ctx, eigenvals, {1.0, 1.0}, eps);
+  TCICT_EXPECT_DIAGONAL(ctx, eigenvals, {1.0, 1.0},
+                        tolerance(fix, tol_category::factorization));
 
   TCICT_ASSERT(tci::order(ctx, eigenvecs) == 2);
 #else
@@ -1226,14 +1226,14 @@ template <typename TenT> void test_eigh_identity(tci_test_fixture<TenT> &fix) {
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
   auto matrix = tci::eye<TenT>(ctx, 2);
 
   tci::real_ten_t<TenT> eigenvals;
   TenT eigenvecs;
   tci::eigh(ctx, matrix, 1, eigenvals, eigenvecs);
 
-  TCICT_EXPECT_DIAGONAL(ctx, eigenvals, {1.0, 1.0}, eps);
+  TCICT_EXPECT_DIAGONAL(ctx, eigenvals, {1.0, 1.0},
+                        tolerance(fix, tol_category::factorization));
   TCICT_ASSERT(tci::order(ctx, eigenvecs) == 2);
 #else
   (void)fix;
@@ -1569,7 +1569,6 @@ template <typename TenT> void test_svd_basic(tci_test_fixture<TenT> &fix) {
   TCICT_RETURN_IF_SINGLE_PRECISION;
 #endif
   auto &ctx = fix.context();
-  auto eps = fix.epsilon();
 
   // Diagonal matrix with known singular values [3, 1]
   auto matrix = tci::zeros<TenT>(ctx, {2, 2});
@@ -1582,7 +1581,8 @@ template <typename TenT> void test_svd_basic(tci_test_fixture<TenT> &fix) {
 
   // sigma is the {2, 2} diagonal tensor holding the singular values 3 and 1
   // in non-increasing order.
-  TCICT_EXPECT_DIAGONAL(ctx, s_diag, {3.0, 1.0}, eps);
+  TCICT_EXPECT_DIAGONAL(ctx, s_diag, {3.0, 1.0},
+                        tolerance(fix, tol_category::factorization));
 
   // U shape: (2, 2), V† shape: (2, 2)
   auto u_shape = tci::shape(ctx, u);

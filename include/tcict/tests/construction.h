@@ -122,7 +122,7 @@ void test_eye(tci_test_fixture<TenT>& fix) {
   // the diagonal and exact zeros off it. See "Diagonal tensors" in
   // CONTRIBUTING.md.
   TCICT_EXPECT_DIAGONAL(ctx, identity, {1.0, 1.0, 1.0},
-                        tolerance(fix, tol_category::elementwise));
+                        tolerance(fix, tol_category::exact));
 #else
   (void)fix;
 #endif
@@ -161,7 +161,9 @@ void test_eye_to_range(tci_test_fixture<TenT>& fix) {
         // Off-diagonal zeros are exact; see "Diagonal tensors" in
         // CONTRIBUTING.md.
         TCICT_ASSERT(real_part<TenT>(elem) == 0.0);
-        TCICT_ASSERT(imag_part<TenT>(elem) == 0.0);
+        if constexpr (is_complex_v<TenT>) {
+          TCICT_ASSERT(imag_part<TenT>(elem) == 0.0);
+        }
       }
     }
   }

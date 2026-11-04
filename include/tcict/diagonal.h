@@ -26,7 +26,8 @@ enum class diag_order {
   /// The element at {i, i} is compared with expected[i].
   as_listed,
   /// The real parts of the diagonal, sorted, are compared with the expected
-  /// values, sorted. For outputs whose order V1 leaves open, such as eig's.
+  /// values, sorted, and each imaginary part with zero. For outputs whose
+  /// order V1 leaves open, such as eig's on a matrix with real eigenvalues.
   any,
 };
 
