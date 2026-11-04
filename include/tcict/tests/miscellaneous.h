@@ -76,6 +76,7 @@ void test_close_zeroth_order(tci_test_fixture<TenT> &fix) {
   if constexpr (is_complex_v<TenT>) {
     const auto w = written<TenT>(1.5);
     auto imag_off = tci::zeros<TenT>(ctx, {});
+    TCICT_ASSERT(tci::shape(ctx, imag_off).empty());
     tci::set_elem(ctx, imag_off, {}, make_elem<TenT>(w.real(), w.imag() + 0.25));
     TCICT_ASSERT(!tci::close(ctx, a, imag_off, eps));
   }

@@ -104,6 +104,9 @@ void test_set_get_elem_zeroth_order(tci_test_fixture<TenT>& fix) {
     defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
   auto tensor = tci::zeros<TenT>(ctx, {});
+  // set_elem and get_elem are the APIs under test, so the input is checked to
+  // be zeroth-order before either is called on it.
+  TCICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, tensor);
 
   tci::set_elem(ctx, tensor, {}, written_elem<TenT>(6.25));
   TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, 6.25);
@@ -133,7 +136,7 @@ void test_size_bytes_2x2(tci_test_fixture<TenT>& fix) {
 
 template <typename TenT>
 void test_size_bytes_zeroth_order(tci_test_fixture<TenT>& fix) {
-#if !defined(TCICT_SKIP_SIZE_BYTES) && !defined(TCICT_SKIP_SHAPE)
+#ifndef TCICT_SKIP_SIZE_BYTES
   auto& ctx = fix.context();
   // As for the third-order test above, the call returning is all V1 leaves
   // assertable; this adds the zeroth order to the ranks it is made on. The
