@@ -4,6 +4,7 @@
 #include <tcict/elem_helper.h>
 #include <tcict/fixture.h>
 #include <tcict/skip.h>
+#include <tcict/zeroth_order.h>
 
 #include <cmath>
 
@@ -92,6 +93,26 @@ void test_set_get_elem(tci_test_fixture<TenT>& fix) {
 #endif
 }
 
+// --- get_elem / set_elem: zeroth-order ---
+
+// TCAPI V1: for a zeroth-order tensor, `coors` is the empty sequence {}, and
+// get_elem returns and set_elem updates the sole element.
+template <typename TenT>
+void test_set_get_elem_zeroth_order(tci_test_fixture<TenT>& fix) {
+#if !defined(TCICT_SKIP_GET_ELEM) && !defined(TCICT_SKIP_SET_ELEM) && \
+    defined(TCICT_HAS_ELEM_SWEEP)
+  auto& ctx = fix.context();
+  auto tensor = tci::zeros<TenT>(ctx, {});
+
+  tci::set_elem(ctx, tensor, {}, written_elem<TenT>(6.25));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, 6.25);
+  tci::set_elem(ctx, tensor, {}, written_elem<TenT>(-0.75));
+  TCICT_EXPECT_ZEROTH_ORDER(fix, tensor, -0.75);
+#else
+  (void)fix;
+#endif
+}
+
 // --- size_bytes for small tensor ---
 
 template <typename TenT>
@@ -101,6 +122,21 @@ void test_size_bytes_2x2(tci_test_fixture<TenT>& fix) {
   // The second-order half of the pair; see the third-order test above for what
   // V1 leaves assertable.
   auto tensor = tci::zeros<TenT>(ctx, {2, 2});
+  TCICT_ASSERT_NOTHROW(tci::size_bytes(ctx, tensor));
+#else
+  (void)fix;
+#endif
+}
+
+// --- size_bytes: zeroth-order ---
+
+template <typename TenT>
+void test_size_bytes_zeroth_order(tci_test_fixture<TenT>& fix) {
+#ifndef TCICT_SKIP_SIZE_BYTES
+  auto& ctx = fix.context();
+  // As for the third-order test above, the call returning is all V1 leaves
+  // assertable; this adds the zeroth order to the ranks it is made on.
+  auto tensor = tci::zeros<TenT>(ctx, {});
   TCICT_ASSERT_NOTHROW(tci::size_bytes(ctx, tensor));
 #else
   (void)fix;
@@ -117,4 +153,6 @@ void test_size_bytes_2x2(tci_test_fixture<TenT>& fix) {
   X(__VA_ARGS__, "read_only_getters", test_size) \
   X(__VA_ARGS__, "read_only_getters", test_size_bytes) \
   X(__VA_ARGS__, "read_only_getters", test_set_get_elem) \
-  X(__VA_ARGS__, "read_only_getters", test_size_bytes_2x2)
+  X(__VA_ARGS__, "read_only_getters", test_set_get_elem_zeroth_order) \
+  X(__VA_ARGS__, "read_only_getters", test_size_bytes_2x2) \
+  X(__VA_ARGS__, "read_only_getters", test_size_bytes_zeroth_order)
