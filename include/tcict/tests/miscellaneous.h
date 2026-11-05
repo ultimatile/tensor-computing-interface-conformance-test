@@ -452,15 +452,21 @@ void test_convert_real_to_complex(tci_test_fixture<RealTenT> &fix) {
 
 // TCAPI V1: convert converts `t1` "into a destination tensor, possibly
 // changing the element type, the underlying TCF/backend, or both. Conversion
-// also supports precision changes within one TCF." The destinations are the
-// types of tci::supported_ten_types_t that hold TenT's kind of element, real
-// or complex, at another precision; a pair of them is in one TCF or in two,
-// and the first sentence covers the second case, so the test needs no way to
-// tell which, and V1 gives none. Each result is read through the destination
-// type's own fixture context. Every real and imaginary part written is a small
-// integer or half of one, exact in single precision and wider, so the copy is
-// exact. A catalog with no such type leaves nothing to convert. The input is
-// read back as "Out-of-place inputs" in CONTRIBUTING.md describes.
+// also supports precision changes within one TCF." The first sentence says
+// what a conversion may change, not which pairs a backend supports; the second
+// is what V1 says convert supports, so the destinations are the types of
+// tci::supported_ten_types_t in TenT's TCF that hold TenT's kind of element,
+// real or complex, at another precision. V1 ties a TCF to a context handle
+// type: context_handle_t is the "Handle to the backend context maintained by
+// the underlying TCF that provides `ten_t`", and of create_context, "the
+// concrete type `ContextHandleT` selects the target TCF/backend". So a type
+// whose context_handle_t is TenT's is in TenT's TCF; one with another handle
+// type may or may not be, and is not converted to. Each result is read through
+// the destination type's own fixture context. Every real and imaginary part
+// written is a small integer or half of one, exact in single precision and
+// wider, so the copy is exact. A catalog with no such type leaves nothing to
+// convert. The input is read back as "Out-of-place inputs" in CONTRIBUTING.md
+// describes.
 template <typename TenT>
 void test_convert_precision(tci_test_fixture<TenT> &fix) {
 #if !defined(TCICT_SKIP_CONVERT) && !defined(TCICT_SKIP_SUPPORTED_TEN_TYPES) &&               \
@@ -473,7 +479,9 @@ void test_convert_precision(tci_test_fixture<TenT> &fix) {
 
   detail::for_each_tuple_type<tci::supported_ten_types_t>([&](auto tag) {
     using DestTenT = typename decltype(tag)::type;
-    if constexpr (is_complex_v<DestTenT> == is_complex_v<TenT> &&
+    if constexpr (std::is_same_v<tci::context_handle_t<DestTenT>,
+                                 tci::context_handle_t<TenT>> &&
+                  is_complex_v<DestTenT> == is_complex_v<TenT> &&
                   !std::is_same_v<tci::real_t<DestTenT>, tci::real_t<TenT>>) {
       // b, declared after fix2, is released first.
       tci_test_fixture<DestTenT> fix2;
