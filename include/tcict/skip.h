@@ -45,6 +45,11 @@
 //   TCICT_SKIP_TO_RANGE, TCICT_SKIP_SHOW, TCICT_SKIP_CLOSE, TCICT_SKIP_CONVERT,
 //   TCICT_SKIP_VERSION
 //
+// Type system:
+//   TCICT_SKIP_SUPPORTED_TEN_TYPES, for a backend that does not yet provide the
+//   tci::supported_ten_types_t catalog. test_convert_precision, which takes
+//   its destination types from the catalog, is skipped with it.
+//
 // Tests that build and check tensors element by element:
 //
 // The tests that build or check tensors through the helpers in

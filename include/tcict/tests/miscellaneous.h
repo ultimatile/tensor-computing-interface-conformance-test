@@ -11,10 +11,49 @@
 #include <complex>
 #include <cstddef>
 #include <string>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace tcict {
+namespace detail {
+
+// Type helpers for tci::supported_ten_types_t. Each one takes any type and
+// treats one that is not a std::tuple as holding no tensor types, so the tests
+// using them compile against a catalog of the wrong kind, and
+// test_supported_ten_types reports it through its assertion on
+// is_std_tuple_v.
+
+template <typename T> struct type_tag {
+  using type = T;
+};
+
+template <typename T> struct is_std_tuple : std::false_type {};
+template <typename... Ts> struct is_std_tuple<std::tuple<Ts...>> : std::true_type {};
+template <typename T> inline constexpr bool is_std_tuple_v = is_std_tuple<T>::value;
+
+template <typename T, typename Tuple> struct tuple_contains : std::false_type {};
+template <typename T, typename... Ts>
+struct tuple_contains<T, std::tuple<Ts...>>
+    : std::bool_constant<(std::is_same_v<T, Ts> || ...)> {};
+template <typename T, typename Tuple>
+inline constexpr bool tuple_contains_v = tuple_contains<T, Tuple>::value;
+
+template <typename Tuple> struct for_each_tuple_type_impl {
+  template <typename F> static void run(F &&) {}
+};
+template <typename... Ts> struct for_each_tuple_type_impl<std::tuple<Ts...>> {
+  template <typename F> static void run(F &&f) { (f(type_tag<Ts>{}), ...); }
+};
+
+// Calls `f(type_tag<U>{})` once for each element type `U` of `Tuple`.
+template <typename Tuple, typename F> void for_each_tuple_type(F &&f) {
+  for_each_tuple_type_impl<Tuple>::run(std::forward<F>(f));
+}
+
+} // namespace detail
+
 namespace tests {
 
 // --- close (eq) : identical tensors ---
@@ -409,6 +448,95 @@ void test_convert_real_to_complex(tci_test_fixture<RealTenT> &fix) {
 #endif
 }
 
+// --- convert: precision change ---
+
+// TCAPI V1: convert converts `t1` "into a destination tensor, possibly
+// changing the element type, the underlying TCF/backend, or both. Conversion
+// also supports precision changes within one TCF." The first sentence says
+// what a conversion may change, not which pairs a backend supports; the second
+// is what V1 says convert supports, so the destinations are the types of
+// tci::supported_ten_types_t in TenT's TCF that hold TenT's kind of element,
+// real or complex, at another precision. V1 ties a TCF to a context handle
+// type: context_handle_t is the "Handle to the backend context maintained by
+// the underlying TCF that provides `ten_t`", and of create_context, "the
+// concrete type `ContextHandleT` selects the target TCF/backend". So a type
+// whose context_handle_t is TenT's is in TenT's TCF; one with another handle
+// type may or may not be, and is not converted to. Each result is read through
+// the destination type's own fixture context. Every real and imaginary part
+// written is a small integer or half of one, exact in single precision and
+// wider, so the copy is exact. A catalog with no such type leaves nothing to
+// convert. The input is read back as "Out-of-place inputs" in CONTRIBUTING.md
+// describes.
+template <typename TenT>
+void test_convert_precision(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_CONVERT) && !defined(TCICT_SKIP_SUPPORTED_TEN_TYPES) &&               \
+    defined(TCICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  const tci::shape_t<TenT> shape = {2, 3};
+  auto at = ramp_over<TenT>(shape, -2.0);
+  auto a = tci::zeros<TenT>(ctx, shape);
+  TCICT_SET_ELEMS(fix, a, at);
+
+  detail::for_each_tuple_type<tci::supported_ten_types_t>([&](auto tag) {
+    using DestTenT = typename decltype(tag)::type;
+    if constexpr (std::is_same_v<tci::context_handle_t<DestTenT>,
+                                 tci::context_handle_t<TenT>> &&
+                  is_complex_v<DestTenT> == is_complex_v<TenT> &&
+                  !std::is_same_v<tci::real_t<DestTenT>, tci::real_t<TenT>>) {
+      // b, declared after fix2, is released first.
+      tci_test_fixture<DestTenT> fix2;
+      DestTenT b;
+      TCICT_ASSERT_NOTHROW(tci::convert(ctx, a, fix2.context(), b));
+      const tci::shape_t<DestTenT> b_shape(shape.begin(), shape.end());
+      // DestTenT holds TenT's kind of element, so a real value stands for the
+      // same element in both.
+      TCICT_EXPECT_ELEMS(
+          fix2, b, b_shape,
+          [&](const tci::elem_coors_t<DestTenT> &c) {
+            const tci::elem_coors_t<TenT> coors(c.begin(), c.end());
+            return at(coors);
+          },
+          tol_category::exact);
+    }
+  });
+
+  TCICT_EXPECT_ELEMS(fix, a, shape, at, tol_category::exact);
+#else
+  (void)fix;
+#endif
+}
+
+// --- supported_ten_types_t ---
+
+// TCAPI V1: "Each C++ implementation provides a compile-time catalog of its
+// tensor types through `tcapi::supported_ten_types_t` in `tcapi/tcapi.h`", a
+// std::tuple of them. "The catalog order is implementation-defined, and
+// context compatibility is backend-dependent. Standard tuple traits and
+// `tcapi::elem_t` expose its size, types, and element types". This suite spells
+// V1's tcapi namespace as tci, so it reads the catalog as
+// tci::supported_ten_types_t. The test asserts that the catalog is a
+// std::tuple, and names tci::elem_t of each catalog
+// type, which fails to compile for a type whose traits do not expose one. It
+// also asserts a reading of "its tensor types": that the catalog holds TenT, a
+// type the backend registers with the suite, and tci::real_ten_t<TenT> and
+// tci::cplx_ten_t<TenT>, which V1 defines as tensor types and the backend's
+// functions return. It asserts neither the order nor anything about contexts.
+template <typename TenT>
+void test_supported_ten_types(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_SUPPORTED_TEN_TYPES
+  using Catalog = tci::supported_ten_types_t;
+  TCICT_ASSERT((detail::is_std_tuple_v<Catalog>));
+  TCICT_ASSERT((detail::tuple_contains_v<TenT, Catalog>));
+  TCICT_ASSERT((detail::tuple_contains_v<tci::real_ten_t<TenT>, Catalog>));
+  TCICT_ASSERT((detail::tuple_contains_v<tci::cplx_ten_t<TenT>, Catalog>));
+  detail::for_each_tuple_type<Catalog>([](auto tag) {
+    using ElemT = tci::elem_t<typename decltype(tag)::type>;
+    [[maybe_unused]] ElemT *elem_t_named = nullptr;
+  });
+#endif
+  (void)fix;
+}
+
 // --- version ---
 
 template <typename TenT> void test_version(tci_test_fixture<TenT> &fix) {
@@ -445,6 +573,8 @@ template <typename TenT> void test_version(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "miscellaneous", test_convert_different_context) \
   X(__VA_ARGS__, "miscellaneous", test_convert_data_integrity) \
   X(__VA_ARGS__, "miscellaneous", test_convert_zeroth_order) \
+  X(__VA_ARGS__, "miscellaneous", test_convert_precision) \
+  X(__VA_ARGS__, "miscellaneous", test_supported_ten_types) \
   X(__VA_ARGS__, "miscellaneous", test_version)
 
 // REAL_ONLY: the test's input must be real, as its template parameter's name
