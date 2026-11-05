@@ -459,9 +459,8 @@ void test_convert_real_to_complex(tci_test_fixture<RealTenT> &fix) {
 // tell which, and V1 gives none. Each result is read through the destination
 // type's own fixture context. Every real and imaginary part written is a small
 // integer or half of one, exact in single precision and wider, so the copy is
-// exact. A catalog with no
-// such type leaves nothing to convert. The input is read back as
-// test_convert_real_to_complex reads it.
+// exact. A catalog with no such type leaves nothing to convert. The input is
+// read back as "Out-of-place inputs" in CONTRIBUTING.md describes.
 template <typename TenT>
 void test_convert_precision(tci_test_fixture<TenT> &fix) {
 #if !defined(TCICT_SKIP_CONVERT) && !defined(TCICT_SKIP_SUPPORTED_TEN_TYPES) &&               \
