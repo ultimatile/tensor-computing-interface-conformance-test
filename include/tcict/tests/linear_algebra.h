@@ -715,17 +715,18 @@ template <typename TenT> tci::real_t<TenT> trunc_svd_expected_epsilon(int chi) {
 // only the values a test checks can show the order is wrong. Every overload
 // (2) test calls through here, and test_trunc_svd_argument_order checks values
 // that differ when this call passes them as chi_min, chi_max,
-// target_trunc_err, s_min.
+// target_trunc_err, s_min. The two real arguments are taken as
+// tci::real_t<TenT>, so a value the backend reported, such as a measured
+// truncation error, reaches it again at its own precision.
 template <typename TenT>
 void trunc_svd_by_strategy(tci::context_handle_t<TenT> &ctx, const TenT &a,
                            int num_of_bds_as_row, TenT &u, tci::real_ten_t<TenT> &sigma,
                            TenT &v_dag, tci::real_t<TenT> &trunc_err, int chi_max,
-                           double s_min, int chi_min, double target_trunc_err) {
+                           tci::real_t<TenT> s_min, int chi_min,
+                           tci::real_t<TenT> target_trunc_err) {
   tci::trunc_svd(ctx, a, static_cast<tci::order_t<TenT>>(num_of_bds_as_row), u, sigma, v_dag,
-                 trunc_err, static_cast<tci::bond_dim_t<TenT>>(chi_max),
-                 static_cast<tci::real_t<TenT>>(s_min),
-                 static_cast<tci::bond_dim_t<TenT>>(chi_min),
-                 static_cast<tci::real_t<TenT>>(target_trunc_err));
+                 trunc_err, static_cast<tci::bond_dim_t<TenT>>(chi_max), s_min,
+                 static_cast<tci::bond_dim_t<TenT>>(chi_min), target_trunc_err);
 }
 
 // Helper: run overload (2) on the fixture spectrum and assert sigma, which
@@ -755,8 +756,9 @@ void trunc_svd_expect_retained_chi(tci_test_fixture<TenT> &fix, double scale, in
   tci::real_ten_t<TenT> s_diag;
   tci::real_t<TenT> trunc_err = -1.0;
 
-  trunc_svd_by_strategy(ctx, matrix, 1, u, s_diag, v_dag, trunc_err, chi_max, s_min, chi_min,
-                        target_trunc_err);
+  trunc_svd_by_strategy(ctx, matrix, 1, u, s_diag, v_dag, trunc_err, chi_max,
+                        static_cast<tci::real_t<TenT>>(s_min), chi_min,
+                        static_cast<tci::real_t<TenT>>(target_trunc_err));
 
   // The tolerance is absolute, so it scales with the values it bounds; epsilon,
   // a ratio, keeps the unscaled one.
