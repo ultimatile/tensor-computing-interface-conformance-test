@@ -12,6 +12,7 @@
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <exception>
 #include <functional>
 #include <string>
 #include <utility>
@@ -1851,22 +1852,38 @@ void expect_orthonormal_rows(tci_test_fixture<TenT> &fix, const TenT &f,
 
 /// Asserts that every element of the second-order `t` with
 /// `zero_at(row, col)` is exactly zero, as V1's "upper triangular" and "lower
-/// triangular" say of r and l.
+/// triangular" say of r and l, through TCICT_EXPECT_ELEMS with an exact
+/// tolerance: zero where `zero_at` holds, and elsewhere the element read back.
 template <typename TenT, typename ZeroAt>
 void expect_zero_where(tci_test_fixture<TenT> &fix, const TenT &t,
                        ZeroAt zero_at) {
   auto &ctx = fix.context();
   const auto shape = tci::shape(ctx, t);
   TCICT_ASSERT(shape.size() == 2);
-  bool zero = true;
-  detail::for_each_coors<TenT>(shape, [&](const tci::elem_coors_t<TenT> &c) {
-    if (zero_at(static_cast<std::size_t>(c[0]),
-                static_cast<std::size_t>(c[1]))) {
-      const auto e = tci::get_elem(ctx, t, c);
-      zero = zero && real_part<TenT>(e) == 0.0 && imag_part<TenT>(e) == 0.0;
-    }
-  });
-  TCICT_ASSERT(zero);
+  TCICT_EXPECT_ELEMS(
+      fix, t, shape,
+      [&](const tci::elem_coors_t<TenT> &c) -> std::complex<double> {
+        if (zero_at(static_cast<std::size_t>(c[0]),
+                    static_cast<std::size_t>(c[1]))) {
+          return {0.0, 0.0};
+        }
+        const auto e = tci::get_elem(ctx, t, c);
+        return {real_part<TenT>(e), imag_part<TenT>(e)};
+      },
+      tol_category::exact);
+}
+
+/// Calls `f`, reporting an assertion failing or a std::exception thrown in it
+/// with `label` in front, so a test checking several cases through one helper
+/// says which case failed.
+template <typename F> void in_case(const std::string &label, F f) {
+  try {
+    f();
+  } catch (const assertion_error &e) {
+    throw assertion_error(label + ": " + e.what());
+  } catch (const std::exception &e) {
+    throw assertion_error(label + ": unexpected exception: " + e.what());
+  }
 }
 
 /// Asserts that `left`, whose last bond is the factor bond, contracted over
@@ -2026,10 +2043,12 @@ template <typename TenT, typename Check>
 void on_wide_and_tall(tci_test_fixture<TenT> &fix, Check check) {
   auto &ctx = fix.context();
   for (bool transposed : {false, true}) {
-    const auto at = wide_or_tall<TenT>(transposed);
-    auto matrix = tci::zeros<TenT>(ctx, at.shape);
-    at.fill(ctx, matrix);
-    check(matrix, at);
+    in_case(transposed ? "tall {3, 2}" : "wide {2, 3}", [&] {
+      const auto at = wide_or_tall<TenT>(transposed);
+      auto matrix = tci::zeros<TenT>(ctx, at.shape);
+      at.fill(ctx, matrix);
+      check(matrix, at);
+    });
   }
 }
 
@@ -2041,8 +2060,8 @@ void on_dense_third_order(tci_test_fixture<TenT> &fix, Check check) {
   const dense_values<TenT> at{{2, 3, 4}};
   auto dense = tci::zeros<TenT>(ctx, at.shape);
   at.fill(ctx, dense);
-  check(dense, at, 1);
-  check(dense, at, 2);
+  in_case("dense {2, 3, 4}, one row bond", [&] { check(dense, at, 1); });
+  in_case("dense {2, 3, 4}, two row bonds", [&] { check(dense, at, 2); });
 }
 
 } // namespace factor_check
@@ -2077,8 +2096,12 @@ void test_svd_higher_order(tci_test_fixture<TenT> &fix) {
   const auto sparse_at = factor_check::third_order_sparse<TenT>();
   auto sparse = tci::zeros<TenT>(ctx, sparse_at.shape);
   sparse_at.fill(ctx, sparse);
-  factor_check::check_svd(fix, sparse, 1, sparse_at, {13.0, 5.0});
-  factor_check::check_svd(fix, sparse, 2, sparse_at, {12.0, 5.0, 4.0, 3.0});
+  factor_check::in_case("sparse {2, 3, 4}, one row bond", [&] {
+    factor_check::check_svd(fix, sparse, 1, sparse_at, {13.0, 5.0});
+  });
+  factor_check::in_case("sparse {2, 3, 4}, two row bonds", [&] {
+    factor_check::check_svd(fix, sparse, 2, sparse_at, {12.0, 5.0, 4.0, 3.0});
+  });
 
   factor_check::on_dense_third_order(
       fix, [&](const TenT &d, const auto &at, std::size_t k) {

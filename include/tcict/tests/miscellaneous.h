@@ -121,9 +121,9 @@ void test_close_maximum_norm(tci_test_fixture<TenT> &fix) {
 
 // --- close: a difference equal to epsilon ---
 
-// "At most epsilon" in TCAPI V1's close admits a difference equal to
-// epsilon. The difference 0.5 and the tolerances 0.5 and 0.4375 are binary
-// fractions, so the comparison is exact.
+// TCAPI V1's close requires the largest difference to be at most epsilon,
+// which admits a difference equal to epsilon. The difference 0.5 and the
+// tolerances 0.5 and 0.4375 are binary fractions, so the comparison is exact.
 template <typename TenT>
 void test_close_boundary_inclusive(tci_test_fixture<TenT> &fix) {
 #ifndef TCICT_SKIP_CLOSE
