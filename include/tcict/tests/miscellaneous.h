@@ -504,8 +504,10 @@ void test_convert_precision(tci_test_fixture<TenT> &fix) {
 // tensor types through `tcapi::supported_ten_types_t` in `tcapi/tcapi.h`", a
 // std::tuple of them. "The catalog order is implementation-defined, and
 // context compatibility is backend-dependent. Standard tuple traits and
-// `tcapi::elem_t` expose its size, types, and element types". The test asserts
-// that the catalog is a std::tuple, and names tci::elem_t of each catalog
+// `tcapi::elem_t` expose its size, types, and element types". This suite spells
+// V1's tcapi namespace as tci, so it reads the catalog as
+// tci::supported_ten_types_t. The test asserts that the catalog is a
+// std::tuple, and names tci::elem_t of each catalog
 // type, which fails to compile for a type whose traits do not expose one. It
 // also asserts a reading of "its tensor types": that the catalog holds TenT, a
 // type the backend registers with the suite, and tci::real_ten_t<TenT> and
