@@ -8,6 +8,7 @@
 #include <tcict/skip.h>
 #include <tcict/zeroth_order.h>
 
+#include <complex>
 #include <cstddef>
 #include <string>
 #include <type_traits>
@@ -388,31 +389,19 @@ void test_convert_real_to_complex(tci_test_fixture<RealTenT> &fix) {
   auto a = tci::zeros<RealTenT>(ctx, shape);
   TCICT_SET_ELEMS(fix, a, at);
 
-  tci::context_handle_t<CplxTenT> ctx2;
-  tci::create_context(ctx2);
-  bool shape_ok = false;
-  bool all_equal = true;
-  {
-    // b is released before the context it lives on.
-    CplxTenT b;
-    TCICT_ASSERT_NOTHROW(tci::convert(ctx, a, ctx2, b));
-    const auto b_shape = tci::shape(ctx2, b);
-    shape_ok = b_shape.size() == 2 && b_shape[0] == 2 && b_shape[1] == 3;
-    if (shape_ok) {
-      detail::for_each_coors<RealTenT>(
-          shape, [&](const tci::elem_coors_t<RealTenT> &coors) {
-            const tci::elem_coors_t<CplxTenT> c(coors.begin(), coors.end());
-            const auto elem = tci::get_elem(ctx2, b, c);
-            if (real_part<CplxTenT>(elem) != at(coors) ||
-                imag_part<CplxTenT>(elem) != 0.0) {
-              all_equal = false;
-            }
-          });
-    }
-  }
-  tci::destroy_context(ctx2);
-  TCICT_ASSERT(shape_ok);
-  TCICT_ASSERT(all_equal);
+  // The destination context comes from the backend's fixture for CplxTenT,
+  // which releases it on every exit; b, declared after it, is released first.
+  tci_test_fixture<CplxTenT> fix2;
+  CplxTenT b;
+  TCICT_ASSERT_NOTHROW(tci::convert(ctx, a, fix2.context(), b));
+  const tci::shape_t<CplxTenT> b_shape(shape.begin(), shape.end());
+  TCICT_EXPECT_ELEMS(
+      fix2, b, b_shape,
+      [&](const tci::elem_coors_t<CplxTenT> &c) {
+        const tci::elem_coors_t<RealTenT> coors(c.begin(), c.end());
+        return std::complex<double>(at(coors), 0.0);
+      },
+      tol_category::exact);
 
   TCICT_EXPECT_ELEMS(fix, a, shape, at, tol_category::exact);
 #else

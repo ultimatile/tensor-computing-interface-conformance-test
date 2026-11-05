@@ -15,10 +15,27 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 
 namespace tcict {
 
 namespace detail {
+
+// Removes the file at `path`, if any, when it goes out of scope, an assertion
+// failing before then included.
+class removes_on_exit {
+public:
+  explicit removes_on_exit(std::string path) : path_(std::move(path)) {}
+  removes_on_exit(const removes_on_exit &) = delete;
+  removes_on_exit &operator=(const removes_on_exit &) = delete;
+  ~removes_on_exit() {
+    std::error_code ec;
+    std::filesystem::remove(path_, ec);
+  }
+
+private:
+  std::string path_;
+};
 
 // A file path under the system temporary directory, removed when the object
 // goes out of scope, an assertion failing before then included. A
@@ -190,9 +207,9 @@ void test_save_load_string_view(tci_test_fixture<TenT> &fix) {
       fix, "string_view",
       [](auto &ctx, const TenT &t, const std::string &path) {
         const std::string buffer = path + ".not_this_one";
+        // A backend misreading the view writes here; remove it on every exit.
+        const detail::removes_on_exit decoy(buffer);
         tci::save(ctx, t, std::string_view(buffer).substr(0, path.size()));
-        std::error_code ec;
-        std::filesystem::remove(buffer, ec);
       },
       [](auto &ctx, const std::string &path) {
         const std::string buffer = path + ".not_this_one";

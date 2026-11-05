@@ -1701,7 +1701,12 @@ void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
 // several bonds into one index, so these checks assert only what does not
 // depend on one: shapes, sigma's diagonal, reconstruction by bond labels, and
 // orthonormality as a contraction over whole bonds. Triangularity is asserted
-// only for second-order inputs, where the matrix is the input itself.
+// where the triangular factor is itself second-order: r with one column bond
+// and l with one row bond. Reordering the rows of the matrix, A' -> P A',
+// turns a QR factorization Q R into (P Q) R, again a QR factorization with
+// the same r, and
+// reordering its columns does the same for l, so r and l are triangular
+// whatever order the bonds they do not keep flatten in.
 
 #if defined(TCICT_HAS_ELEM_SWEEP) &&                                           \
     (!defined(TCICT_SKIP_SVD) || !defined(TCICT_SKIP_QR) ||                    \
@@ -1939,7 +1944,7 @@ void check_svd(tci_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
 
 #ifndef TCICT_SKIP_QR
 /// qr of `input` with `k` row bonds: the factor shapes; q * r reproduces the
-/// input; q has orthonormal columns; for a second-order input, r is zero
+/// input; q has orthonormal columns; when r is second-order, it is zero
 /// below its diagonal.
 template <typename TenT, typename ValueAt>
 void check_qr(tci_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
@@ -1947,7 +1952,6 @@ void check_qr(tci_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
   auto &ctx = fix.context();
   const auto in_shape = tci::shape(ctx, input);
   const auto [q_shape, r_shape] = factor_shapes<TenT>(in_shape, k);
-  const auto order = in_shape.size();
 
   TenT q, r;
   tci::qr(ctx, input, static_cast<tci::order_t<TenT>>(k), q, r);
@@ -1955,7 +1959,7 @@ void check_qr(tci_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
   TCICT_ASSERT(tci::shape(ctx, r) == r_shape);
   expect_product(fix, q, r, k, in_shape, value_at);
   expect_orthonormal_columns(fix, q, k);
-  if (order == 2) {
+  if (r_shape.size() == 2) {
     expect_zero_where(fix, r, [](std::size_t row, std::size_t col) {
       return row > col;
     });
@@ -1965,7 +1969,7 @@ void check_qr(tci_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
 
 #ifndef TCICT_SKIP_LQ
 /// lq of `input` with `k` row bonds: the factor shapes; l * q reproduces the
-/// input; q has orthonormal rows; for a second-order input, l is zero above
+/// input; q has orthonormal rows; when l is second-order, it is zero above
 /// its diagonal.
 template <typename TenT, typename ValueAt>
 void check_lq(tci_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
@@ -1981,7 +1985,7 @@ void check_lq(tci_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
   TCICT_ASSERT(tci::shape(ctx, q) == q_shape);
   expect_product(fix, l, q, k, in_shape, value_at);
   expect_orthonormal_rows(fix, q, order - k);
-  if (order == 2) {
+  if (l_shape.size() == 2) {
     expect_zero_where(fix, l, [](std::size_t row, std::size_t col) {
       return col > row;
     });
