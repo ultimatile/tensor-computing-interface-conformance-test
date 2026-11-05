@@ -2,11 +2,13 @@
 
 #include <tcict/assertion.h>
 #include <tcict/elem_helper.h>
+#include <tcict/elem_sweep.h>
 #include <tcict/fixture.h>
 #include <tcict/range_2d.h>
 #include <tcict/skip.h>
 #include <tcict/zeroth_order.h>
 
+#include <complex>
 #include <cstddef>
 #include <string>
 #include <type_traits>
@@ -51,11 +53,11 @@ void test_close_different(tci_test_fixture<TenT> &fix) {
 
 // --- close: zeroth-order ---
 
-// TCAPI V1: close is true "iff shapes match and `max(|a_i - b_i|) <= epsilon`".
-// Against an equal tensor it is true; against another value, or for a complex
-// element type a difference in the imaginary part alone, it is false; and
-// against a shape-{1} tensor holding the same value it is false, since {} and
-// {1} differ.
+// TCAPI V1: close succeeds iff the shapes match and the largest elementwise
+// |a_i - b_i| is at most epsilon. Against an equal tensor it is true; against
+// another value, or for a complex element type a difference in the imaginary
+// part alone, it is false; and against a shape-{1} tensor holding the same
+// value it is false, since {} and {1} differ.
 template <typename TenT>
 void test_close_zeroth_order(tci_test_fixture<TenT> &fix) {
 #if !defined(TCICT_SKIP_CLOSE) && defined(TCICT_HAS_ELEM_SWEEP)
@@ -84,6 +86,93 @@ void test_close_zeroth_order(tci_test_fixture<TenT> &fix) {
   auto one = tci::zeros<TenT>(ctx, {1});
   TCICT_SET_ELEMS(fix, one, value);
   TCICT_ASSERT(!tci::close(ctx, a, one, eps));
+#else
+  (void)fix;
+#endif
+}
+
+// --- close: the maximum of the differences, not their norm ---
+
+// TCAPI V1: close succeeds iff the shapes match and the largest elementwise
+// |a_i - b_i| is at most epsilon. Two differences of 0.375 against epsilon
+// 0.5 have maximum 0.375, so close is true, while their Frobenius norm,
+// sqrt(2) * 0.375 ~ 0.53, exceeds 0.5. One difference of 0.625 makes it
+// false. Every value is a binary fraction, so the differences are exact.
+template <typename TenT>
+void test_close_maximum_norm(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_CLOSE
+  auto &ctx = fix.context();
+  const tci::real_t<TenT> epsilon = 0.5;
+  auto zero = tci::zeros<TenT>(ctx, {2});
+
+  auto within = tci::zeros<TenT>(ctx, {2});
+  tci::set_elem(ctx, within, {0}, make_elem<TenT>(0.375));
+  tci::set_elem(ctx, within, {1}, make_elem<TenT>(0.375));
+  TCICT_ASSERT(tci::close(ctx, zero, within, epsilon));
+
+  auto beyond = tci::zeros<TenT>(ctx, {2});
+  tci::set_elem(ctx, beyond, {0}, make_elem<TenT>(0.375));
+  tci::set_elem(ctx, beyond, {1}, make_elem<TenT>(0.625));
+  TCICT_ASSERT(!tci::close(ctx, zero, beyond, epsilon));
+#else
+  (void)fix;
+#endif
+}
+
+// --- close: a difference equal to epsilon ---
+
+// TCAPI V1's close requires the largest difference to be at most epsilon,
+// which admits a difference equal to epsilon. The difference 0.5 and the
+// tolerances 0.5 and 0.4375 are binary fractions, so the comparison is exact.
+template <typename TenT>
+void test_close_boundary_inclusive(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_CLOSE
+  auto &ctx = fix.context();
+  auto zero = tci::zeros<TenT>(ctx, {1});
+  auto half = tci::zeros<TenT>(ctx, {1});
+  tci::set_elem(ctx, half, {0}, make_elem<TenT>(0.5));
+  TCICT_ASSERT(tci::close(ctx, zero, half, tci::real_t<TenT>(0.5)));
+  TCICT_ASSERT(!tci::close(ctx, zero, half, tci::real_t<TenT>(0.4375)));
+#else
+  (void)fix;
+#endif
+}
+
+// --- close: the modulus of a complex difference ---
+
+// TCAPI V1 measures a complex difference by "absolute value, or modulus for
+// complex values". 0.375 + 0.5i has modulus 0.625: false at epsilon 0.6, which
+// the larger of its parts, 0.5, would pass, and true at 0.7, which the sum of
+// its parts, 0.875, would fail.
+template <typename TenT>
+void test_close_complex_modulus(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_CLOSE
+  if constexpr (is_complex_v<TenT>) {
+    auto &ctx = fix.context();
+    auto zero = tci::zeros<TenT>(ctx, {1});
+    auto off = tci::zeros<TenT>(ctx, {1});
+    tci::set_elem(ctx, off, {0}, make_elem<TenT>(0.375, 0.5));
+    TCICT_ASSERT(!tci::close(ctx, zero, off, tci::real_t<TenT>(0.6)));
+    TCICT_ASSERT(tci::close(ctx, zero, off, tci::real_t<TenT>(0.7)));
+  } else {
+    (void)fix;
+  }
+#else
+  (void)fix;
+#endif
+}
+
+// --- close: shapes of one size ---
+
+// TCAPI V1 requires the shapes to match; {2, 3} and {3, 2} hold the same number
+// of elements, all zero, and still differ.
+template <typename TenT>
+void test_close_shape_mismatch_same_size(tci_test_fixture<TenT> &fix) {
+#ifndef TCICT_SKIP_CLOSE
+  auto &ctx = fix.context();
+  auto wide = tci::zeros<TenT>(ctx, {2, 3});
+  auto tall = tci::zeros<TenT>(ctx, {3, 2});
+  TCICT_ASSERT(!tci::close(ctx, wide, tall, fix.epsilon()));
 #else
   (void)fix;
 #endif
@@ -278,6 +367,48 @@ void test_convert_zeroth_order(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// --- convert: real to complex element type ---
+
+// TCAPI V1: convert converts `t1` "into a destination tensor, possibly
+// changing the element type, the underlying TCF/backend, or both", writing
+// the result into `t2`, the tensor on the destination context, so the test
+// reads it through that context. Converting a real tensor to
+// tci::cplx_ten_t<RealTenT> keeps each value as its real part with a zero
+// imaginary part, the one reading that preserves the values; every value here
+// is a small integer, so the copy is exact. The input is read back as
+// "Out-of-place inputs" in CONTRIBUTING.md describes.
+template <typename RealTenT>
+void test_convert_real_to_complex(tci_test_fixture<RealTenT> &fix) {
+#if !defined(TCICT_SKIP_CONVERT) && defined(TCICT_HAS_ELEM_SWEEP)
+  static_assert(!is_complex_v<RealTenT>,
+                "test_convert_real_to_complex takes a real tensor type");
+  using CplxTenT = tci::cplx_ten_t<RealTenT>;
+  auto &ctx = fix.context();
+  const tci::shape_t<RealTenT> shape = {2, 3};
+  auto at = ramp_over<RealTenT>(shape, -2.0);
+  auto a = tci::zeros<RealTenT>(ctx, shape);
+  TCICT_SET_ELEMS(fix, a, at);
+
+  // The destination context comes from the backend's fixture for CplxTenT,
+  // which releases it on every exit; b, declared after it, is released first.
+  tci_test_fixture<CplxTenT> fix2;
+  CplxTenT b;
+  TCICT_ASSERT_NOTHROW(tci::convert(ctx, a, fix2.context(), b));
+  const tci::shape_t<CplxTenT> b_shape(shape.begin(), shape.end());
+  TCICT_EXPECT_ELEMS(
+      fix2, b, b_shape,
+      [&](const tci::elem_coors_t<CplxTenT> &c) {
+        const tci::elem_coors_t<RealTenT> coors(c.begin(), c.end());
+        return std::complex<double>(at(coors), 0.0);
+      },
+      tol_category::exact);
+
+  TCICT_EXPECT_ELEMS(fix, a, shape, at, tol_category::exact);
+#else
+  (void)fix;
+#endif
+}
+
 // --- version ---
 
 template <typename TenT> void test_version(tci_test_fixture<TenT> &fix) {
@@ -303,6 +434,9 @@ template <typename TenT> void test_version(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "miscellaneous", test_close_identical) \
   X(__VA_ARGS__, "miscellaneous", test_close_different) \
   X(__VA_ARGS__, "miscellaneous", test_close_zeroth_order) \
+  X(__VA_ARGS__, "miscellaneous", test_close_maximum_norm) \
+  X(__VA_ARGS__, "miscellaneous", test_close_boundary_inclusive) \
+  X(__VA_ARGS__, "miscellaneous", test_close_shape_mismatch_same_size) \
   X(__VA_ARGS__, "miscellaneous", test_to_range) \
   X(__VA_ARGS__, "miscellaneous", test_to_range_zeroth_order) \
   X(__VA_ARGS__, "miscellaneous", test_show) \
@@ -312,3 +446,13 @@ template <typename TenT> void test_version(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "miscellaneous", test_convert_data_integrity) \
   X(__VA_ARGS__, "miscellaneous", test_convert_zeroth_order) \
   X(__VA_ARGS__, "miscellaneous", test_version)
+
+// REAL_ONLY: the test's input must be real, as its template parameter's name
+//   says.
+#define TCICT_FOREACH_MISCELLANEOUS_TEST_REAL_ONLY(X, ...) \
+  X(__VA_ARGS__, "miscellaneous", test_convert_real_to_complex)
+
+// CPLX_ONLY: body is wrapped in `if constexpr (is_complex_v<TenT>)`; running
+//   for real TenT would be a no-op, so skip registration.
+#define TCICT_FOREACH_MISCELLANEOUS_TEST_CPLX_ONLY(X, ...) \
+  X(__VA_ARGS__, "miscellaneous", test_close_complex_modulus)

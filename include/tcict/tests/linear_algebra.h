@@ -11,7 +11,11 @@
 #include <algorithm>
 #include <cmath>
 #include <complex>
+#include <cstddef>
+#include <exception>
 #include <functional>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace tcict {
@@ -1688,6 +1692,490 @@ void test_svd_reconstruction(tci_test_fixture<TenT> &fix) {
 #endif
 }
 
+// --- svd / qr / lq: inputs other than a square matrix with one row bond ---
+//
+// TCAPI V1 matricizes an input of shape {d_0, ..., d_{r-1}} into an I x J
+// matrix, the first k = num_of_bds_as_row bonds giving the rows, and folds the
+// factors back with a bond of dimension min(I, J) between them: u (or q, or
+// l) has shape {d_0, ..., d_{k-1}, min(I, J)} and v_dag (or r, or q)
+// {min(I, J), d_k, ..., d_{r-1}}. V1 defines no linear order for flattening
+// several bonds into one index, so these checks assert only what does not
+// depend on one: shapes, sigma's diagonal, reconstruction by bond labels, and
+// orthonormality as a contraction over whole bonds. Triangularity is asserted
+// where the triangular factor is itself second-order: r with one column bond
+// and l with one row bond. Reordering the rows of the matrix, A' -> P A',
+// turns a QR factorization Q R into (P Q) R, again a QR factorization with
+// the same r, and
+// reordering its columns does the same for l, so r and l are triangular
+// whatever order the bonds they do not keep flatten in.
+
+#if defined(TCICT_HAS_ELEM_SWEEP) &&                                           \
+    (!defined(TCICT_SKIP_SVD) || !defined(TCICT_SKIP_QR) ||                    \
+     !defined(TCICT_SKIP_LQ))
+namespace factor_check {
+
+/// `count` bond labels, one letter each, starting at the `first`-th letter.
+/// The factor bond takes 'x', and 'y' its partner in a Gram contraction, so
+/// the labels stop at 'w': at most 23 of them.
+inline std::string bond_labels(std::size_t first, std::size_t count) {
+  TCICT_ASSERT(first + count <= static_cast<std::size_t>('x' - 'a'));
+  std::string labels;
+  for (std::size_t b = 0; b < count; ++b) {
+    labels += static_cast<char>('a' + first + b);
+  }
+  return labels;
+}
+
+/// The shapes V1 gives the two factors of `in_shape` matricized with `k` row
+/// bonds.
+template <typename TenT>
+std::pair<tci::shape_t<TenT>, tci::shape_t<TenT>>
+factor_shapes(const tci::shape_t<TenT> &in_shape, std::size_t k) {
+  // V1 matricizes with 1 <= num_of_bds_as_row < order.
+  TCICT_ASSERT(k >= 1 && k < in_shape.size());
+  std::size_t rows = 1, cols = 1;
+  for (std::size_t b = 0; b < in_shape.size(); ++b) {
+    (b < k ? rows : cols) *= static_cast<std::size_t>(in_shape[b]);
+  }
+  using dim_t = typename tci::shape_t<TenT>::value_type;
+  const auto bond = static_cast<dim_t>(std::min(rows, cols));
+  const auto split = in_shape.begin() + static_cast<std::ptrdiff_t>(k);
+  tci::shape_t<TenT> left(in_shape.begin(), split);
+  left.push_back(bond);
+  tci::shape_t<TenT> right{bond};
+  right.insert(right.end(), split, in_shape.end());
+  return {left, right};
+}
+
+/// A tensor of `shape` holding zeros apart from `entries`, each a coordinate
+/// and the real value there. As a function it gives each coordinate's element
+/// as TCICT_EXPECT_ELEMS compares it; `fill` writes the entries into a
+/// tensor of `shape` that `zeros` built.
+template <typename TenT> struct sparse_values {
+  tci::shape_t<TenT> shape;
+  std::vector<std::pair<tci::elem_coors_t<TenT>, double>> entries;
+
+  std::complex<double> operator()(const tci::elem_coors_t<TenT> &coors) const {
+    for (const auto &entry : entries) {
+      if (entry.first == coors) {
+        return {entry.second, 0.0};
+      }
+    }
+    return {0.0, 0.0};
+  }
+
+  void fill(tci::context_handle_t<TenT> &ctx, TenT &tensor) const {
+    TCICT_ASSERT(tci::shape(ctx, tensor) == shape);
+    for (const auto &entry : entries) {
+      TCICT_ASSERT(entry.first.size() == shape.size());
+      for (std::size_t b = 0; b < shape.size(); ++b) {
+        TCICT_ASSERT(static_cast<std::size_t>(entry.first[b]) <
+                     static_cast<std::size_t>(shape[b]));
+      }
+      tci::set_elem(ctx, tensor, entry.first, make_elem<TenT>(entry.second));
+    }
+  }
+};
+
+/// A dense tensor of `shape`: the coordinate at row-major position p holds
+/// real part ((7 p) mod 11) + 1 and, for a complex element type, imaginary
+/// part ((5 p) mod 7) - 3. Unlike ramp_over, whose values are affine in the
+/// coordinates and so matricize to rank at most 2, the {2, 3, 4} instance has
+/// full rank with one row bond and with two, and its imaginary parts are not
+/// a multiple of its real parts, as TCICT_SET_ELEMS's are, so a factor that
+/// should be conjugated and is not changes the product. As a function it
+/// gives each coordinate's element as TCICT_EXPECT_ELEMS compares it; `fill`
+/// writes them into a tensor of `shape` that `zeros` built.
+template <typename TenT> struct dense_values {
+  tci::shape_t<TenT> shape;
+
+  std::complex<double> operator()(const tci::elem_coors_t<TenT> &coors) const {
+    const auto p = static_cast<long>(ramp_over<TenT>(shape, 0.0)(coors));
+    const double re = static_cast<double>((7 * p) % 11 + 1);
+    const double im = is_complex_v<TenT> ? static_cast<double>((5 * p) % 7 - 3)
+                                         : 0.0;
+    return {re, im};
+  }
+
+  void fill(tci::context_handle_t<TenT> &ctx, TenT &tensor) const {
+    TCICT_ASSERT(tci::shape(ctx, tensor) == shape);
+    detail::for_each_coors<TenT>(
+        shape, [&](const tci::elem_coors_t<TenT> &coors) {
+          const auto v = (*this)(coors);
+          tci::set_elem(ctx, tensor, coors,
+                        make_elem<TenT>(v.real(), v.imag()));
+        });
+  }
+};
+
+/// The identity on {n, n}, as TCICT_EXPECT_ELEMS compares it.
+template <typename TenT>
+std::complex<double> identity_at(const tci::elem_coors_t<TenT> &coors) {
+  return {coors[0] == coors[1] ? 1.0 : 0.0, 0.0};
+}
+
+/// Asserts that conj(f) contracted with f over the `k` bonds before f's last,
+/// its factor bond, is the identity on that bond: orthonormal columns.
+template <typename TenT>
+void expect_orthonormal_columns(tci_test_fixture<TenT> &fix, const TenT &f,
+                                std::size_t k) {
+  auto &ctx = fix.context();
+  const auto shape = tci::shape(ctx, f);
+  TCICT_ASSERT(shape.size() == k + 1);
+  const auto bond = shape.back();
+  TenT f_conj;
+  tci::cplx_conj(ctx, f, f_conj);
+  const auto rows = bond_labels(0, k);
+  TenT gram;
+  tci::contract(ctx, f_conj, rows + "x", f, rows + "y", gram, "xy");
+  TCICT_EXPECT_ELEMS(fix, gram, {bond, bond}, identity_at<TenT>,
+                     tol_category::factorization);
+}
+
+/// Asserts that f contracted with conj(f) over the `count` bonds after f's
+/// first, its factor bond, is the identity on that bond: orthonormal rows.
+template <typename TenT>
+void expect_orthonormal_rows(tci_test_fixture<TenT> &fix, const TenT &f,
+                             std::size_t count) {
+  auto &ctx = fix.context();
+  const auto shape = tci::shape(ctx, f);
+  TCICT_ASSERT(shape.size() == count + 1);
+  const auto bond = shape.front();
+  TenT f_conj;
+  tci::cplx_conj(ctx, f, f_conj);
+  const auto cols = bond_labels(0, count);
+  TenT gram;
+  tci::contract(ctx, f, "x" + cols, f_conj, "y" + cols, gram, "xy");
+  TCICT_EXPECT_ELEMS(fix, gram, {bond, bond}, identity_at<TenT>,
+                     tol_category::factorization);
+}
+
+/// Asserts that every element of the second-order `t` with
+/// `zero_at(row, col)` is exactly zero, as V1's "upper triangular" and "lower
+/// triangular" say of r and l, through TCICT_EXPECT_ELEMS with an exact
+/// tolerance: zero where `zero_at` holds, and elsewhere the element read back.
+template <typename TenT, typename ZeroAt>
+void expect_zero_where(tci_test_fixture<TenT> &fix, const TenT &t,
+                       ZeroAt zero_at) {
+  auto &ctx = fix.context();
+  const auto shape = tci::shape(ctx, t);
+  TCICT_ASSERT(shape.size() == 2);
+  TCICT_EXPECT_ELEMS(
+      fix, t, shape,
+      [&](const tci::elem_coors_t<TenT> &c) -> std::complex<double> {
+        if (zero_at(static_cast<std::size_t>(c[0]),
+                    static_cast<std::size_t>(c[1]))) {
+          return {0.0, 0.0};
+        }
+        const auto e = tci::get_elem(ctx, t, c);
+        return {real_part<TenT>(e), imag_part<TenT>(e)};
+      },
+      tol_category::exact);
+}
+
+/// Calls `f`, reporting an assertion failing or a std::exception thrown in it
+/// with `label` in front, so a test checking several cases through one helper
+/// says which case failed.
+template <typename F> void in_case(const std::string &label, F f) {
+  try {
+    f();
+  } catch (const assertion_error &e) {
+    throw assertion_error(label + ": " + e.what());
+  } catch (const std::exception &e) {
+    throw assertion_error(label + ": unexpected exception: " + e.what());
+  }
+}
+
+/// Asserts that `left`, whose last bond is the factor bond, contracted over
+/// it with `right`, whose first bond is, gives back the input of shape
+/// `in_shape` that `value_at` describes, matricized with `k` row bonds.
+template <typename TenT, typename ValueAt>
+void expect_product(tci_test_fixture<TenT> &fix, const TenT &left,
+                    const TenT &right, std::size_t k,
+                    const tci::shape_t<TenT> &in_shape, ValueAt value_at) {
+  auto &ctx = fix.context();
+  const auto rows = bond_labels(0, k);
+  const auto cols = bond_labels(k, in_shape.size() - k);
+  TenT product;
+  tci::contract(ctx, left, rows + "x", right, "x" + cols, product, rows + cols);
+  TCICT_EXPECT_ELEMS(fix, product, in_shape, value_at,
+                     tol_category::factorization);
+}
+
+#if !defined(TCICT_SKIP_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK)
+/// svd of `input`, whose elements `value_at` gives, with `k` row bonds: the
+/// factor shapes; sigma's diagonal against `singular_values` in V1's
+/// non-increasing order when they are given, and otherwise sigma's shape and
+/// that its diagonal, read back, is non-negative and non-increasing with
+/// off-diagonal elements exactly zero; u * sigma * v_dag reproduces the
+/// input; u has orthonormal columns and v_dag orthonormal rows.
+template <typename TenT, typename ValueAt>
+void check_svd(tci_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
+               ValueAt value_at, const std::vector<double> &singular_values) {
+  using RealTenT = tci::real_ten_t<TenT>;
+  auto &ctx = fix.context();
+  const auto in_shape = tci::shape(ctx, input);
+  const auto [u_shape, v_shape] = factor_shapes<TenT>(in_shape, k);
+  const auto order = in_shape.size();
+
+  TenT u, v_dag;
+  RealTenT sigma;
+  tci::svd(ctx, input, static_cast<tci::order_t<TenT>>(k), u, sigma, v_dag);
+  TCICT_ASSERT(tci::shape(ctx, u) == u_shape);
+  TCICT_ASSERT(tci::shape(ctx, v_dag) == v_shape);
+  const auto bond = u_shape.back();
+  const auto tol = tolerance(fix, tol_category::factorization);
+  if (!singular_values.empty()) {
+    TCICT_EXPECT_DIAGONAL(ctx, sigma, singular_values, tol);
+  } else {
+    // Values not known in closed form: sigma's diagonal, read back, must be
+    // non-negative and non-increasing, and sigma diagonal around it.
+    const auto s_shape = tci::shape(ctx, sigma);
+    TCICT_ASSERT(s_shape.size() == 2 && s_shape[0] == bond &&
+                 s_shape[1] == bond);
+    const auto diagonal = TCICT_REAL_DIAGONAL_OF(ctx, sigma);
+    for (std::size_t i = 0; i < diagonal.size(); ++i) {
+      TCICT_ASSERT(diagonal[i] >= 0.0);
+      TCICT_ASSERT(i == 0 || diagonal[i] <= diagonal[i - 1]);
+    }
+    TCICT_EXPECT_DIAGONAL(ctx, sigma, diagonal, tol);
+  }
+
+  // u with each element on factor-bond coordinate j scaled by sigma's {j, j}.
+  auto u_scaled = tci::copy(ctx, u);
+  detail::for_each_coors<TenT>(u_shape, [&](const tci::elem_coors_t<TenT> &c) {
+    const auto j = c.back();
+    const auto s = real_part<RealTenT>(
+        tci::get_elem(ctx, sigma, coors_of<RealTenT>(j, j)));
+    const auto e = tci::get_elem(ctx, u, c);
+    tci::set_elem(ctx, u_scaled, c,
+                  make_elem<TenT>(real_part<TenT>(e) * s,
+                                  imag_part<TenT>(e) * s));
+  });
+  expect_product(fix, u_scaled, v_dag, k, in_shape, value_at);
+
+  expect_orthonormal_columns(fix, u, k);
+  expect_orthonormal_rows(fix, v_dag, order - k);
+}
+#endif
+
+#ifndef TCICT_SKIP_QR
+/// qr of `input` with `k` row bonds: the factor shapes; q * r reproduces the
+/// input; q has orthonormal columns; when r is second-order, it is zero
+/// below its diagonal.
+template <typename TenT, typename ValueAt>
+void check_qr(tci_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
+              ValueAt value_at) {
+  auto &ctx = fix.context();
+  const auto in_shape = tci::shape(ctx, input);
+  const auto [q_shape, r_shape] = factor_shapes<TenT>(in_shape, k);
+
+  TenT q, r;
+  tci::qr(ctx, input, static_cast<tci::order_t<TenT>>(k), q, r);
+  TCICT_ASSERT(tci::shape(ctx, q) == q_shape);
+  TCICT_ASSERT(tci::shape(ctx, r) == r_shape);
+  expect_product(fix, q, r, k, in_shape, value_at);
+  expect_orthonormal_columns(fix, q, k);
+  if (r_shape.size() == 2) {
+    expect_zero_where(fix, r, [](std::size_t row, std::size_t col) {
+      return row > col;
+    });
+  }
+}
+#endif
+
+#ifndef TCICT_SKIP_LQ
+/// lq of `input` with `k` row bonds: the factor shapes; l * q reproduces the
+/// input; q has orthonormal rows; when l is second-order, it is zero above
+/// its diagonal.
+template <typename TenT, typename ValueAt>
+void check_lq(tci_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
+              ValueAt value_at) {
+  auto &ctx = fix.context();
+  const auto in_shape = tci::shape(ctx, input);
+  const auto [l_shape, q_shape] = factor_shapes<TenT>(in_shape, k);
+  const auto order = in_shape.size();
+
+  TenT l, q;
+  tci::lq(ctx, input, static_cast<tci::order_t<TenT>>(k), l, q);
+  TCICT_ASSERT(tci::shape(ctx, l) == l_shape);
+  TCICT_ASSERT(tci::shape(ctx, q) == q_shape);
+  expect_product(fix, l, q, k, in_shape, value_at);
+  expect_orthonormal_rows(fix, q, order - k);
+  if (l_shape.size() == 2) {
+    expect_zero_where(fix, l, [](std::size_t row, std::size_t col) {
+      return col > row;
+    });
+  }
+}
+#endif
+
+/// [[1, 1, 0], [0, 0, 2]]: A A^T = diag(2, 4), so its singular values are 2
+/// and sqrt(2); `transposed` gives the {3, 2} transpose, with the same ones.
+template <typename TenT> sparse_values<TenT> wide_or_tall(bool transposed) {
+  auto at = [transposed](std::size_t i, std::size_t j) {
+    return transposed ? coors_of<TenT>(j, i) : coors_of<TenT>(i, j);
+  };
+  return {transposed ? tci::shape_t<TenT>{3, 2} : tci::shape_t<TenT>{2, 3},
+          {{at(0, 0), 1.0}, {at(0, 1), 1.0}, {at(1, 2), 2.0}}};
+}
+
+/// The {2, 3, 4} tensor holding 3, 4, 5 and 12 at {0, 0, 0}, {0, 1, 1},
+/// {1, 0, 2} and {1, 2, 3}. With one row bond its rows i = 0 and i = 1 have
+/// disjoint supports, so A' A'^T = diag(25, 169) and the singular values are
+/// 13 and 5; with two, each column k holds one entry, at distinct rows, so
+/// A'^T A' = diag(9, 16, 25, 144) and they are 12, 5, 4 and 3. Reordering the
+/// rows or columns of A' leaves both unchanged, so they hold for any linear
+/// order. Its first and last bonds differ in dimension, so a backend forming
+/// the row dimension from the last bonds instead gets factors of other
+/// shapes.
+template <typename TenT> sparse_values<TenT> third_order_sparse() {
+  return {{2, 3, 4},
+          {{coors_of<TenT>(0, 0, 0), 3.0},
+           {coors_of<TenT>(0, 1, 1), 4.0},
+           {coors_of<TenT>(1, 0, 2), 5.0},
+           {coors_of<TenT>(1, 2, 3), 12.0}}};
+}
+
+/// Calls `check(matrix, values)` on the matrix of wide_or_tall and on its
+/// transpose.
+template <typename TenT, typename Check>
+void on_wide_and_tall(tci_test_fixture<TenT> &fix, Check check) {
+  auto &ctx = fix.context();
+  for (bool transposed : {false, true}) {
+    in_case(transposed ? "tall {3, 2}" : "wide {2, 3}", [&] {
+      const auto at = wide_or_tall<TenT>(transposed);
+      auto matrix = tci::zeros<TenT>(ctx, at.shape);
+      at.fill(ctx, matrix);
+      check(matrix, at);
+    });
+  }
+}
+
+/// Calls `check(tensor, values, k)` on the dense {2, 3, 4} fixture with one
+/// and with two row bonds.
+template <typename TenT, typename Check>
+void on_dense_third_order(tci_test_fixture<TenT> &fix, Check check) {
+  auto &ctx = fix.context();
+  const dense_values<TenT> at{{2, 3, 4}};
+  auto dense = tci::zeros<TenT>(ctx, at.shape);
+  at.fill(ctx, dense);
+  in_case("dense {2, 3, 4}, one row bond", [&] { check(dense, at, 1); });
+  in_case("dense {2, 3, 4}, two row bonds", [&] { check(dense, at, 2); });
+}
+
+} // namespace factor_check
+#endif
+
+// --- svd: non-square matrices ---
+
+template <typename TenT> void test_svd_non_square(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK) &&           \
+    defined(TCICT_HAS_ELEM_SWEEP)
+#ifdef TCICT_SKIP_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  factor_check::on_wide_and_tall(fix, [&](const TenT &m, const auto &at) {
+    factor_check::check_svd(fix, m, 1, at, {2.0, std::sqrt(2.0)});
+  });
+#else
+  (void)fix;
+#endif
+}
+
+// --- svd: a third-order input, one and two row bonds ---
+
+template <typename TenT>
+void test_svd_higher_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_SVD) && defined(TCICT_HAS_DIAGONAL_CHECK) &&           \
+    defined(TCICT_HAS_ELEM_SWEEP)
+#ifdef TCICT_SKIP_SVD_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  auto &ctx = fix.context();
+  const auto sparse_at = factor_check::third_order_sparse<TenT>();
+  auto sparse = tci::zeros<TenT>(ctx, sparse_at.shape);
+  sparse_at.fill(ctx, sparse);
+  factor_check::in_case("sparse {2, 3, 4}, one row bond", [&] {
+    factor_check::check_svd(fix, sparse, 1, sparse_at, {13.0, 5.0});
+  });
+  factor_check::in_case("sparse {2, 3, 4}, two row bonds", [&] {
+    factor_check::check_svd(fix, sparse, 2, sparse_at, {12.0, 5.0, 4.0, 3.0});
+  });
+
+  factor_check::on_dense_third_order(
+      fix, [&](const TenT &d, const auto &at, std::size_t k) {
+        factor_check::check_svd(fix, d, k, at, {});
+      });
+#else
+  (void)fix;
+#endif
+}
+
+// --- qr: non-square matrices ---
+
+template <typename TenT> void test_qr_non_square(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_QR) && defined(TCICT_HAS_ELEM_SWEEP)
+#ifdef TCICT_SKIP_QR_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  factor_check::on_wide_and_tall(fix, [&](const TenT &m, const auto &at) {
+    factor_check::check_qr(fix, m, 1, at);
+  });
+#else
+  (void)fix;
+#endif
+}
+
+// --- qr: a third-order input, one and two row bonds ---
+
+template <typename TenT>
+void test_qr_higher_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_QR) && defined(TCICT_HAS_ELEM_SWEEP)
+#ifdef TCICT_SKIP_QR_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  factor_check::on_dense_third_order(
+      fix, [&](const TenT &d, const auto &at, std::size_t k) {
+        factor_check::check_qr(fix, d, k, at);
+      });
+#else
+  (void)fix;
+#endif
+}
+
+// --- lq: non-square matrices ---
+
+template <typename TenT> void test_lq_non_square(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_LQ) && defined(TCICT_HAS_ELEM_SWEEP)
+#ifdef TCICT_SKIP_LQ_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  factor_check::on_wide_and_tall(fix, [&](const TenT &m, const auto &at) {
+    factor_check::check_lq(fix, m, 1, at);
+  });
+#else
+  (void)fix;
+#endif
+}
+
+// --- lq: a third-order input, one and two row bonds ---
+
+template <typename TenT>
+void test_lq_higher_order(tci_test_fixture<TenT> &fix) {
+#if !defined(TCICT_SKIP_LQ) && defined(TCICT_HAS_ELEM_SWEEP)
+#ifdef TCICT_SKIP_LQ_SINGLE_PRECISION
+  TCICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  factor_check::on_dense_third_order(
+      fix, [&](const TenT &d, const auto &at, std::size_t k) {
+        factor_check::check_lq(fix, d, k, at);
+      });
+#else
+  (void)fix;
+#endif
+}
+
 // --- eigvals: diagonal matrix ---
 
 template <typename TenT>
@@ -1793,6 +2281,10 @@ void test_eigvalsh_diagonal(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "linear_algebra", test_contract_outer_product) \
   X(__VA_ARGS__, "linear_algebra", test_qr) \
   X(__VA_ARGS__, "linear_algebra", test_lq) \
+  X(__VA_ARGS__, "linear_algebra", test_qr_non_square) \
+  X(__VA_ARGS__, "linear_algebra", test_qr_higher_order) \
+  X(__VA_ARGS__, "linear_algebra", test_lq_non_square) \
+  X(__VA_ARGS__, "linear_algebra", test_lq_higher_order) \
   X(__VA_ARGS__, "linear_algebra", test_trunc_svd) \
   X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_value) \
   X(__VA_ARGS__, "linear_algebra", test_trunc_svd_trunc_err_no_truncation) \
@@ -1822,5 +2314,7 @@ void test_eigvalsh_diagonal(tci_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "linear_algebra", test_trace_leaving_bond) \
   X(__VA_ARGS__, "linear_algebra", test_svd_basic) \
   X(__VA_ARGS__, "linear_algebra", test_svd_reconstruction) \
+  X(__VA_ARGS__, "linear_algebra", test_svd_non_square) \
+  X(__VA_ARGS__, "linear_algebra", test_svd_higher_order) \
   X(__VA_ARGS__, "linear_algebra", test_eigvals_diagonal) \
   X(__VA_ARGS__, "linear_algebra", test_eigvalsh_diagonal)

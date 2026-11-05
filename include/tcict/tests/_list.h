@@ -26,9 +26,11 @@
 
 // Tests meaningful only for real TenT (e.g., tci::to_cplx input must be real).
 #define TCICT_FOREACH_TEST_REAL_ONLY(X, ...) \
+  TCICT_FOREACH_MISCELLANEOUS_TEST_REAL_ONLY(X, __VA_ARGS__) \
   TCICT_FOREACH_TENSOR_MANIPULATION_TEST_REAL_ONLY(X, __VA_ARGS__)
 
 // Tests whose body is guarded `if constexpr (is_complex_v<TenT>)`; registering
 // for real TenT would produce redundant no-op test cases.
 #define TCICT_FOREACH_TEST_CPLX_ONLY(X, ...) \
+  TCICT_FOREACH_MISCELLANEOUS_TEST_CPLX_ONLY(X, __VA_ARGS__) \
   TCICT_FOREACH_TENSOR_MANIPULATION_TEST_CPLX_ONLY(X, __VA_ARGS__)
