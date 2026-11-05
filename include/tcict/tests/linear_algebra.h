@@ -746,8 +746,8 @@ void trunc_svd_by_strategy(tci::context_handle_t<TenT> &ctx, const TenT &a,
 // skips an API that TCICT_HAS_DIAGONAL_CHECK requires.
 template <typename TenT>
 void trunc_svd_expect_retained_chi(tci_test_fixture<TenT> &fix, double scale, int chi_max,
-                                   double s_min, int chi_min, double target_trunc_err,
-                                   int expected_chi) {
+                                   tci::real_t<TenT> s_min, int chi_min,
+                                   tci::real_t<TenT> target_trunc_err, int expected_chi) {
   auto &ctx = fix.context();
   auto tol = tolerance(fix, tol_category::factorization);
   auto matrix = trunc_svd_test_matrix<TenT>(ctx, scale);
@@ -756,9 +756,8 @@ void trunc_svd_expect_retained_chi(tci_test_fixture<TenT> &fix, double scale, in
   tci::real_ten_t<TenT> s_diag;
   tci::real_t<TenT> trunc_err = -1.0;
 
-  trunc_svd_by_strategy(ctx, matrix, 1, u, s_diag, v_dag, trunc_err, chi_max,
-                        static_cast<tci::real_t<TenT>>(s_min), chi_min,
-                        static_cast<tci::real_t<TenT>>(target_trunc_err));
+  trunc_svd_by_strategy(ctx, matrix, 1, u, s_diag, v_dag, trunc_err, chi_max, s_min, chi_min,
+                        target_trunc_err);
 
   // The tolerance is absolute, so it scales with the values it bounds; epsilon,
   // a ratio, keeps the unscaled one.

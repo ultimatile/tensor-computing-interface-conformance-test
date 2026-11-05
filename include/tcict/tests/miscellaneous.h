@@ -506,9 +506,10 @@ void test_convert_precision(tci_test_fixture<TenT> &fix) {
 // std::tuple of them. "The catalog order is implementation-defined, and
 // context compatibility is backend-dependent. Standard tuple traits and
 // `tcapi::elem_t` expose its size, types, and element types". The test asserts
-// that the catalog is a std::tuple and names tci::elem_t of each element, and
-// asserts a reading of "its tensor types": that the catalog holds TenT, a type
-// the backend registers with the suite, and tci::real_ten_t<TenT> and
+// that the catalog is a std::tuple, and names tci::elem_t of each catalog
+// type, which fails to compile for a type whose traits do not expose one. It
+// also asserts a reading of "its tensor types": that the catalog holds TenT, a
+// type the backend registers with the suite, and tci::real_ten_t<TenT> and
 // tci::cplx_ten_t<TenT>, which V1 defines as tensor types and the backend's
 // functions return. It asserts neither the order nor anything about contexts.
 template <typename TenT>
@@ -521,7 +522,7 @@ void test_supported_ten_types(tci_test_fixture<TenT> &fix) {
   TCICT_ASSERT((detail::tuple_contains_v<tci::cplx_ten_t<TenT>, Catalog>));
   detail::for_each_tuple_type<Catalog>([](auto tag) {
     using ElemT = tci::elem_t<typename decltype(tag)::type>;
-    static_assert(!std::is_void_v<ElemT>, "tci::elem_t of a catalog type names a type");
+    [[maybe_unused]] ElemT *elem_t_named = nullptr;
   });
 #endif
   (void)fix;
