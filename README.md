@@ -93,7 +93,7 @@ target_compile_definitions(my_tests PRIVATE
 )
 ```
 
-A skipped test still compiles, registers as a test case, and immediately passes (it has no assertions). See `include/tcict/skip.h` for the full list.
+A skipped test still compiles, registers as a test case, and immediately passes (it has no assertions). See `include/tcict/skip.h` for the full list. `TCICT_SKIP_SUPPORTED_TEN_TYPES` does the same for the `tci::supported_ten_types_t` catalog, which is a type rather than a function.
 
 **Caveat: skip is per-test, not per-API.** The same `tci::*` function may be called as a setup / verification helper in unrelated tests. For example, `tci::get_elem` is used inside many tests beyond the one guarded by `TCICT_SKIP_GET_ELEM`. Skipping a single feature therefore does not guarantee that every reference to its API disappears — to compile against a backend that omits a particular declaration, you may need to skip every test that uses it.
 Some tests are guarded by the APIs they use as well: the tests that build or check tensors through the helpers in `include/tcict/elem_sweep.h` and `include/tcict/zeroth_order.h` — among them the `concatenate`, `stack` and `linear_combine` tests and most zeroth-order tests — call `set_elem`, `shape` and `get_elem` through them and, apart from the tests of the other constructors, build their inputs with `zeros`, so skipping any of those four also skips them (`TCICT_HAS_ELEM_SWEEP` in `include/tcict/skip.h`). The tests using the zeroth-order checks also need `order` and `size`, so skipping either of those skips them too (`TCICT_HAS_ZEROTH_ORDER_SWEEP`).
@@ -133,14 +133,14 @@ This handles backends with runtime-buggy APIs (the call compiles but produces wr
 
 ## Test Categories
 
-| Category | Header | Functions exercised |
+| Category | Header | APIs exercised |
 |---|---|---|
 | Construction | `tests/construction.h` | `allocate`, `assign_from_range`, `clear`, `copy`, `eye`, `fill`, `move`, `random`, `to_range`, `zeros` |
 | Read-only getters | `tests/read_only_getters.h` | `get_elem`, `order`, `set_elem`, `shape`, `size`, `size_bytes` |
 | Tensor manipulation | `tests/tensor_manipulation.h` | `concatenate`, `cplx_conj`, `diag`, `expand`, `extract_sub`, `for_each`, `for_each_with_coors`, `imag`, `real`, `replace_sub`, `reshape`, `shrink`, `stack`, `to_cplx`, `transpose` |
 | Linear algebra | `tests/linear_algebra.h` | `contract`, `eig`, `eigh`, `eigvals`, `eigvalsh`, `exp`, `inverse`, `linear_combine`, `lq`, `norm`, `normalize`, `qr`, `scale`, `svd`, `trace`, `trunc_svd` |
 | I/O | `tests/io_operations.h` | `load`, `save` |
-| Miscellaneous | `tests/miscellaneous.h` | `close`, `convert`, `show`, `to_range`, `version` |
+| Miscellaneous | `tests/miscellaneous.h` | `close`, `convert`, `show`, `supported_ten_types_t`, `to_range`, `version` |
 
 ## Requirements
 
