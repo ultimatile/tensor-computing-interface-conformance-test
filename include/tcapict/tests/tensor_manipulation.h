@@ -1239,9 +1239,11 @@ void test_expand_outofplace(tcapi_test_fixture<TenT> &fix) {
 }
 
 #ifndef TCAPICT_SKIP_DIAG
-// Helpers called by the diag tests only, each compiled under the condition of
-// the APIs it calls: expect_vector_3 calls order, size and get_elem;
-// diag_input_value calls none; diag_input_matrix calls zeros and set_elem.
+// Helpers called by the diag tests only, each compiled under a condition that
+// covers the APIs it calls: expect_vector_3, which calls order, size and
+// get_elem, under TCAPICT_HAS_DIAGONAL_CHECK; diag_input_value, which calls
+// none, unconditionally; and diag_input_matrix, which calls zeros and
+// set_elem, under TCAPICT_HAS_ELEM_SWEEP.
 
 #ifdef TCAPICT_HAS_DIAGONAL_CHECK
 // Asserts that a first-order tensor of length 3 holds `expected` in order.
@@ -1345,21 +1347,28 @@ void test_diag_mat_to_vec(tcapi_test_fixture<TenT> &fix) {
 // result compactly when supported by the underlying TCF."
 template <typename TenT>
 void test_diag_mat_to_vec_from_diagonal(tcapi_test_fixture<TenT> &fix) {
-#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
+#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
+  // Through TCAPICT_SET_ELEMS and TCAPICT_EXPECT_ELEMS a real value v stands
+  // for written<TenT>(v), whose imaginary part for a complex TenT is -0.5v, so
+  // an extraction that drops or conjugates imaginary parts does not pass.
   const double expected[3] = {7.5, -8.5, 9.5};
+  auto on_diagonal = [&](const tcapi::elem_coors_t<TenT> &c) {
+    return c[0] == c[1] ? expected[c[0]] : 0.0;
+  };
+  auto listed = [&](const tcapi::elem_coors_t<TenT> &c) {
+    return expected[c[0]];
+  };
 
   auto vector = tcapi::zeros<TenT>(ctx, {3});
-  for (std::size_t i = 0; i < 3; ++i) {
-    tcapi::set_elem(ctx, vector, coors_of<TenT>(i), make_elem<TenT>(expected[i]));
-  }
+  TCAPICT_SET_ELEMS(fix, vector, listed);
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
-  // The input is now that diagonal tensor, not the vector left as it was.
-  TCAPICT_EXPECT_DIAGONAL(ctx, vector, expected,
-                          tolerance(fix, tol_category::exact));
+  // The input is now that diagonal tensor, its off-diagonal elements exactly
+  // zero, not the vector left as it was.
+  TCAPICT_EXPECT_ELEMS(fix, vector, {3, 3}, on_diagonal, tol_category::exact);
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
 
-  expect_vector_3(fix, vector, expected);
+  TCAPICT_EXPECT_ELEMS(fix, vector, {3}, listed, tol_category::exact);
 #else
   (void)fix;
 #endif

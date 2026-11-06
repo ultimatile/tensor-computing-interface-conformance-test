@@ -276,7 +276,7 @@ template <typename TenT>
 void test_random_zeroth_order(tcapi_test_fixture<TenT>& fix) {
 #if !defined(TCAPICT_SKIP_RANDOM) && defined(TCAPICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
-  // The k-th call (counting from 1) returns written<TenT>(value_of_call(k)).
+  // The k-th call (counting from 1) returns written_elem<TenT>(value_of_call(k)).
   auto value_of_call = [](std::size_t k) {
     return 10.0 + static_cast<double>(k);
   };
