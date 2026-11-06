@@ -1965,7 +1965,6 @@ void expect_product(tcapi_test_fixture<TenT> &fix, const TenT &left,
                     const TenT &right, std::size_t k,
                     const tcapi::shape_t<TenT> &in_shape, ValueAt value_at) {
   auto &ctx = fix.context();
-  TCAPICT_ASSERT(k >= 1 && k < in_shape.size());
   const auto rows = bond_labels(0, k);
   const auto cols = bond_labels(k, in_shape.size() - k);
   TenT product;

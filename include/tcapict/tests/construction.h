@@ -287,6 +287,9 @@ void test_random_zeroth_order(tcapi_test_fixture<TenT>& fix) {
 
   TenT tensor;
   TCAPICT_ASSERT_NOTHROW(tensor = tcapi::template random<TenT>(ctx, {}, gen));
+  // Checked before the call count, so a backend that ignores the empty shape
+  // is reported as such rather than as a wrong number of calls.
+  TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, tensor);
   TCAPICT_ASSERT_MSG(calls == 1, "random did not invoke gen() exactly once");
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, tensor, value_of_call(1));
 #else
