@@ -1265,10 +1265,10 @@ void expect_vector_3(tcapi_test_fixture<TenT> &fix, const TenT &tensor,
 }
 
 // The element at (i, j) of the 3x3 input of the matrix-to-vector diag tests:
-// `diagonal[i]` on the diagonal, which is distinct so that a reordered
-// extraction does not pass, and the distinct non-zero 0.25 + 3i + j off it, so
-// that neither does one that sums a row or a column. Every value is exact in
-// single precision.
+// `diagonal[i]` on the diagonal, and the distinct non-zero 0.25 + 3i + j off
+// it, exact in single precision, so that an extraction that sums a row or a
+// column does not pass. Callers pass distinct diagonal values that are exact
+// in single precision too, so that neither does a reordered one.
 inline double diag_input_value(const double (&diagonal)[3], std::size_t i,
                                std::size_t j) {
   return i == j ? diagonal[i] : 0.25 + static_cast<double>(3 * i + j);

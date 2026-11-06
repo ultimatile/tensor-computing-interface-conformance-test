@@ -610,8 +610,10 @@ template <typename TenT> void test_lq(tcapi_test_fixture<TenT> &fix) {
 // singular values with shape {χ,χ}, where χ is the retained bond dimension."
 // The entry also says the routine "follows the same matricization and SVD
 // convention as svd", and svd's entry says of its sigma "its diagonal
-// elements are the singular values in non-increasing order", but trunc_svd's
-// entry states no order for its own sigma. These tests assert none: they
+// elements are the singular values in non-increasing order". trunc_svd's
+// entry orders the singular values before truncation and retains them "in
+// descending order", but states no order for the diagonal of its output
+// sigma. These tests assert none: they
 // compare sigma's diagonal as a multiset, through diag_order::any, which a
 // non-increasing sigma also passes.
 
@@ -1069,11 +1071,11 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tcapi_test_fixture<
   // The factors are compared through the product they reconstruct rather than
   // elementwise: for a spectrum with distinct singular values the columns of u
   // are fixed only up to a phase, and, since trunc_svd's entry states no order
-  // for its sigma, up to a permutation shared with sigma, neither of which the
-  // two calls are obliged to choose identically, so an elementwise
-  // comparison would assert more than the equivalence claim. The
-  // reconstruction is invariant under both, and unlike a shape comparison it
-  // does read the factors' values.
+  // for the diagonal of its output sigma, up to a permutation shared with
+  // sigma, neither of which the two calls are obliged to choose identically,
+  // so an elementwise comparison would assert more than the equivalence claim.
+  // The reconstruction is invariant under both, and unlike a shape comparison
+  // it does read the factors' values.
   using RealTenT = tcapi::real_ten_t<TenT>;
   auto reconstruct = [&ctx](const TenT &u_in, const RealTenT &s_in, const TenT &v_in) {
     const auto u_shape = tcapi::shape(ctx, u_in);

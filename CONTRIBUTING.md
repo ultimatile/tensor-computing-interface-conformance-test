@@ -146,5 +146,5 @@ Its entries name these diagonal tensors: `eye` returns "the N×N identity tensor
 Off-diagonal elements must be exactly zero, since V1 defines a diagonal tensor as one "whose off-diagonal logical tensor elements are zero".
 The check takes any tensor type, with the context its input came with, because `sigma` and `eigh`'s `lambda_mat` are `real_ten_t<TenT>` and `eig`'s `lambda_mat` is `cplx_ten_t<TenT>`.
 V1 fixes the order of the diagonal for `svd` ("non-increasing order") and for `eigh` ("ascending order").
-It states none for `eig`, nor for the `sigma` of `trunc_svd`, whose entry says that the routine "follows the same matricization and SVD convention as svd" but states no order for its own `sigma`; so the `trunc_svd` tests, and the `eig` tests wherever the eigenvalues are not all equal, compare the diagonal as a multiset, through `diag_order::any`.
+It states none for `eig`, nor for the `sigma` of `trunc_svd`, whose entry says that the routine "follows the same matricization and SVD convention as svd" and retains the singular values "in descending order" but states no order for the diagonal of its output `sigma`; so the `trunc_svd` tests, and the `eig` tests wherever the eigenvalues are not all equal, compare the diagonal as a multiset, through `diag_order::any`.
 `eigvals` and `eigvalsh` return first-order lists, and their tests assert order 1.

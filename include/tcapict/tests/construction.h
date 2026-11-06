@@ -3,6 +3,7 @@
 #include <tcapict/assertion.h>
 #include <tcapict/diagonal.h>
 #include <tcapict/elem_helper.h>
+#include <tcapict/elem_sweep.h>
 #include <tcapict/fixture.h>
 #include <tcapict/range_2d.h>
 #include <tcapict/skip.h>
