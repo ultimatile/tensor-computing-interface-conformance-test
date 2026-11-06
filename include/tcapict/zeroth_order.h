@@ -16,12 +16,16 @@ namespace tcapict {
 
 namespace detail {
 
-// Sends the empty coordinate to index 0. A non-empty coordinate sets
-// `malformed` and also maps to index 0, which keeps the backend's access inside
-// a one-element range; the wrappers below fail on `malformed`. See "Callbacks
-// the backend invokes" in CONTRIBUTING.md.
-template <typename TenT> auto map_0d(bool &malformed) {
-  return [&malformed](const tcapi::elem_coors_t<TenT> &coors) -> std::ptrdiff_t {
+// Sends the empty coordinate to index 0 and counts its invocations in `calls`.
+// A non-empty coordinate sets `malformed` and also maps to index 0, which keeps
+// the backend's access inside a one-element range; the wrappers below fail on
+// `malformed` and on a count other than 1. See "Callbacks the backend invokes"
+// in CONTRIBUTING.md.
+template <typename TenT>
+auto map_0d(bool &malformed, std::size_t &calls) {
+  return [&malformed, &calls](
+             const tcapi::elem_coors_t<TenT> &coors) -> std::ptrdiff_t {
+    ++calls;
     if (!coors.empty()) {
       malformed = true;
     }
@@ -64,32 +68,44 @@ struct visit_record_0d {
 #if !defined(TCAPICT_SKIP_TO_RANGE) && defined(TCAPICT_HAS_ELEM_SWEEP)
 /// `to_range` of a zeroth-order `a` into a one-element range at `first`.
 /// Asserts that `a` has shape {} before the call, then that the call throws no
-/// std::exception and that the backend passed only the empty coordinate.
+/// std::exception, that the backend passed only the empty coordinate, and that
+/// it invoked the map once. V1: "For a zeroth-order tensor, the output range
+/// or list has length 1; `coors2idx` is invoked once with the empty coordinate
+/// sequence and must return 0."
 template <typename TenT, typename RandomIt>
 void to_range_0d(tcapi::context_handle_t<TenT> &ctx, const TenT &a,
                  RandomIt first) {
   TCAPICT_ASSERT(tcapi::shape(ctx, a).empty());
   bool malformed = false;
+  std::size_t calls = 0;
   TCAPICT_ASSERT_NOTHROW(
-      tcapi::to_range(ctx, a, first, detail::map_0d<TenT>(malformed)));
+      tcapi::to_range(ctx, a, first, detail::map_0d<TenT>(malformed, calls)));
   TCAPICT_ASSERT_MSG(!malformed, "to_range_0d: the backend passed a non-empty "
                                  "coordinate for a zeroth-order tensor");
+  TCAPICT_ASSERT_MSG(calls == 1, "to_range_0d: the backend did not invoke "
+                                 "coors2idx exactly once");
 }
 #endif
 
 #if !defined(TCAPICT_SKIP_ASSIGN_FROM_RANGE) && defined(TCAPICT_HAS_ELEM_SWEEP)
 /// `assign_from_range` at shape {} from the one-element range at `first`, into
 /// `out`. Asserts that the call throws no std::exception, that the backend
-/// passed only the empty coordinate, and that `out` has shape {}.
+/// passed only the empty coordinate and invoked the map once, and that `out`
+/// has shape {}. V1: "The empty shape is valid; in that case, the function
+/// returns a zeroth-order tensor and invokes the coordinate-to-index map once
+/// with the empty coordinate sequence."
 template <typename TenT, typename RandomIt>
 void assign_from_range_0d(tcapi::context_handle_t<TenT> &ctx, RandomIt first,
                           TenT &out) {
   bool malformed = false;
+  std::size_t calls = 0;
   TCAPICT_ASSERT_NOTHROW(out = tcapi::template assign_from_range<TenT>(
                            ctx, tcapi::shape_t<TenT>{}, first,
-                           detail::map_0d<TenT>(malformed)));
+                           detail::map_0d<TenT>(malformed, calls)));
   TCAPICT_ASSERT_MSG(!malformed, "assign_from_range_0d: the backend passed a "
                                  "non-empty coordinate for shape {}");
+  TCAPICT_ASSERT_MSG(calls == 1, "assign_from_range_0d: the backend did not "
+                                 "invoke coors2idx exactly once");
   TCAPICT_ASSERT(tcapi::shape(ctx, out).empty());
 }
 #endif

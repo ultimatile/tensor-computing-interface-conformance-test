@@ -268,9 +268,9 @@ void test_random_outofplace(tcapi_test_fixture<TenT>& fix) {
 
 // --- random: zeroth-order ---
 
-// TCAPI V1 fills the tensor "by repeatedly invoking `gen()`" and fixes no call
-// count, so the test asserts at least one call and that the sole element is a
-// value the generator returned, each call returning a different one.
+// TCAPI V1: "The empty shape is valid; in that case, the function returns a
+// zeroth-order tensor and invokes the random-number generator once." The test
+// asserts that one call and that the sole element is the value it returned.
 template <typename TenT>
 void test_random_zeroth_order(tcapi_test_fixture<TenT>& fix) {
 #if !defined(TCAPICT_SKIP_RANDOM) && defined(TCAPICT_HAS_ZEROTH_ORDER_SWEEP)
@@ -284,18 +284,8 @@ void test_random_zeroth_order(tcapi_test_fixture<TenT>& fix) {
   TenT tensor;
   TCAPICT_ASSERT_NOTHROW(tensor = tcapi::template random<TenT>(ctx, {}, gen));
   TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, tensor);
-  TCAPICT_ASSERT(calls > 0);
-
-  const auto elem = tcapi::get_elem(ctx, tensor, {});
-  bool returned_by_gen = false;
-  for (std::size_t k = 1; k <= calls; ++k) {
-    const auto w = written<TenT>(10.0 + static_cast<double>(k));
-    returned_by_gen = returned_by_gen ||
-                      (real_part<TenT>(elem) == w.real() &&
-                       imag_part<TenT>(elem) == w.imag());
-  }
-  TCAPICT_ASSERT_MSG(returned_by_gen,
-                     "the sole element is none of the values gen() returned");
+  TCAPICT_ASSERT_MSG(calls == 1, "random did not invoke gen() exactly once");
+  TCAPICT_EXPECT_ZEROTH_ORDER(fix, tensor, 11.0);
 #else
   (void)fix;
 #endif
@@ -533,8 +523,10 @@ void test_assign_from_range_column_major(tcapi_test_fixture<TenT>& fix) {
 
 // --- assign_from_range: zeroth-order ---
 
-// TCAPI V1: "For coordinates `coors`, element = `*(first + coors2idx(coors))`".
-// The only coordinate of shape {} is {}, which the map sends to index 0.
+// TCAPI V1: "The element at coordinate tuple `coors` is initialized as
+// `*(first + coors2idx(coors))` in C++". The only coordinate of shape {} is {},
+// which the map sends to index 0; assign_from_range_0d asserts the map's one
+// invocation.
 template <typename TenT>
 void test_assign_from_range_zeroth_order(tcapi_test_fixture<TenT>& fix) {
 #if !defined(TCAPICT_SKIP_ASSIGN_FROM_RANGE) && defined(TCAPICT_HAS_ZEROTH_ORDER_SWEEP)
