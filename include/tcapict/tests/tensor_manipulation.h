@@ -909,11 +909,10 @@ template <typename TenT> void test_reshape(tcapi_test_fixture<TenT> &fix) {
 
   // V1 says of reshape: "No element reordering, transposition, or value
   // modification occurs; the linear order of logical tensor elements is
-  // preserved." But it defines
-  // that linear order for no shape, so which coordinate a given element lands
-  // on is not portably assertable. The multiset of values is: it holds under
-  // any ordering, and still catches a dropped, duplicated, or corrupted
-  // element.
+  // preserved." But it defines that linear order for no shape, so which
+  // coordinate a given element lands on is not portably assertable. The
+  // multiset of values is: it holds under any ordering, and still catches a
+  // dropped, duplicated, or corrupted element.
   std::vector<double> observed;
   observed.reserve(24);
   for (std::size_t i = 0; i < 6; ++i) {
@@ -1299,9 +1298,21 @@ void test_diag_mat_to_vec(tcapi_test_fixture<TenT> &fix) {
                     make_elem<TenT>(expected[i]));
   }
 
-  tcapi::diag(ctx, matrix);
+  TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, matrix));
 
   expect_vector_3(fix, matrix, expected);
+
+  // The same values extracted from a diagonal tensor, the result of diag on a
+  // first-order input, of which V1 says "Implementations may store the result
+  // compactly when supported by the underlying TCF."
+  auto vector = tcapi::zeros<TenT>(ctx, {3});
+  for (std::size_t i = 0; i < 3; ++i) {
+    tcapi::set_elem(ctx, vector, coors_of<TenT>(i), make_elem<TenT>(expected[i]));
+  }
+  TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
+  TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
+
+  expect_vector_3(fix, vector, expected);
 #else
   (void)fix;
 #endif

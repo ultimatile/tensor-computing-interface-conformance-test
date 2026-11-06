@@ -21,10 +21,9 @@ namespace detail {
 
 // Type helpers for tcapi::supported_ten_types_t. is_std_tuple, tuple_contains
 // and for_each_tuple_type take any type and treat one that is not a std::tuple
-// as holding no tensor types, so the tests
-// using them compile against a catalog of the wrong kind, and
-// test_supported_ten_types reports it through its assertion on
-// is_std_tuple_v.
+// as holding no tensor types, so the tests using them compile against a
+// catalog of the wrong kind, and test_supported_ten_types reports it through
+// its assertion on is_std_tuple_v.
 
 template <typename T> struct type_tag {
   using type = T;
@@ -455,9 +454,9 @@ void test_convert_real_to_complex(tcapi_test_fixture<RealTenT> &fix) {
 // TCAPI V1: "Convert `t1` into a destination tensor, possibly changing the
 // element type, the underlying TCF/backend, or both. This includes
 // conversions between different floating-point precisions within the same
-// TCF." The first sentence says
-// what a conversion may change, not which pairs a backend supports; the second
-// is what V1 says convert supports, so the destinations are the types of
+// TCF." The first sentence says what a conversion may change, not which pairs
+// a backend supports; the second names precision changes within one TCF as
+// conversions convert performs, so the destinations are the types of
 // tcapi::supported_ten_types_t in TenT's TCF that hold TenT's kind of element,
 // real or complex, at another precision. V1 ties a TCF to a context handle
 // type: context_handle_t is the "Handle to the backend context maintained by

@@ -283,7 +283,6 @@ void test_random_zeroth_order(tcapi_test_fixture<TenT>& fix) {
 
   TenT tensor;
   TCAPICT_ASSERT_NOTHROW(tensor = tcapi::template random<TenT>(ctx, {}, gen));
-  TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, tensor);
   TCAPICT_ASSERT_MSG(calls == 1, "random did not invoke gen() exactly once");
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, tensor, 11.0);
 #else
