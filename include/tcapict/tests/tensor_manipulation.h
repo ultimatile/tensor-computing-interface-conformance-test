@@ -1361,7 +1361,9 @@ void test_diag_mat_to_vec_from_diagonal(tcapi_test_fixture<TenT> &fix) {
   };
 
   auto vector = tcapi::zeros<TenT>(ctx, {3});
-  // `listed` indexes `expected`, so the sweep must not visit more than {3}.
+  // `listed` reads `c[0]` as an index into `expected`, so the shape {3} asked
+  // for is asserted before the sweep: an order-0 shape gives no `c[0]`, and a
+  // first extent above 3 reads past `expected`.
   const tcapi::shape_t<TenT> length_3 = {3};
   TCAPICT_ASSERT(tcapi::shape(ctx, vector) == length_3);
   TCAPICT_SET_ELEMS(fix, vector, listed);
