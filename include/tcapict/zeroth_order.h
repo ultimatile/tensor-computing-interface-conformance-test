@@ -52,7 +52,7 @@ struct visit_record_0d {
     return true;
   }
 
-  // V1's for_each_with_coors: "For a zeroth-order tensor, the callable is
+  // TCAPI V1's for_each_with_coors: "For a zeroth-order tensor, the callable is
   // invoked once with the empty coordinate sequence."
   void check() const {
     TCAPICT_ASSERT(!malformed_coordinate);
@@ -69,9 +69,9 @@ struct visit_record_0d {
 /// `to_range` of a zeroth-order `a` into a one-element range at `first`.
 /// Asserts that `a` has shape {} before the call, then that the call throws no
 /// std::exception, that the backend passed only the empty coordinate, and that
-/// it invoked the map once. V1: "For a zeroth-order tensor, the output range
-/// or list has length 1; `coors2idx` is invoked once with the empty coordinate
-/// sequence and must return 0."
+/// it invoked the map once. TCAPI V1: "For a zeroth-order tensor, the output
+/// range or list has length 1; `coors2idx` is invoked once with the empty
+/// coordinate sequence and must return 0."
 template <typename TenT, typename RandomIt>
 void to_range_0d(tcapi::context_handle_t<TenT> &ctx, const TenT &a,
                  RandomIt first) {
@@ -91,9 +91,9 @@ void to_range_0d(tcapi::context_handle_t<TenT> &ctx, const TenT &a,
 /// `assign_from_range` at shape {} from the one-element range at `first`, into
 /// `out`. Asserts that the call throws no std::exception, that the backend
 /// passed only the empty coordinate and invoked the map once, and that `out`
-/// has shape {}. V1: "The empty shape is valid; in that case, the function
-/// returns a zeroth-order tensor and invokes the coordinate-to-index map once
-/// with the empty coordinate sequence."
+/// has shape {}. TCAPI V1: "The empty shape is valid; in that case, the
+/// function returns a zeroth-order tensor and invokes the coordinate-to-index
+/// map once with the empty coordinate sequence."
 template <typename TenT, typename RandomIt>
 void assign_from_range_0d(tcapi::context_handle_t<TenT> &ctx, RandomIt first,
                           TenT &out) {

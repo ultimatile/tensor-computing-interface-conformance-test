@@ -4,7 +4,7 @@ Header-only, test-framework-agnostic conformance tests for the [Tensor Computing
 
 ## Overview
 
-TCAPICT verifies that a TCAPI backend correctly implements the spec-defined API. Tests are written as template functions that throw `tcapict::assertion_error` on failure, making them usable with any test framework (doctest, Google Test, Catch2) or standalone.
+TCAPICT verifies that a TCAPI backend correctly implements the API TCAPI V1 defines. Tests are written as template functions that throw `tcapict::assertion_error` on failure, making them usable with any test framework (doctest, Google Test, Catch2) or standalone.
 
 Known TCAPI backend implementations:
 - [Cytnx backend](https://github.com/r-ccs-cms/tcapi-backend-cytnx)

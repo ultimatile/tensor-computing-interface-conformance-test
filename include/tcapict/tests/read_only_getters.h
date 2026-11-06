@@ -60,7 +60,7 @@ void test_size_bytes(tcapi_test_fixture<TenT>& fix) {
 #ifndef TCAPICT_SKIP_SIZE_BYTES
   auto& ctx = fix.context();
   auto tensor = tcapi::zeros<TenT>(ctx, {2, 3, 4});
-  // V1's entry for it is "Return the physical memory footprint of `a` in
+  // TCAPI V1's entry for it is "Return the physical memory footprint of `a` in
   // bytes. A compactly stored diagonal tensor may use fewer bytes than a dense
   // tensor with the same shape." Its example gives 96 bytes for a float32
   // tensor of shape {3, 4, 2}; the suite reads that as the example's value,
@@ -129,7 +129,7 @@ void test_size_bytes_2x2(tcapi_test_fixture<TenT>& fix) {
 #ifndef TCAPICT_SKIP_SIZE_BYTES
   auto& ctx = fix.context();
   // The second-order one of the three; see the third-order test above for what
-  // V1 leaves assertable.
+  // TCAPI V1 leaves assertable.
   auto tensor = tcapi::zeros<TenT>(ctx, {2, 2});
   TCAPICT_ASSERT_NOTHROW(tcapi::size_bytes(ctx, tensor));
 #else
@@ -143,9 +143,9 @@ template <typename TenT>
 void test_size_bytes_zeroth_order(tcapi_test_fixture<TenT>& fix) {
 #ifndef TCAPICT_SKIP_SIZE_BYTES
   auto& ctx = fix.context();
-  // As for the third-order test above, the call returning is all V1 leaves
-  // assertable; this adds the zeroth order to the ranks it is made on. The
-  // shape check keeps the test from passing on a tensor that is not one.
+  // As for the third-order test above, the call returning is all TCAPI V1
+  // leaves assertable; this adds the zeroth order to the ranks it is made on.
+  // The shape check keeps the test from passing on a tensor that is not one.
   auto tensor = tcapi::zeros<TenT>(ctx, {});
   TCAPICT_ASSERT(tcapi::shape(ctx, tensor).empty());
   TCAPICT_ASSERT_NOTHROW(tcapi::size_bytes(ctx, tensor));

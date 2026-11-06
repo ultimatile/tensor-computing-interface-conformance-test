@@ -6,7 +6,7 @@ Commit subjects follow [Conventional Commits](https://www.conventionalcommits.or
 This repository's deliverable is the test suite, so the type is judged against the suite, not against the backends it tests:
 
 - `feat`: new coverage, such as a new test case or a newly covered API, or new suite infrastructure, such as adapters, tolerance categories or skip macros.
-- `fix`: a test that asserts the wrong thing, including one that asserts behavior the spec does not define, or any other bug in the suite.
+- `fix`: a test that asserts the wrong thing, including one that asserts behavior TCAPI V1 does not define, or any other bug in the suite.
 - `refactor`: a change to how tests are written that leaves what they assert unchanged.
 
 `test` is not used: every change here touches tests, so the type would tell a reader nothing.
@@ -107,13 +107,13 @@ A zeroth-order input has one element, which no reordering can move, so the test 
 
 Each of the three operations, and each `linear_combine` overload, is called at least once through a named `tcapi::List<tcapi::CRef<TenT>>` variable, not only through a braced `{std::cref(a), ...}` list.
 When `TenT` is copy-constructible, a braced list of `std::cref`s also initializes a `List<TenT>`, so a braced call alone compiles against a backend that still takes `List<TenT>`.
-A named `List<CRef<TenT>>` does not convert to `List<TenT>`, so that call compiles only against V1's parameter type.
+A named `List<CRef<TenT>>` does not convert to `List<TenT>`, so that call compiles only against TCAPI V1's parameter type.
 A call with a braced list names `TenT` explicitly, as in `tcapi::stack<TenT>(ctx, {std::cref(a), std::cref(b)}, 0)`, because no parameter of these functions deduces it from a braced list.
 
 ### Callbacks the backend invokes
 
 Coordinate maps, generators and traversal callbacks run inside the backend's frames, which a conformance suite cannot assume are able to carry an exception.
-The suite reads V1 as invoking them one at a time: V1's own `for_each` example accumulates into a plain variable, `[&tot](const float el) { tot += el; }`, and gives the result as `tot == 3.0`.
+The suite reads TCAPI V1 as invoking them one at a time: TCAPI V1's own `for_each` example accumulates into a plain variable, `[&tot](const float el) { tot += el; }`, and gives the result as `tot == 3.0`.
 So they do not assert, do not allocate, and read a coordinate's components only after checking the coordinate: that it has as many components as the tensor has bonds, and that each is less than its bond's dimension.
 Whatever a callback observes for the test, such as a flag for a malformed coordinate, a visit count or a running sum, it keeps in variables the test reads after the call returns, and the test asserts on those.
 A callback that receives a second-order coordinate makes that check with `coors_2d` in `include/tcapict/elem_helper.h` before reading its components, and records a coordinate `coors_2d` rejects in a flag the test asserts is clear.
@@ -127,14 +127,14 @@ The results of `real` and `imag` of a complex tensor, and of `to_cplx` of a real
 `test_random_zeroth_order` checks its result through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE` before it asserts the generator's call count, and then the sole element through `TCAPICT_EXPECT_ELEMS`, so that a backend ignoring the empty shape is reported as such.
 A callback that receives a coordinate of a zeroth-order tensor expects the empty one and flags any other, under "Callbacks the backend invokes", through `to_range_0d`, `assign_from_range_0d` or `visit_record_0d` in the same header.
 
-V1 goes on: "Operations whose definitions require selecting, reordering, inserting, removing, slicing, or partitioning existing bonds are not applicable to zeroth-order tensors unless explicitly specified by the operation."
+TCAPI V1 goes on: "Operations whose definitions require selecting, reordering, inserting, removing, slicing, or partitioning existing bonds are not applicable to zeroth-order tensors unless explicitly specified by the operation."
 It names no such operation. The suite reads `transpose`, `svd`, `qr`, `eig`, `expand`, `shrink`, `extract_sub` and `replace_sub` as such operations, and none of their entries specifies a zeroth-order case.
-V1 defines no exception for them, so nothing about calling them on a zeroth-order tensor is assertable, and no test calls them on one.
+TCAPI V1 defines no exception for them, so nothing about calling them on a zeroth-order tensor is assertable, and no test calls them on one.
 No test calls the following on a zeroth-order tensor either, since the suite reads the same sentence as covering them, and their entries specify no zeroth-order case: `concatenate`, which selects a bond, `stack`, which inserts one, and the operations that matricize, which partition bonds into rows and columns (`trunc_svd`, `lq`, `eigh`, `eigvals`, `eigvalsh`, `exp`, `inverse`).
-Nor does any call `diag`, whose input V1 requires to be first- or second-order.
+Nor does any call `diag`, whose input TCAPI V1 requires to be first- or second-order.
 The suite reads the operations its zeroth-order tests do call as requiring no existing bond of a zeroth-order operand; `contract` is among them, since such an operand takes the empty label list `""`.
 
-The zeroth-order tests assert nothing about `TenT{}`, the state `clear` and `move` leave, since V1 does not say what queries return on it; the `order == 0` assertions the existing `clear` and `move` tests make on it are left as they are, pending the open question on [#51](https://github.com/ultimatile/tcapi-conformance-test/issues/51).
+The zeroth-order tests assert nothing about `TenT{}`, the state `clear` and `move` leave, since TCAPI V1 does not say what queries return on it; the `order == 0` assertions the existing `clear` and `move` tests make on it are left as they are, pending the open question on [#51](https://github.com/ultimatile/tcapi-conformance-test/issues/51).
 Of `size_bytes` they assert only that it returns, as the tests of the other ranks do.
 
 ### Diagonal tensors
@@ -143,8 +143,8 @@ TCAPI V1, in the introduction to its core functions: "TCAPI treats a diagonal te
 Its entries name these diagonal tensors: `eye` returns "the N×N identity tensor as a diagonal tensor", `diag` of a first-order input and the `sigma` of `trunc_svd` and `lambda_mat` of `eig` are each "a second-order diagonal tensor", and the `sigma` of `svd` and `lambda_mat` of `eigh` are each "a real second-order diagonal tensor".
 `test_diag_mat_to_vec_from_diagonal` checks every element of the diagonal tensor it builds with `diag`, its off-diagonal zeros included, through `TCAPICT_EXPECT_ELEMS` before extracting from it; `test_diag_mat_to_vec_from_eye` extracts from `eye` without checking that result, which `test_eye` checks.
 `test_eye` and the other tests of `diag`, `svd`, `trunc_svd`, `eig` and `eigh` check each diagonal tensor they produce as a result through `TCAPICT_EXPECT_DIAGONAL` in `include/tcapict/diagonal.h`: order 2, shape `{n, n}` and size `n * n`, checked before any element is read, then every element against the expected diagonal.
-Off-diagonal elements must be exactly zero, since V1 defines a diagonal tensor as one "whose off-diagonal logical tensor elements are zero".
+Off-diagonal elements must be exactly zero, since TCAPI V1 defines a diagonal tensor as one "whose off-diagonal logical tensor elements are zero".
 The check takes any tensor type, with the context its input came with, because `sigma` and `eigh`'s `lambda_mat` are `real_ten_t<TenT>` and `eig`'s `lambda_mat` is `cplx_ten_t<TenT>`.
-V1 fixes the order of the diagonal for `svd` ("non-increasing order") and for `eigh` ("ascending order").
+TCAPI V1 fixes the order of the diagonal for `svd` ("non-increasing order") and for `eigh` ("ascending order").
 It states none for `eig`, nor for the `sigma` of `trunc_svd`, whose entry says that the routine "follows the same matricization and SVD convention as svd" and retains the singular values "in descending order" but states no order for the diagonal of its output `sigma`; so the `trunc_svd` tests, and the `eig` tests wherever the eigenvalues are not all equal, compare the diagonal as a multiset, through `diag_order::any`.
 `eigvals` and `eigvalsh` return first-order lists, and their tests assert order 1.

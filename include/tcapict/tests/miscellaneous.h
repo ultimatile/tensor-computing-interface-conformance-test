@@ -454,23 +454,23 @@ void test_convert_real_to_complex(tcapi_test_fixture<RealTenT> &fix) {
 // --- convert: precision change ---
 
 // TCAPI V1: "Convert `t1` into a destination tensor, possibly changing the
-// element type, the underlying TCF/backend, or both. This includes
-// conversions between different floating-point precisions within the same
-// TCF." The first sentence says what a conversion may change, not which pairs
-// a backend supports; the second names precision changes within one TCF as
-// conversions convert performs, so the destinations are the types of
+// element type, the underlying TCF/backend, or both. This includes conversions
+// between different floating-point precisions within the same TCF." The first
+// sentence says what a conversion may change, not which pairs a backend
+// supports; the second names precision changes within one TCF as conversions
+// convert performs, so the destinations are the types of
 // tcapi::supported_ten_types_t in TenT's TCF that hold TenT's kind of element,
-// real or complex, at another precision. V1 ties a TCF to a context handle
-// type: context_handle_t is the "Handle to the backend context maintained by
-// the underlying TCF that provides `ten_t`", and of create_context, "the
-// concrete type `ContextHandleT` selects the target TCF/backend". So a type
-// whose context_handle_t is TenT's is in TenT's TCF; one with another handle
-// type may or may not be, and is not converted to. Each result is read through
-// the destination type's own fixture context. Every real and imaginary part
-// written is a small integer or half of one, exact in single precision and
-// wider, so the copy is exact. A catalog with no such type leaves nothing to
-// convert. The input is read back as "Out-of-place inputs" in CONTRIBUTING.md
-// describes.
+// real or complex, at another precision. TCAPI V1 ties a TCF to a context
+// handle type: context_handle_t is the "Handle to the backend context
+// maintained by the underlying TCF that provides `ten_t`", and of
+// create_context, "the concrete type `ContextHandleT` selects the target
+// TCF/backend". So a type whose context_handle_t is TenT's is in TenT's TCF;
+// one with another handle type may or may not be, and is not converted to. Each
+// result is read through the destination type's own fixture context. Every real
+// and imaginary part written is a small integer or half of one, exact in single
+// precision and wider, so the copy is exact. A catalog with no such type leaves
+// nothing to convert. The input is read back as "Out-of-place inputs" in
+// CONTRIBUTING.md describes.
 template <typename TenT>
 void test_convert_precision(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_CONVERT) && !defined(TCAPICT_SKIP_SUPPORTED_TEN_TYPES) &&           \
@@ -513,19 +513,19 @@ void test_convert_precision(tcapi_test_fixture<TenT> &fix) {
 // --- supported_ten_types_t ---
 
 // TCAPI V1: "Each C++ TCAPI implementation exposes its concrete tensor types
-// through the namespace-level alias `tcapi::supported_ten_types_t`,
-// accessible through `tcapi/tcapi.h`", a std::tuple of them. "This is a
-// compile-time type catalog. Its ordering is implementation-defined. The
-// catalog lists the types provided by the implementation, while their
-// compatibility with a particular execution context remains
-// backend-dependent." Its size, types and element types "can be obtained
-// using standard tuple traits and `tcapi::elem_t`". The test asserts that the
-// catalog is a std::tuple, and names tcapi::elem_t of each catalog type, which
-// fails to compile for a type whose traits do not expose one. It also asserts
-// a reading of "its concrete tensor types": that the catalog holds TenT, a
-// type the backend registers with the suite, and tcapi::real_ten_t<TenT> and
-// tcapi::cplx_ten_t<TenT>, which V1 defines as tensor types and the backend's
-// functions return. It asserts neither the order nor anything about contexts.
+// through the namespace-level alias `tcapi::supported_ten_types_t`, accessible
+// through `tcapi/tcapi.h`", a std::tuple of them. "This is a compile-time type
+// catalog. Its ordering is implementation-defined. The catalog lists the types
+// provided by the implementation, while their compatibility with a particular
+// execution context remains backend-dependent." Its size, types and element
+// types "can be obtained using standard tuple traits and `tcapi::elem_t`". The
+// test asserts that the catalog is a std::tuple, and names tcapi::elem_t of
+// each catalog type, which fails to compile for a type whose traits do not
+// expose one. It also asserts a reading of "its concrete tensor types": that
+// the catalog holds TenT, a type the backend registers with the suite, and
+// tcapi::real_ten_t<TenT> and tcapi::cplx_ten_t<TenT>, which TCAPI V1 defines
+// as tensor types and the backend's functions return. It asserts neither the
+// order nor anything about contexts.
 template <typename TenT>
 void test_supported_ten_types(tcapi_test_fixture<TenT> &fix) {
 #ifndef TCAPICT_SKIP_SUPPORTED_TEN_TYPES

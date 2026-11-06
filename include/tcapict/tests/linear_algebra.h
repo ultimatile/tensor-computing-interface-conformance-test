@@ -607,7 +607,7 @@ template <typename TenT> void test_lq(tcapi_test_fixture<TenT> &fix) {
 
 // --- truncated SVD ---
 //
-// V1: "The output `sigma` is a second-order diagonal tensor of retained
+// TCAPI V1: "The output `sigma` is a second-order diagonal tensor of retained
 // singular values with shape {χ,χ}, where χ is the retained bond dimension."
 // The entry also says the routine "follows the same matricization and SVD
 // convention as svd", and svd's entry says of its sigma "its diagonal
@@ -679,15 +679,15 @@ TenT trunc_svd_test_matrix(typename tcapi::tensor_traits<TenT>::context_handle_t
   return matrix;
 }
 
-// Helper: the spec's relative truncation error for keeping `chi` of the
+// Helper: TCAPI V1's relative truncation error for keeping `chi` of the
 // singular values in `svs`,
 //
 //   epsilon(chi) = sum_{i>=chi} s_i^2 / sum_{i<kappa} s_i^2.
 //
-// Evaluated here from the spectrum rather than by calling back into the backend,
-// so an assertion using it compares the implementation against the specification
-// and not against a second route through the same code. Takes no scale: epsilon
-// is a ratio of sums of squares and so is scale-invariant.
+// Evaluated here from the spectrum rather than by calling back into the
+// backend, so an assertion using it compares the implementation against
+// TCAPI V1 and not against a second route through the same code. Takes no
+// scale: epsilon is a ratio of sums of squares and so is scale-invariant.
 template <typename TenT>
 tcapi::real_t<TenT> trunc_svd_expected_epsilon_from(const double *svs, int rank, int chi) {
   TCAPICT_ASSERT(chi >= 0 && chi <= rank);
@@ -710,8 +710,8 @@ template <typename TenT> tcapi::real_t<TenT> trunc_svd_expected_epsilon(int chi)
                                                chi);
 }
 
-// Helper: the suite's one call of overload (2), whose trailing parameters V1
-// declares as
+// Helper: the suite's one call of overload (2), whose trailing parameters
+// TCAPI V1 declares as
 //
 //   const tcapi::bond_dim_t<TenT> chi_max,
 //   const tcapi::real_t<TenT> s_min,
@@ -738,8 +738,8 @@ void trunc_svd_by_strategy(tcapi::context_handle_t<TenT> &ctx, const TenT &a,
 }
 
 // Helper: run overload (2) on the fixture spectrum and assert sigma, which
-// holds the retained singular values, and the truncation error against the
-// spec's epsilon for the expected chi.
+// holds the retained singular values, and the truncation error against
+// TCAPI V1's epsilon for the expected chi.
 //
 // The strategy tests below differ only in the four strategy arguments, taken
 // here in overload (2)'s order, the fixture scale, and the expected chi, so the
@@ -802,7 +802,7 @@ template <typename TenT> void test_trunc_svd(tcapi_test_fixture<TenT> &fix) {
 #endif
 }
 
-/// Verify trunc_err equals the spec formula when truncation occurs.
+/// Verify trunc_err equals TCAPI V1's formula when truncation occurs.
 /// SVs = [3, 2, 1, 0.1], chi_max = 2 → keep [3, 2], discard [1, 0.1].
 /// epsilon = (1^2 + 0.1^2) / (3^2 + 2^2 + 1^2 + 0.1^2)
 ///         = 1.01 / 14.01 ≈ 0.07209
@@ -895,7 +895,7 @@ void test_trunc_svd_trunc_err_bounded(tcapi_test_fixture<TenT> &fix) {
 /// input's diagonal into sigma fails. [[1, 2], [3, 4]] has the singular values
 /// sqrt(15 +- sqrt(221)): the eigenvalues of A^T A, which has trace 30 and
 /// determinant 4, are 15 +- sqrt(221). chi_max = 1 keeps the larger one, and
-/// epsilon(1) is the spec's ratio for discarding the smaller.
+/// epsilon(1) is TCAPI V1's ratio for discarding the smaller.
 template <typename TenT>
 void test_trunc_svd_non_diagonal_input(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_TRUNC_SVD) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
@@ -929,7 +929,7 @@ void test_trunc_svd_non_diagonal_input(tcapi_test_fixture<TenT> &fix) {
 
 // --- truncated SVD, overload (2): chi_max / s_min / chi_min / target_trunc_err ---
 //
-// V1's rule, with the truncation error for keeping chi values
+// TCAPI V1's rule, with the truncation error for keeping chi values
 // epsilon(chi) = sum_{i>=chi} s_i^2 / sum_{i<kappa} s_i^2:
 //
 //   - "Discard all s_i < s_min."
@@ -1018,14 +1018,14 @@ void test_trunc_svd_target_err_chi_max_cap(tcapi_test_fixture<TenT> &fix) {
 }
 
 /// Verify overload (2) with chi_min = 1 and target_trunc_err = 0 reproduces
-/// overload (1), which V1 defines as exactly that specialization.
+/// overload (1), which TCAPI V1 defines as exactly that specialization.
 ///
-/// The two calls are also pinned against the spec, not only against each other.
-/// V1 lets a backend implement overload (1) by delegating to overload (2), and
-/// a backend that does so satisfies any purely differential assertion no matter
-/// what the shared route computes. Anchoring the general call's retained chi and
-/// truncation error to the values the spec prescribes for chi_max = 2 keeps the
-/// test able to fail on such a backend.
+/// The two calls are also pinned against TCAPI V1, not only against each
+/// other. TCAPI V1 lets a backend implement overload (1) by delegating to
+/// overload (2), and a backend that does so satisfies any purely differential
+/// assertion no matter what the shared route computes. Anchoring the general
+/// call's retained chi and truncation error to the values TCAPI V1 prescribes
+/// for chi_max = 2 keeps the test able to fail on such a backend.
 template <typename TenT>
 void test_trunc_svd_target_err_zero_matches_chi_max_overload(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_TRUNC_SVD) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
@@ -1052,7 +1052,7 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tcapi_test_fixture<
 
   // No chi below chi_max = 2 reaches epsilon <= 0, so both calls must stop at
   // 2, keep the singular values 3 and 2, and report epsilon(2). Assert that
-  // against the spec first: it is what the differential assertions below
+  // against TCAPI V1 first: it is what the differential assertions below
   // cannot supply on their own. Both sigmas are checked here, before any of
   // their elements is read below.
   TCAPICT_EXPECT_DIAGONAL(ctx, s_general, trunc_svd_fixture_svs(2), tol,
@@ -1158,12 +1158,12 @@ void test_trunc_svd_chi_min_not_restored_below_s_min(tcapi_test_fixture<TenT> &f
 /// achievable epsilon: only there do they disagree. `<=` then retains that chi
 /// and `<` grows past it.
 ///
-/// Which bit pattern the backend's epsilon carries is not something the test may
-/// assume. The spec fixes epsilon as a formula, not an arithmetic path, so two
-/// conforming backends can land an ulp apart on the same spectrum — one summing
-/// s_i^2 directly, another dividing through a squared Frobenius norm. A target
-/// written as a literal would therefore hit the tie on the first and miss it on
-/// the second, and the miss looks exactly like a `<` implementation.
+/// Which bit pattern the backend's epsilon carries is not something the test
+/// may assume. TCAPI V1 fixes epsilon as a formula, not an arithmetic path, so
+/// two conforming backends can land an ulp apart on the same spectrum — one
+/// summing s_i^2 directly, another dividing through a squared Frobenius norm. A
+/// target written as a literal would therefore hit the tie on the first and
+/// miss it on the second, and the miss looks exactly like a `<` implementation.
 ///
 /// So the target is measured rather than written. The first call pins chi to 1
 /// through chi_max, which fixes the retained set without consulting
@@ -1171,14 +1171,15 @@ void test_trunc_svd_chi_min_not_restored_below_s_min(tcapi_test_fixture<TenT> &f
 /// Feeding that value back as the target of the second call puts the tie on the
 /// boundary by construction, whatever route the backend computes epsilon by.
 ///
-/// That reuse assumes the backend does not realize the one epsilon V1 names by
-/// two divergent expressions — the value it reports in trunc_err has to be the
-/// value it compares against target_trunc_err. V1 introduces epsilon once and uses that single
-/// symbol for both, so this is the specification's own reading rather than an
-/// extra requirement; but V1 constrains no arithmetic path, so an implementation
-/// that summed the discarded tail for the comparison and took the complement of
-/// the retained prefix for the report could land the two an ulp apart and fail
-/// here while conforming. A backend in that shape should compute epsilon once.
+/// That reuse assumes the backend does not realize the one epsilon TCAPI V1
+/// names by two divergent expressions — the value it reports in trunc_err has
+/// to be the value it compares against target_trunc_err. TCAPI V1 introduces
+/// epsilon once and uses that single symbol for both, so this is TCAPI V1's
+/// own reading rather than an extra requirement; but TCAPI V1 constrains no
+/// arithmetic path, so an implementation that summed the discarded tail for the
+/// comparison and took the complement of the retained prefix for the report
+/// could land the two an ulp apart and fail here while conforming. A backend in
+/// that shape should compute epsilon once.
 ///
 /// SVs [5, 4, 3] give sum s_i^2 = 50 with 16 + 9 = 25 discarded at chi = 1, so
 /// the measured epsilon is 25 / 50 up to the backend's rounding. It stays well
@@ -1298,8 +1299,8 @@ template <typename TenT> void test_eig_identity(tcapi_test_fixture<TenT> &fix) {
 // lambda^2 - lambda - 2 = (lambda - 2)(lambda + 1), so its eigenvalues are -1
 // and 2, real and distinct. The input is not diagonal and its diagonal (0, 1)
 // holds neither, so a backend that returned the input or its diagonal fails.
-// V1 fixes no order for eig's eigenvalues, so the diagonal is compared as a
-// multiset.
+// TCAPI V1 fixes no order for eig's eigenvalues, so the diagonal is compared
+// as a multiset.
 template <typename TenT> void test_eig_distinct(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_EIG) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
 #ifdef TCAPICT_SKIP_EIG_SINGLE_PRECISION
@@ -1347,8 +1348,9 @@ template <typename TenT> void test_eigh_identity(tcapi_test_fixture<TenT> &fix) 
 // --- eigh: distinct eigenvalues in ascending order ---
 
 // The symmetric [[2, 1], [1, 2]] has det(A - lambda I) = (2 - lambda)^2 - 1,
-// so its eigenvalues are 1 and 3; V1 has eigh hold them "in ascending order",
-// so lambda_mat is diag(1, 3). The input's diagonal (2, 2) holds neither.
+// so its eigenvalues are 1 and 3; TCAPI V1 has eigh hold them
+// "in ascending order", so lambda_mat is diag(1, 3). The input's diagonal
+// (2, 2) holds neither.
 template <typename TenT>
 void test_eigh_ascending(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_EIGH) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
@@ -1772,15 +1774,16 @@ void test_svd_reconstruction(tcapi_test_fixture<TenT> &fix) {
 // matrix, the first k = num_of_bds_as_row bonds giving the rows, and folds the
 // factors back with a bond of dimension min(I, J) between them: u (or q, or
 // l) has shape {d_0, ..., d_{k-1}, min(I, J)} and v_dag (or r, or q)
-// {min(I, J), d_k, ..., d_{r-1}}. V1 defines no linear order for flattening
-// several bonds into one index, so these checks assert only what does not
-// depend on one: shapes, sigma's diagonal, reconstruction by bond labels, and
-// orthonormality as a contraction over whole bonds. Triangularity is asserted
-// where the triangular factor is itself second-order: r with one column bond
-// and l with one row bond. Reordering the rows of the matrix, A' -> P A',
-// turns a QR factorization Q R into (P Q) R, again a QR factorization with
-// the same r, and reordering its columns does the same for l, so r and l are
-// triangular whatever order the bonds they do not keep flatten in.
+// {min(I, J), d_k, ..., d_{r-1}}. TCAPI V1 defines no linear order for
+// flattening several bonds into one index, so these checks assert only what
+// does not depend on one: shapes, sigma's diagonal, reconstruction by bond
+// labels, and orthonormality as a contraction over whole bonds. Triangularity
+// is asserted where the triangular factor is itself second-order: r with one
+// column bond and l with one row bond. Reordering the rows of the matrix,
+// A' -> P A', turns a QR factorization Q R into (P Q) R, again a QR
+// factorization with the same r, and reordering its columns does the same for
+// l, so r and l are triangular whatever order the bonds they do not keep
+// flatten in.
 
 #if defined(TCAPICT_HAS_ELEM_SWEEP) &&                                         \
     (!defined(TCAPICT_SKIP_SVD) || !defined(TCAPICT_SKIP_QR) ||                \
@@ -1800,12 +1803,12 @@ inline std::string bond_labels(std::size_t first, std::size_t count) {
   return labels;
 }
 
-/// The shapes V1 gives the two factors of `in_shape` matricized with `k` row
-/// bonds.
+/// The shapes TCAPI V1 gives the two factors of `in_shape` matricized with `k`
+/// row bonds.
 template <typename TenT>
 std::pair<tcapi::shape_t<TenT>, tcapi::shape_t<TenT>>
 factor_shapes(const tcapi::shape_t<TenT> &in_shape, std::size_t k) {
-  // V1 matricizes with 1 <= num_of_bds_as_row < order.
+  // TCAPI V1 matricizes with 1 <= num_of_bds_as_row < order.
   TCAPICT_ASSERT(k >= 1 && k < in_shape.size());
   std::size_t rows = 1, cols = 1;
   for (std::size_t b = 0; b < in_shape.size(); ++b) {
@@ -1924,10 +1927,10 @@ void expect_orthonormal_rows(tcapi_test_fixture<TenT> &fix, const TenT &f,
                        tol_category::factorization);
 }
 
-/// Asserts that every element of the second-order `t` with
-/// `zero_at(row, col)` is exactly zero, as V1's "upper triangular" and "lower
-/// triangular" say of r and l, through TCAPICT_EXPECT_ELEMS with an exact
-/// tolerance: zero where `zero_at` holds, and elsewhere the element read back.
+/// Asserts that every element of the second-order `t` with `zero_at(row, col)`
+/// is exactly zero, as TCAPI V1's "upper triangular" and "lower triangular" say
+/// of r and l, through TCAPICT_EXPECT_ELEMS with an exact tolerance: zero where
+/// `zero_at` holds, and elsewhere the element read back.
 template <typename TenT, typename ZeroAt>
 void expect_zero_where(tcapi_test_fixture<TenT> &fix, const TenT &t,
                        ZeroAt zero_at) {
@@ -1978,7 +1981,7 @@ void expect_product(tcapi_test_fixture<TenT> &fix, const TenT &left,
 
 #if !defined(TCAPICT_SKIP_SVD) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
 /// svd of `input`, whose elements `value_at` gives, with `k` row bonds: the
-/// factor shapes; sigma's diagonal against `singular_values` in V1's
+/// factor shapes; sigma's diagonal against `singular_values` in TCAPI V1's
 /// non-increasing order when they are given, and otherwise sigma's shape and
 /// that its diagonal, read back, is non-negative and non-increasing with
 /// off-diagonal elements exactly zero; u * sigma * v_dag reproduces the
@@ -2270,7 +2273,7 @@ void test_eigvals_diagonal(tcapi_test_fixture<TenT> &fix) {
   tcapi::cplx_ten_t<TenT> eigenvalues;
   tcapi::eigvals(ctx, matrix, 1, eigenvalues);
 
-  // V1 keeps eigvals' result a first-order list, unlike eig's lambda_mat.
+  // TCAPI V1 keeps eigvals' result a first-order list, unlike eig's lambda_mat.
   TCAPICT_ASSERT(tcapi::order(ctx, eigenvalues) == 1);
   TCAPICT_ASSERT(tcapi::size(ctx, eigenvalues) == 3);
 
@@ -2315,7 +2318,8 @@ void test_eigvalsh_diagonal(tcapi_test_fixture<TenT> &fix) {
   tcapi::real_ten_t<TenT> eigenvalues;
   tcapi::eigvalsh(ctx, matrix, 1, eigenvalues);
 
-  // V1 keeps eigvalsh's result a first-order list, unlike eigh's lambda_mat.
+  // TCAPI V1 keeps eigvalsh's result a first-order list, unlike eigh's
+  // lambda_mat.
   TCAPICT_ASSERT(tcapi::order(ctx, eigenvalues) == 1);
   TCAPICT_ASSERT(tcapi::size(ctx, eigenvalues) == 3);
 
@@ -2334,8 +2338,8 @@ void test_eigvalsh_diagonal(tcapi_test_fixture<TenT> &fix) {
 // --- eigvals: distinct eigenvalues of a non-diagonal matrix ---
 
 // [[0, 1], [2, 1]] has the eigenvalues -1 and 2; its diagonal (0, 1) holds
-// neither, so a backend that returned the input's diagonal fails. V1 fixes no
-// order for eigvals' list, so it is compared as a multiset.
+// neither, so a backend that returned the input's diagonal fails. TCAPI V1
+// fixes no order for eigvals' list, so it is compared as a multiset.
 template <typename TenT>
 void test_eigvals_distinct(tcapi_test_fixture<TenT> &fix) {
 #ifndef TCAPICT_SKIP_EIGVALS
@@ -2374,8 +2378,8 @@ void test_eigvals_distinct(tcapi_test_fixture<TenT> &fix) {
 
 // --- eigvalsh: distinct eigenvalues in ascending order ---
 
-// The symmetric [[2, 1], [1, 2]] has the eigenvalues 1 and 3; V1 returns them
-// "in ascending order", and the input's diagonal (2, 2) holds neither.
+// The symmetric [[2, 1], [1, 2]] has the eigenvalues 1 and 3; TCAPI V1 returns
+// them "in ascending order", and the input's diagonal (2, 2) holds neither.
 template <typename TenT>
 void test_eigvalsh_ascending(tcapi_test_fixture<TenT> &fix) {
 #ifndef TCAPICT_SKIP_EIGVALSH
