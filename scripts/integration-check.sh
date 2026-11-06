@@ -85,6 +85,8 @@ sync_default_path() {
 require_registered_submodule() {
   [[ -d "$CYTNX_BACKEND_DIR/.git" || -f "$CYTNX_BACKEND_DIR/.git" ]] \
     || fail "$CYTNX_BACKEND_DIR is not a git checkout"
+  [[ -f "$CYTNX_BACKEND_DIR/.gitmodules" ]] \
+    || fail "$CYTNX_BACKEND_DIR has no .gitmodules (CYTNX_BACKEND_DIR may not point at a cytnx checkout)"
   # Read from the working tree's .gitmodules, which a sync or a checkout sets
   # to the checked-out revision's. A file under DEST cannot answer this: the
   # pinned suite revision may have another layout, and a reset to an older
