@@ -60,8 +60,12 @@ void test_size_bytes(tcapi_test_fixture<TenT>& fix) {
 #ifndef TCAPICT_SKIP_SIZE_BYTES
   auto& ctx = fix.context();
   auto tensor = tcapi::zeros<TenT>(ctx, {2, 3, 4});
-  // V1's entry for it is "Reports memory consumption in bytes": no formula, no
-  // lower bound. Callable-and-returns is the whole of what is portably
+  // TCAPI V1's entry for it is "Return the physical memory footprint of `a` in
+  // bytes. A compactly stored diagonal tensor may use fewer bytes than a dense
+  // tensor with the same shape." Its example gives 96 bytes for a float32
+  // tensor of shape {3, 4, 2}; the suite reads that as the example's value,
+  // not as a formula every backend must meet, since the entry states none and
+  // no lower bound. Callable-and-returns is the whole of what is portably
   // assertable, so what this test and its second-order and zeroth-order
   // counterparts below give between them is that none of the three ranks makes
   // the call fail.
@@ -96,8 +100,9 @@ void test_set_get_elem(tcapi_test_fixture<TenT>& fix) {
 
 // --- get_elem / set_elem: zeroth-order ---
 
-// TCAPI V1: for a zeroth-order tensor, `coors` is the empty sequence {}, and
-// get_elem returns and set_elem updates the sole element.
+// TCAPI V1, of get_elem: "For a zeroth-order tensor, `coors` is the empty
+// coordinate sequence, and the function returns the sole element." Of
+// set_elem, the same sentence ends "the function updates the sole element".
 template <typename TenT>
 void test_set_get_elem_zeroth_order(tcapi_test_fixture<TenT>& fix) {
 #if !defined(TCAPICT_SKIP_GET_ELEM) && !defined(TCAPICT_SKIP_SET_ELEM) && \
@@ -124,7 +129,7 @@ void test_size_bytes_2x2(tcapi_test_fixture<TenT>& fix) {
 #ifndef TCAPICT_SKIP_SIZE_BYTES
   auto& ctx = fix.context();
   // The second-order one of the three; see the third-order test above for what
-  // V1 leaves assertable.
+  // TCAPI V1 leaves assertable.
   auto tensor = tcapi::zeros<TenT>(ctx, {2, 2});
   TCAPICT_ASSERT_NOTHROW(tcapi::size_bytes(ctx, tensor));
 #else
@@ -138,9 +143,9 @@ template <typename TenT>
 void test_size_bytes_zeroth_order(tcapi_test_fixture<TenT>& fix) {
 #ifndef TCAPICT_SKIP_SIZE_BYTES
   auto& ctx = fix.context();
-  // As for the third-order test above, the call returning is all V1 leaves
-  // assertable; this adds the zeroth order to the ranks it is made on. The
-  // shape check keeps the test from passing on a tensor that is not one.
+  // As for the third-order test above, the call returning is all TCAPI V1
+  // leaves assertable; this adds the zeroth order to the ranks it is made on.
+  // The shape check keeps the test from passing on a tensor that is not one.
   auto tensor = tcapi::zeros<TenT>(ctx, {});
   TCAPICT_ASSERT(tcapi::shape(ctx, tensor).empty());
   TCAPICT_ASSERT_NOTHROW(tcapi::size_bytes(ctx, tensor));

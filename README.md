@@ -4,7 +4,7 @@ Header-only, test-framework-agnostic conformance tests for the [Tensor Computing
 
 ## Overview
 
-TCAPICT verifies that a TCAPI backend correctly implements the spec-defined API. Tests are written as template functions that throw `tcapict::assertion_error` on failure, making them usable with any test framework (doctest, Google Test, Catch2) or standalone.
+TCAPICT verifies that a TCAPI backend correctly implements the API TCAPI V1 defines. Tests are written as template functions that throw `tcapict::assertion_error` on failure, making them usable with any test framework (doctest, Google Test, Catch2) or standalone.
 
 Known TCAPI backend implementations:
 - [Cytnx backend](https://github.com/r-ccs-cms/tcapi-backend-cytnx)
@@ -98,7 +98,7 @@ A skipped test still compiles, registers as a test case, and immediately passes 
 
 **Caveat: skip is per-test, not per-API.** The same `tcapi::*` function may be called as a setup / verification helper in unrelated tests. For example, `tcapi::get_elem` is used inside many tests beyond the one guarded by `TCAPICT_SKIP_GET_ELEM`. Skipping a single feature therefore does not guarantee that every reference to its API disappears — to compile against a backend that omits a particular declaration, you may need to skip every test that uses it.
 Some tests are guarded by the APIs they use as well: the tests that build or check tensors through the helpers in `include/tcapict/elem_sweep.h` and `include/tcapict/zeroth_order.h` — among them the `concatenate`, `stack` and `linear_combine` tests and most zeroth-order tests — call `set_elem`, `shape` and `get_elem` through them and, apart from the tests of the other constructors, build their inputs with `zeros`, so skipping any of those four also skips them (`TCAPICT_HAS_ELEM_SWEEP` in `include/tcapict/skip.h`). The tests using the zeroth-order checks also need `order` and `size`, so skipping either of those skips them too (`TCAPICT_HAS_ZEROTH_ORDER_SWEEP`).
-The tests that check a diagonal tensor through `include/tcapict/diagonal.h` — `test_eye`, the `svd`, `trunc_svd`, `eig` and `eigh` tests and three of the `diag` tests — call `order`, `shape`, `size` and `get_elem` through it, so skipping any of those four skips them too (`TCAPICT_HAS_DIAGONAL_CHECK`).
+The tests that check a diagonal tensor through `include/tcapict/diagonal.h` — `test_eye`, the `svd`, `trunc_svd`, `eig` and `eigh` tests and two of the `diag` tests — call `order`, `shape`, `size` and `get_elem` through it, so skipping any of those four skips them too (`TCAPICT_HAS_DIAGONAL_CHECK`). The `diag` test that extracts from `eye` does not call `diagonal.h`, but it is guarded by `TCAPICT_HAS_DIAGONAL_CHECK` as well, since it reads its result through `order`, `size` and `get_elem`.
 
 **Baseline requirement.** Some functions must always be declared, regardless of skip macros, because they are used as setup / teardown by every test fixture:
 

@@ -26,8 +26,8 @@ enum class diag_order {
   /// The element at {i, i} is compared with expected[i].
   as_listed,
   /// The real parts of the diagonal, sorted, are compared with the expected
-  /// values, sorted, and each imaginary part with zero. For outputs whose
-  /// order V1 leaves open, such as eig's on a matrix with real eigenvalues.
+  /// values, sorted, and each imaginary part with zero. For outputs whose order
+  /// TCAPI V1 leaves open, such as eig's on a matrix with real eigenvalues.
   any,
 };
 
@@ -119,8 +119,8 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
       const double re = real_part<DiagT>(elem);
       const double im = imag_part<DiagT>(elem);
       if (i != j) {
-        // V1: a diagonal tensor's off-diagonal elements are zero, so no
-        // tolerance applies.
+        // TCAPI V1 defines a diagonal tensor as one "whose off-diagonal logical
+        // tensor elements are zero", so no tolerance applies.
         if (re != 0.0 || im != 0.0) {
           std::string value = text(re);
           if constexpr (is_complex_v<DiagT>) {

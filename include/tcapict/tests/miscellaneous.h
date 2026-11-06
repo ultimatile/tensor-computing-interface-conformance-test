@@ -19,11 +19,11 @@
 namespace tcapict {
 namespace detail {
 
-// Type helpers for tcapi::supported_ten_types_t. Each one takes any type and
-// treats one that is not a std::tuple as holding no tensor types, so the tests
-// using them compile against a catalog of the wrong kind, and
-// test_supported_ten_types reports it through its assertion on
-// is_std_tuple_v.
+// Type helpers for tcapi::supported_ten_types_t. tuple_contains and
+// for_each_tuple_type take any type and treat one that is not a std::tuple as
+// holding no tensor types, so the tests using them compile against a catalog
+// of the wrong kind, and test_supported_ten_types reports it through its
+// assertion on is_std_tuple_v, which is false for such a type.
 
 template <typename T> struct type_tag {
   using type = T;
@@ -92,11 +92,12 @@ void test_close_different(tcapi_test_fixture<TenT> &fix) {
 
 // --- close: zeroth-order ---
 
-// TCAPI V1: close succeeds iff the shapes match and the largest elementwise
-// |a_i - b_i| is at most epsilon. Against an equal tensor it is true; against
-// another value, or for a complex element type a difference in the imaginary
-// part alone, it is false; and against a shape-{1} tensor holding the same
-// value it is false, since {} and {1} differ.
+// TCAPI V1: "The comparison succeeds iff shape(a)=shape(b)" and the largest
+// elementwise |a_i - b_i| is at most epsilon, "where |·| denotes absolute
+// value, or modulus for complex values". Against an equal tensor it is true;
+// against another value, or for a complex element type a difference in the
+// imaginary part alone, it is false; and against a shape-{1} tensor holding
+// the same value it is false, since {} and {1} differ.
 template <typename TenT>
 void test_close_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_CLOSE) && defined(TCAPICT_HAS_ELEM_SWEEP)
@@ -132,11 +133,12 @@ void test_close_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 
 // --- close: the maximum of the differences, not their norm ---
 
-// TCAPI V1: close succeeds iff the shapes match and the largest elementwise
-// |a_i - b_i| is at most epsilon. Two differences of 0.375 against epsilon
-// 0.5 have maximum 0.375, so close is true, while their Frobenius norm,
-// sqrt(2) * 0.375 ~ 0.53, exceeds 0.5. One difference of 0.625 makes it
-// false. Every value is a binary fraction, so the differences are exact.
+// TCAPI V1: "The comparison succeeds iff shape(a)=shape(b)" and the largest
+// elementwise |a_i - b_i| is at most epsilon, "where |·| denotes absolute
+// value, or modulus for complex values". Two differences of 0.375 against
+// epsilon 0.5 have maximum 0.375, so close is true, while their Frobenius
+// norm, sqrt(2) * 0.375 ~ 0.53, exceeds 0.5. One difference of 0.625 makes
+// it false. Every value is a binary fraction, so the differences are exact.
 template <typename TenT>
 void test_close_maximum_norm(tcapi_test_fixture<TenT> &fix) {
 #ifndef TCAPICT_SKIP_CLOSE
@@ -387,7 +389,8 @@ void test_convert_data_integrity(tcapi_test_fixture<TenT> &fix) {
 
 // --- convert: zeroth-order ---
 
-// TCAPI V1: with Ten1T == Ten2T, convert is "equivalent to deep copy".
+// TCAPI V1: "If the source and destination have the same tensor type or tensor
+// kind, this routine is equivalent to a deep copy."
 template <typename TenT>
 void test_convert_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_CONVERT) && defined(TCAPICT_HAS_ZEROTH_ORDER_SWEEP)
@@ -408,9 +411,9 @@ void test_convert_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 
 // --- convert: real to complex element type ---
 
-// TCAPI V1: convert converts `t1` "into a destination tensor, possibly
-// changing the element type, the underlying TCF/backend, or both", writing
-// the result into `t2`, the tensor on the destination context, so the test
+// TCAPI V1: "Convert `t1` into a destination tensor, possibly changing the
+// element type, the underlying TCF/backend, or both", and "the result is
+// written into `t2`", the tensor on the destination context, so the test
 // reads it through that context. Converting a real tensor to
 // tcapi::cplx_ten_t<RealTenT> keeps each value as its real part with a zero
 // imaginary part, the one reading that preserves the values; every value here
@@ -450,23 +453,24 @@ void test_convert_real_to_complex(tcapi_test_fixture<RealTenT> &fix) {
 
 // --- convert: precision change ---
 
-// TCAPI V1: convert converts `t1` "into a destination tensor, possibly
-// changing the element type, the underlying TCF/backend, or both. Conversion
-// also supports precision changes within one TCF." The first sentence says
-// what a conversion may change, not which pairs a backend supports; the second
-// is what V1 says convert supports, so the destinations are the types of
+// TCAPI V1: "Convert `t1` into a destination tensor, possibly changing the
+// element type, the underlying TCF/backend, or both. This includes conversions
+// between different floating-point precisions within the same TCF." The first
+// sentence says what a conversion may change, not which pairs a backend
+// supports; the second names precision changes within one TCF as conversions
+// convert performs, so the destinations are the types of
 // tcapi::supported_ten_types_t in TenT's TCF that hold TenT's kind of element,
-// real or complex, at another precision. V1 ties a TCF to a context handle
-// type: context_handle_t is the "Handle to the backend context maintained by
-// the underlying TCF that provides `ten_t`", and of create_context, "the
-// concrete type `ContextHandleT` selects the target TCF/backend". So a type
-// whose context_handle_t is TenT's is in TenT's TCF; one with another handle
-// type may or may not be, and is not converted to. Each result is read through
-// the destination type's own fixture context. Every real and imaginary part
-// written is a small integer or half of one, exact in single precision and
-// wider, so the copy is exact. A catalog with no such type leaves nothing to
-// convert. The input is read back as "Out-of-place inputs" in CONTRIBUTING.md
-// describes.
+// real or complex, at another precision. TCAPI V1 ties a TCF to a context
+// handle type: context_handle_t is the "Handle to the backend context
+// maintained by the underlying TCF that provides `ten_t`", and of
+// create_context, "the concrete type `ContextHandleT` selects the target
+// TCF/backend". So a type whose context_handle_t is TenT's is in TenT's TCF;
+// one with another handle type may or may not be, and is not converted to. Each
+// result is read through the destination type's own fixture context. Every real
+// and imaginary part written is a small integer or half of one, exact in single
+// precision and wider, so the copy is exact. A catalog with no such type leaves
+// nothing to convert. The input is read back as "Out-of-place inputs" in
+// CONTRIBUTING.md describes.
 template <typename TenT>
 void test_convert_precision(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_CONVERT) && !defined(TCAPICT_SKIP_SUPPORTED_TEN_TYPES) &&           \
@@ -508,17 +512,20 @@ void test_convert_precision(tcapi_test_fixture<TenT> &fix) {
 
 // --- supported_ten_types_t ---
 
-// TCAPI V1: "Each C++ implementation provides a compile-time catalog of its
-// tensor types through `tcapi::supported_ten_types_t` in `tcapi/tcapi.h`", a
-// std::tuple of them. "The catalog order is implementation-defined, and
-// context compatibility is backend-dependent. Standard tuple traits and
-// `tcapi::elem_t` expose its size, types, and element types". The test asserts
-// that the catalog is a std::tuple, and names tcapi::elem_t of each catalog
-// type, which fails to compile for a type whose traits do not expose one. It
-// also asserts a reading of "its tensor types": that the catalog holds TenT, a
-// type the backend registers with the suite, and tcapi::real_ten_t<TenT> and
-// tcapi::cplx_ten_t<TenT>, which V1 defines as tensor types and the backend's
-// functions return. It asserts neither the order nor anything about contexts.
+// TCAPI V1: "Each C++ TCAPI implementation exposes its concrete tensor types
+// through the namespace-level alias `tcapi::supported_ten_types_t`, accessible
+// through `tcapi/tcapi.h`", a std::tuple of them. "This is a compile-time type
+// catalog. Its ordering is implementation-defined. The catalog lists the types
+// provided by the implementation, while their compatibility with a particular
+// execution context remains backend-dependent." Its size, types and element
+// types "can be obtained using standard tuple traits and `tcapi::elem_t`". The
+// test asserts that the catalog is a std::tuple, and names tcapi::elem_t of
+// each catalog type, which fails to compile for a type whose traits do not
+// expose one. It also asserts a reading of "its concrete tensor types": that
+// the catalog holds TenT, a type the backend registers with the suite, and
+// tcapi::real_ten_t<TenT> and tcapi::cplx_ten_t<TenT>, which TCAPI V1 defines
+// as tensor types and the backend's functions return. It asserts neither the
+// order nor anything about contexts.
 template <typename TenT>
 void test_supported_ten_types(tcapi_test_fixture<TenT> &fix) {
 #ifndef TCAPICT_SKIP_SUPPORTED_TEN_TYPES
@@ -575,8 +582,8 @@ template <typename TenT> void test_version(tcapi_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "miscellaneous", test_supported_ten_types) \
   X(__VA_ARGS__, "miscellaneous", test_version)
 
-// REAL_ONLY: the test's input must be real, as its template parameter's name
-//   says.
+// REAL_ONLY: the test lifts a real tensor to complex and checks the zero
+//   imaginary parts it gains, so it takes only a real TenT.
 #define TCAPICT_FOREACH_MISCELLANEOUS_TEST_REAL_ONLY(X, ...) \
   X(__VA_ARGS__, "miscellaneous", test_convert_real_to_complex)
 

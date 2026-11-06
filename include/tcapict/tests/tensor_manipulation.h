@@ -180,7 +180,9 @@ void test_imag_extraction(tcapi_test_fixture<TenT> &fix) {
     TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 2.71, tol);
     TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.58, tol);
   } else {
-    // Real input: tcapi::imag returns a zero tensor per TCAPI spec.
+    // Real input. TCAPI V1: "If `tcapi::elem_t<TenT>` is already real, the
+    // function returns a real-valued tensor of the same shape whose elements
+    // are all zero."
     TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 0.0, tol);
     TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.0, tol);
   }
@@ -194,7 +196,7 @@ void test_imag_extraction(tcapi_test_fixture<TenT> &fix) {
 // Their results have type real_ten_t<TenT>, which is not TenT when TenT is
 // complex, so TCAPICT_EXPECT_ZEROTH_ORDER cannot take them with this test's
 // fixture; they are checked through TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE and
-// get_elem, as the extraction tests above check theirs.
+// get_elem.
 template <typename TenT>
 void test_real_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_REAL) && defined(TCAPICT_HAS_ZEROTH_ORDER_SWEEP)
@@ -210,8 +212,9 @@ void test_real_zeroth_order(tcapi_test_fixture<TenT> &fix) {
   TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(tcapi::get_elem(ctx, real_tensor, {})),
                        4.0, tol);
 
-  // V1: "Deep copy if already real", so for a real TenT a write to the input
-  // afterwards leaves the result as it was.
+  // TCAPI V1: "If `tcapi::elem_t<TenT>` is already real, this function returns
+  // a deep copy of `in`", so for a real TenT a write to the input afterwards
+  // leaves the result as it was.
   if constexpr (!is_complex_v<TenT>) {
     TCAPICT_SET_ZEROTH_ORDER(fix, tensor, -7.0);
     TCAPICT_ASSERT_CLOSE(
@@ -232,8 +235,8 @@ void test_imag_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 
   auto imag_tensor = tcapi::imag(ctx, tensor);
 
-  // written<TenT>(4.0) has imaginary part -2.0 for a complex TenT and none
-  // for a real one, whose imag is a zero tensor.
+  // written<TenT>(4.0) has imaginary part -2.0 for a complex TenT and 0 for a
+  // real one, whose imag is a zero tensor.
   using RealTenT = tcapi::real_ten_t<TenT>;
   TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, imag_tensor);
   TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(tcapi::get_elem(ctx, imag_tensor, {})),
@@ -258,8 +261,8 @@ void test_cplx_conj_inplace(tcapi_test_fixture<TenT> &fix) {
 
   tcapi::cplx_conj(ctx, tensor);
 
-  // Real parts unchanged for both real and complex (cplx_conj on real tensors
-  // is a no-op per TCAPI spec); imaginary parts only exist for complex.
+  // Real parts unchanged for both real and complex: of a real TenT TCAPI V1
+  // says "(1) performs no change". Imaginary parts only exist for complex.
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {0, 0})), 1.0,
                        tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {0, 1})), -3.0,
@@ -297,10 +300,9 @@ void test_cplx_conj_outofplace(tcapi_test_fixture<TenT> &fix) {
   TenT output;
   tcapi::cplx_conj(ctx, input, output);
 
-  // Real parts hold for both real and complex (cplx_conj out-of-place is a
-  // deep copy for real tensors per TCAPI spec); imaginary parts only exist for
-  // complex. The reads of `input` assert it unchanged; see "Out-of-place
-  // inputs" in CONTRIBUTING.md.
+  // Real parts hold for both real and complex: of a real TenT TCAPI V1 says
+  // "(2) produces a deep copy". Imaginary parts only exist for complex. `input`
+  // is read back at {0, 0}; see "Out-of-place inputs" in CONTRIBUTING.md.
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, input, {0, 0})), 3.14,
                        tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, output, {0, 0})), 3.14,
@@ -342,8 +344,9 @@ void test_cplx_conj_zeroth_order(tcapi_test_fixture<TenT> &fix) {
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, output, conj_of(-3.0), tol_category::elementwise);
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, input, -3.0);
 
-  // V1: the out-of-place overload is a "deep copy for real", so for a real
-  // TenT a write to the input afterwards leaves the output as it was.
+  // TCAPI V1: "If `tcapi::elem_t<TenT>` is real, (1) performs no change and (2)
+  // produces a deep copy", so for a real TenT a write to the input afterwards
+  // leaves the output of the out-of-place overload (2) as it was.
   if constexpr (!is_complex_v<TenT>) {
     TCAPICT_SET_ZEROTH_ORDER(fix, input, 5.0);
     TCAPICT_EXPECT_ZEROTH_ORDER(fix, output, conj_of(-3.0), tol_category::elementwise);
@@ -418,9 +421,9 @@ void test_to_cplx_complex_to_complex(tcapi_test_fixture<TenT> &fix) {
 
 // --- to_cplx: zeroth-order ---
 
-// Registered for every TenT: V1 embeds a real input as real parts and gives a
-// deep copy of a complex one. The result has type cplx_ten_t<TenT>, which is
-// not TenT when TenT is real, so it is checked through
+// Registered for every TenT: TCAPI V1 embeds a real input as real parts and
+// gives a deep copy of a complex one. The result has type cplx_ten_t<TenT>,
+// which is not TenT when TenT is real, so it is checked through
 // TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE and get_elem.
 template <typename TenT>
 void test_to_cplx_zeroth_order(tcapi_test_fixture<TenT> &fix) {
@@ -439,8 +442,9 @@ void test_to_cplx_zeroth_order(tcapi_test_fixture<TenT> &fix) {
   TCAPICT_ASSERT_CLOSE(real_part<CplxTenT>(elem), expected.real(), tol);
   TCAPICT_ASSERT_CLOSE(imag_part<CplxTenT>(elem), expected.imag(), tol);
 
-  // V1: "complex inputs yield a deep copy", so for a complex TenT a write to
-  // the input afterwards leaves the result as it was.
+  // TCAPI V1: "If `tcapi::elem_t<TenT>` is already complex, the function
+  // returns a deep copy of `in`", so for a complex TenT a write to the input
+  // afterwards leaves the result as it was.
   if constexpr (is_complex_v<TenT>) {
     TCAPICT_SET_ZEROTH_ORDER(fix, tensor, 9.0);
     const auto after = tcapi::get_elem(ctx, complex_tensor, {});
@@ -586,7 +590,8 @@ void test_for_each_inversion(tcapi_test_fixture<TenT> &fix) {
 
 // --- for_each: zeroth-order ---
 
-// "Visits every element exactly once", and a zeroth-order tensor has one.
+// TCAPI V1's for_each: "Visit every element exactly once", and a zeroth-order
+// tensor has one.
 template <typename TenT>
 void test_for_each_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_FOR_EACH) && defined(TCAPICT_HAS_ZEROTH_ORDER_SWEEP)
@@ -642,11 +647,12 @@ struct visit_record_2x2 {
     return true;
   }
 
-  // V1 gives `for_each_with_coors` as "Like `for_each` but passes coordinates
-  // alongside each element", so `for_each`'s "Visits every element exactly
-  // once" carries over. No malformed coordinate, no revisit and every one of
-  // the 4 coordinates seen is that, and it excludes a backend walking only the
-  // 2 entries a diagonal tensor stores.
+  // TCAPI V1 gives `for_each_with_coors` as "similar to `for_each`, but invokes
+  // `f` with both the element and its coordinates", and the suite reads
+  // `for_each`'s "Visit every element exactly once" as carrying over. No
+  // malformed coordinate, no revisit and every one of the 4 coordinates seen is
+  // that, and it excludes a backend walking only the 2 entries a diagonal
+  // tensor stores.
   void check() const {
     TCAPICT_ASSERT(!malformed_coordinate);
     TCAPICT_ASSERT(!revisited);
@@ -778,10 +784,10 @@ void test_for_each_with_coors_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 
 // --- for_each: traversal over a diagonal tensor ---
 
-// V1's rule for `for_each` is "Visits every element exactly once". `eye(3)` has
-// 9 logical elements — a diagonal tensor's off-diagonal zeros are elements too
-// — so a backend traversing the 3 entries it stores is excluded by the visit
-// count, which is what this test adds over reading values.
+// TCAPI V1's rule for `for_each` is "Visit every element exactly once".
+// `eye(3)` has 9 logical elements — a diagonal tensor's off-diagonal zeros are
+// elements too — so a backend traversing the 3 entries it stores is excluded by
+// the visit count, which is what this test adds over reading values.
 template <typename TenT>
 void test_for_each_eye_traversal(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_FOR_EACH) && !defined(TCAPICT_SKIP_EYE)
@@ -902,12 +908,12 @@ template <typename TenT> void test_reshape(tcapi_test_fixture<TenT> &fix) {
   TCAPICT_ASSERT(tcapi::shape(ctx, tensor) == new_shape);
   TCAPICT_ASSERT(tcapi::size(ctx, tensor) == 24);
 
-  // V1 has reshape perform "no reordering, transposition, or value change" and
-  // preserve "the linear order of logical tensor elements" — but it defines
-  // that linear order for no shape, so which coordinate a given element lands
-  // on is not portably assertable. The multiset of values is: it holds under
-  // any ordering, and still catches a dropped, duplicated, or corrupted
-  // element.
+  // TCAPI V1 says of reshape: "No element reordering, transposition, or value
+  // modification occurs; the linear order of logical tensor elements is
+  // preserved." But it defines that linear order for no shape, so which
+  // coordinate a given element lands on is not portably assertable. The
+  // multiset of values is: it holds under any ordering, and still catches a
+  // dropped, duplicated, or corrupted element.
   std::vector<double> observed;
   observed.reserve(24);
   for (std::size_t i = 0; i < 6; ++i) {
@@ -939,9 +945,10 @@ template <typename TenT> void test_reshape(tcapi_test_fixture<TenT> &fix) {
 
 // --- reshape: zeroth-order ---
 
-// TCAPI V1: reshape "converts between the empty shape (zeroth-order) and any
-// total-size-1 shape such as {1} or {1, 1}" with no value change. One element
-// has one position, so its value is assertable at every shape.
+// TCAPI V1: reshape "also converts between the empty shape and any shape with
+// total size 1, such as {1} or {1,1}", with "No element reordering,
+// transposition, or value modification". One element has one position, so its
+// value is assertable at every shape.
 template <typename TenT>
 void test_reshape_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_RESHAPE) && defined(TCAPICT_HAS_ZEROTH_ORDER_SWEEP)
@@ -991,12 +998,14 @@ template <typename TenT> void test_transpose(tcapi_test_fixture<TenT> &fix) {
   tcapi::List<tcapi::bond_idx_t<TenT>> new_order = {2, 0, 1};
   TCAPICT_ASSERT_NOTHROW(tcapi::transpose(ctx, tensor, new_order, transposed));
 
-  // V1 says only "Permutes bonds according to `new_order`, preserving element
-  // values", and its one example uses an order that is its own inverse, so
-  // which way the permutation runs is a reading. The suite reads new bond p as old bond
-  // new_order[p]: the {2, 3, 4} input becomes {4, 2, 3}, and
-  // out[k, i, j] == a[i, j, k]. The coordinate map follows from that reading,
-  // so no convention for the linear order of elements enters into it.
+  // TCAPI V1 says only "Permute tensor bonds according to the permutation
+  // `new_order`. Element values are preserved; only their coordinates are
+  // permuted (the memory layout may also change).", and both of its examples
+  // use orders that are their own inverses, so which way the permutation runs
+  // is a reading. The suite reads new bond p as old bond new_order[p]: the
+  // {2, 3, 4} input becomes {4, 2, 3}, and out[k, i, j] == a[i, j, k]. The
+  // coordinate map follows from that reading, so no convention for the linear
+  // order of elements enters into it.
   const tcapi::shape_t<TenT> expected_shape = {4, 2, 3};
   expect_ramp_2x3x4(fix, transposed, expected_shape,
                     [](std::size_t i, std::size_t j, std::size_t k) {
@@ -1173,7 +1182,8 @@ void test_replace_sub_outofplace(tcapi_test_fixture<TenT> &fix) {
                        tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, result, {0, 0})), 99.0,
                        tol);
-  // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
+  // The input is read back at {1, 1}; see "Out-of-place inputs" in
+  // CONTRIBUTING.md.
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, a, {1, 1})), 0.0, tol);
 #else
   (void)fix;
@@ -1229,8 +1239,13 @@ void test_expand_outofplace(tcapi_test_fixture<TenT> &fix) {
 }
 
 #ifndef TCAPICT_SKIP_DIAG
-// expect_vector_3 is called by the diag tests only.
+// Helpers called by the diag tests only, each compiled under a condition that
+// covers the APIs it calls: expect_vector_3, which calls order, size and
+// get_elem, under TCAPICT_HAS_DIAGONAL_CHECK; diag_input_value, which calls
+// none, unconditionally; and diag_input_matrix, which calls zeros and
+// set_elem, under TCAPICT_HAS_ELEM_SWEEP.
 
+#ifdef TCAPICT_HAS_DIAGONAL_CHECK
 // Asserts that a first-order tensor of length 3 holds `expected` in order.
 // `expected` is real, so for a complex element type the imaginary part is
 // expected to be zero and is checked as such.
@@ -1250,6 +1265,37 @@ void expect_vector_3(tcapi_test_fixture<TenT> &fix, const TenT &tensor,
     }
   }
 }
+#endif
+
+// The element at (i, j) of the 3x3 input of the matrix-to-vector diag tests:
+// `diagonal[i]` on the diagonal, and the distinct non-zero 0.25 + 3i + j off
+// it, exact in single precision, so that an extraction that sums a row or a
+// column does not pass. Callers pass distinct diagonal values that are exact
+// in single precision too, so that neither does a reordered one.
+inline double diag_input_value(const double (&diagonal)[3], std::size_t i,
+                               std::size_t j) {
+  return i == j ? diagonal[i] : 0.25 + static_cast<double>(3 * i + j);
+}
+
+#ifdef TCAPICT_HAS_ELEM_SWEEP
+// A 3x3 matrix built with zeros and set_elem holding
+// written_elem<TenT>(diag_input_value(...)): for a complex TenT each element
+// also has the non-zero imaginary part -0.5 times its real part, so an
+// extraction that drops or conjugates imaginary parts does not pass.
+template <typename TenT>
+TenT diag_input_matrix(tcapi_test_fixture<TenT> &fix,
+                       const double (&diagonal)[3]) {
+  auto &ctx = fix.context();
+  auto matrix = tcapi::zeros<TenT>(ctx, {3, 3});
+  for (std::size_t i = 0; i < 3; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      tcapi::set_elem(ctx, matrix, coors_of<TenT>(i, j),
+                      written_elem<TenT>(diag_input_value(diagonal, i, j)));
+    }
+  }
+  return matrix;
+}
+#endif
 
 #endif
 
@@ -1278,14 +1324,74 @@ void test_diag_vec_to_mat(tcapi_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_diag_mat_to_vec(tcapi_test_fixture<TenT> &fix) {
-#ifndef TCAPICT_SKIP_DIAG
+#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  const double expected[3] = {7.5, -8.5, 9.5};
+  auto matrix = diag_input_matrix(fix, expected);
+
+  TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, matrix));
+
+  TCAPICT_EXPECT_ELEMS(
+      fix, matrix, {3},
+      [&](const tcapi::elem_coors_t<TenT> &c) { return expected[c[0]]; },
+      tol_category::exact);
+#else
+  (void)fix;
+#endif
+}
+
+// --- diag: matrix to vector, from a diagonal tensor ---
+
+// Extracts distinct diagonal values from a diagonal tensor, the result of diag
+// on a first-order input, of which TCAPI V1 says "Implementations may store the
+// result compactly when supported by the underlying TCF."
+template <typename TenT>
+void test_diag_mat_to_vec_from_diagonal(tcapi_test_fixture<TenT> &fix) {
+#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_ELEM_SWEEP)
+  auto &ctx = fix.context();
+  // Through TCAPICT_SET_ELEMS and TCAPICT_EXPECT_ELEMS a real value v stands
+  // for written<TenT>(v), whose imaginary part for a complex TenT is -0.5v, so
+  // an extraction that drops or conjugates imaginary parts does not pass.
+  const double expected[3] = {7.5, -8.5, 9.5};
+  auto on_diagonal = [&](const tcapi::elem_coors_t<TenT> &c) {
+    return c[0] == c[1] ? expected[c[0]] : 0.0;
+  };
+  auto listed = [&](const tcapi::elem_coors_t<TenT> &c) {
+    return expected[c[0]];
+  };
+
+  auto vector = tcapi::zeros<TenT>(ctx, {3});
+  // `listed` reads `c[0]` as an index into `expected`, so the shape {3} asked
+  // for is asserted before the sweep: an order-0 shape gives no `c[0]`, and a
+  // first extent above 3 reads past `expected`.
+  const tcapi::shape_t<TenT> length_3 = {3};
+  TCAPICT_ASSERT(tcapi::shape(ctx, vector) == length_3);
+  TCAPICT_SET_ELEMS(fix, vector, listed);
+  TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
+  // The input is now that diagonal tensor, its off-diagonal elements exactly
+  // zero, not the vector left as it was.
+  TCAPICT_EXPECT_ELEMS(fix, vector, {3, 3}, on_diagonal, tol_category::exact);
+  TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
+
+  TCAPICT_EXPECT_ELEMS(fix, vector, {3}, listed, tol_category::exact);
+#else
+  (void)fix;
+#endif
+}
+
+// --- diag: matrix to vector, from eye ---
+
+// Extracts the diagonal of eye(3), whose entry returns "the N×N identity
+// tensor as a diagonal tensor", as TCAPI V1's own diag example does.
+template <typename TenT>
+void test_diag_mat_to_vec_from_eye(tcapi_test_fixture<TenT> &fix) {
+#if !defined(TCAPICT_SKIP_DIAG) && !defined(TCAPICT_SKIP_EYE) && \
+    defined(TCAPICT_HAS_DIAGONAL_CHECK)
   auto &ctx = fix.context();
   auto identity = tcapi::eye<TenT>(ctx, 3);
-
-  tcapi::diag(ctx, identity);
-
-  const double expected[3] = {1.0, 1.0, 1.0};
-  expect_vector_3(fix, identity, expected);
+  TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, identity));
+  const double ones[3] = {1.0, 1.0, 1.0};
+  expect_vector_3(fix, identity, ones);
 #else
   (void)fix;
 #endif
@@ -1321,29 +1427,27 @@ void test_diag_vec_to_mat_outofplace(tcapi_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_diag_mat_to_vec_outofplace(tcapi_test_fixture<TenT> &fix) {
-#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
+#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
-  // Distinct diagonal values rather than an identity: all-ones cannot tell a
-  // correct extraction from a reordered one. Building the input with `zeros`
-  // also keeps eye out of this test, so a backend that implements diag but
-  // skips eye can still run it.
   const double expected[3] = {4.5, -5.5, 6.5};
-
-  auto matrix = tcapi::zeros<TenT>(ctx, {3, 3});
-  for (std::size_t i = 0; i < 3; ++i) {
-    tcapi::set_elem(ctx, matrix, coors_of<TenT>(i, i),
-                    make_elem<TenT>(expected[i]));
-  }
+  auto matrix = diag_input_matrix(fix, expected);
 
   TenT vector;
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, matrix, vector));
 
-  expect_vector_3(fix, vector, expected);
+  TCAPICT_EXPECT_ELEMS(
+      fix, vector, {3},
+      [&](const tcapi::elem_coors_t<TenT> &c) { return expected[c[0]]; },
+      tol_category::exact);
 
-  // Input unchanged, values included, not just order and size; see
+  // Input unchanged, every element read back after its shape; see
   // "Out-of-place inputs" in CONTRIBUTING.md.
-  TCAPICT_EXPECT_DIAGONAL(ctx, matrix, expected,
-                          tolerance(fix, tol_category::exact));
+  TCAPICT_EXPECT_ELEMS(
+      fix, matrix, {3, 3},
+      [&](const tcapi::elem_coors_t<TenT> &c) {
+        return diag_input_value(expected, c[0], c[1]);
+      },
+      tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -1476,13 +1580,15 @@ void test_stack_last_axis(tcapi_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "tensor_manipulation", test_expand_outofplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_vec_to_mat) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec) \
+  X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec_from_diagonal) \
+  X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec_from_eye) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_vec_to_mat_outofplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec_outofplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_stack_basic) \
   X(__VA_ARGS__, "tensor_manipulation", test_stack_last_axis)
 
-// REAL_ONLY: TCAPI `to_cplx` takes a real tensor and lifts to complex, so the
-//   test below is only meaningful for real TenT.
+// REAL_ONLY: the test lifts a real tensor to complex and checks the zero
+//   imaginary parts it gains, so it takes only a real TenT.
 #define TCAPICT_FOREACH_TENSOR_MANIPULATION_TEST_REAL_ONLY(X, ...) \
   X(__VA_ARGS__, "tensor_manipulation", test_to_cplx_outofplace)
 

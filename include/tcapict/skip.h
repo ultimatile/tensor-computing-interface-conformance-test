@@ -68,11 +68,21 @@
 //
 // The tests that check a diagonal tensor through TCAPICT_EXPECT_DIAGONAL in
 // include/tcapict/diagonal.h, test_eye and the diag, svd, trunc_svd, eig and
-// eigh tests apart from test_diag_mat_to_vec, reach order, shape, size and
-// get_elem through it, and defining any of TCAPICT_SKIP_ORDER, TCAPICT_SKIP_SHAPE,
-// TCAPICT_SKIP_SIZE or TCAPICT_SKIP_GET_ELEM skips them too.
-// TCAPICT_HAS_DIAGONAL_CHECK, defined below, holds exactly when none of those
-// four is skipped.
+// eigh tests apart from the four matrix-to-vector diag tests, which do not
+// call it, reach order, shape, size and get_elem through it, and defining any
+// of TCAPICT_SKIP_ORDER, TCAPICT_SKIP_SHAPE, TCAPICT_SKIP_SIZE or
+// TCAPICT_SKIP_GET_ELEM skips them too. TCAPICT_HAS_DIAGONAL_CHECK, defined
+// below, holds exactly when none of those four is skipped.
+//
+// test_diag_mat_to_vec, test_diag_mat_to_vec_outofplace and
+// test_diag_mat_to_vec_from_diagonal build their input with zeros and
+// set_elem and check their result through TCAPICT_EXPECT_ELEMS, so they are
+// skipped unless TCAPICT_HAS_ELEM_SWEEP holds. test_diag_mat_to_vec_from_eye
+// reads its result through order, size and get_elem; it is skipped when
+// TCAPICT_SKIP_EYE is defined, and also unless TCAPICT_HAS_DIAGONAL_CHECK
+// holds. Not every call a test makes in its own body is reflected in its
+// guard, the zeros and set_elem other diag tests use to build a vector among
+// them; see https://github.com/ultimatile/tcapi-conformance-test/issues/66.
 //
 // These macros are fixed when this file is first included, so define the skip
 // macros they read before including any tcapict header, for instance as compile
@@ -113,7 +123,7 @@
 // (API × precision) combination compile-time-unavailable (via SFINAE /
 // `static_assert` / `= delete`), use the whole-API TCAPICT_SKIP_<API>
 // macro instead. A compile-time body-discard variant is planned; see
-// issue #50.
+// https://github.com/ultimatile/tcapi-conformance-test/issues/50.
 
 // `if constexpr`-guarded early return that fires when `tcapi::real_t<TenT>`
 // is `float` (i.e., TenT's real precision is single — covering both

@@ -202,7 +202,8 @@ void test_save_load_string_view(tcapi_test_fixture<TenT> &fix) {
   // Each view ends before its buffer does. A backend reading the save view as
   // a null-terminated string through `data()` writes another file, so the
   // existence check fails; one reading the load view so looks for a file
-  // that does not exist, so the load throws.
+  // that does not exist, which the load's no-throw check reports if the load
+  // throws a std::exception and the element check reports if it returns.
   io_check::expect_round_trip(
       fix, "string_view",
       [](auto &ctx, const TenT &t, const std::string &path) {
