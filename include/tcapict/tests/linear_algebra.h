@@ -2327,6 +2327,82 @@ void test_eigvalsh_diagonal(tcapi_test_fixture<TenT> &fix) {
 #endif
 }
 
+// --- eigvals: distinct eigenvalues of a non-diagonal matrix ---
+
+// The input of test_eig_distinct, [[0, 1], [2, 1]], whose eigenvalues are -1
+// and 2; its diagonal (0, 1) holds neither, so a backend that returned the
+// input's diagonal fails. V1 fixes no order for eigvals' list, so it is
+// compared as a multiset.
+template <typename TenT>
+void test_eigvals_distinct(tcapi_test_fixture<TenT> &fix) {
+#ifndef TCAPICT_SKIP_EIGVALS
+#ifdef TCAPICT_SKIP_EIGVALS_SINGLE_PRECISION
+  TCAPICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::factorization);
+  auto matrix = tcapi::zeros<TenT>(ctx, {2, 2});
+  tcapi::set_elem(ctx, matrix, {0, 1}, make_elem<TenT>(1.0));
+  tcapi::set_elem(ctx, matrix, {1, 0}, make_elem<TenT>(2.0));
+  tcapi::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(1.0));
+
+  tcapi::cplx_ten_t<TenT> eigenvalues;
+  tcapi::eigvals(ctx, matrix, 1, eigenvalues);
+
+  TCAPICT_ASSERT(tcapi::order(ctx, eigenvalues) == 1);
+  TCAPICT_ASSERT(tcapi::size(ctx, eigenvalues) == 2);
+  using CplxTenT = tcapi::cplx_ten_t<TenT>;
+  std::vector<double> ev_real(2);
+  for (tcapi::elem_coor_t<CplxTenT> i = 0; i < 2; ++i) {
+    const auto ev = tcapi::get_elem(ctx, eigenvalues, {i});
+    ev_real[i] = real_part<CplxTenT>(ev);
+    // A NaN breaks the strict weak ordering std::sort requires; fail here
+    // instead of sorting with one.
+    TCAPICT_ASSERT(!std::isnan(ev_real[i]));
+    TCAPICT_ASSERT_CLOSE(imag_part<CplxTenT>(ev), 0.0, tol);
+  }
+  std::sort(ev_real.begin(), ev_real.end());
+  TCAPICT_ASSERT_CLOSE(ev_real[0], -1.0, tol);
+  TCAPICT_ASSERT_CLOSE(ev_real[1], 2.0, tol);
+#else
+  (void)fix;
+#endif
+}
+
+// --- eigvalsh: distinct eigenvalues in ascending order ---
+
+// The input of test_eigh_ascending, [[2, 1], [1, 2]], whose eigenvalues are 1
+// and 3; V1 returns them "in ascending order", and the input's diagonal (2, 2)
+// holds neither.
+template <typename TenT>
+void test_eigvalsh_ascending(tcapi_test_fixture<TenT> &fix) {
+#ifndef TCAPICT_SKIP_EIGVALSH
+#ifdef TCAPICT_SKIP_EIGVALSH_SINGLE_PRECISION
+  TCAPICT_RETURN_IF_SINGLE_PRECISION;
+#endif
+  auto &ctx = fix.context();
+  auto tol = tolerance(fix, tol_category::factorization);
+  auto matrix = tcapi::zeros<TenT>(ctx, {2, 2});
+  tcapi::set_elem(ctx, matrix, {0, 0}, make_elem<TenT>(2.0));
+  tcapi::set_elem(ctx, matrix, {0, 1}, make_elem<TenT>(1.0));
+  tcapi::set_elem(ctx, matrix, {1, 0}, make_elem<TenT>(1.0));
+  tcapi::set_elem(ctx, matrix, {1, 1}, make_elem<TenT>(2.0));
+
+  tcapi::real_ten_t<TenT> eigenvalues;
+  tcapi::eigvalsh(ctx, matrix, 1, eigenvalues);
+
+  TCAPICT_ASSERT(tcapi::order(ctx, eigenvalues) == 1);
+  TCAPICT_ASSERT(tcapi::size(ctx, eigenvalues) == 2);
+  using RealTenT = tcapi::real_ten_t<TenT>;
+  TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(tcapi::get_elem(ctx, eigenvalues, {0})),
+                       1.0, tol);
+  TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(tcapi::get_elem(ctx, eigenvalues, {1})),
+                       3.0, tol);
+#else
+  (void)fix;
+#endif
+}
+
 } // namespace tests
 } // namespace tcapict
 
@@ -2388,4 +2464,6 @@ void test_eigvalsh_diagonal(tcapi_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "linear_algebra", test_svd_non_square) \
   X(__VA_ARGS__, "linear_algebra", test_svd_higher_order) \
   X(__VA_ARGS__, "linear_algebra", test_eigvals_diagonal) \
-  X(__VA_ARGS__, "linear_algebra", test_eigvalsh_diagonal)
+  X(__VA_ARGS__, "linear_algebra", test_eigvals_distinct) \
+  X(__VA_ARGS__, "linear_algebra", test_eigvalsh_diagonal) \
+  X(__VA_ARGS__, "linear_algebra", test_eigvalsh_ascending)

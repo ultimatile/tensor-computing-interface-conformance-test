@@ -1290,12 +1290,18 @@ template <typename TenT>
 void test_diag_mat_to_vec(tcapi_test_fixture<TenT> &fix) {
 #ifndef TCAPICT_SKIP_DIAG
   auto &ctx = fix.context();
-  auto identity = tcapi::eye<TenT>(ctx, 3);
+  // Distinct diagonal values, so a reordered extraction does not pass.
+  const double expected[3] = {7.5, -8.5, 9.5};
 
-  tcapi::diag(ctx, identity);
+  auto matrix = tcapi::zeros<TenT>(ctx, {3, 3});
+  for (std::size_t i = 0; i < 3; ++i) {
+    tcapi::set_elem(ctx, matrix, coors_of<TenT>(i, i),
+                    make_elem<TenT>(expected[i]));
+  }
 
-  const double expected[3] = {1.0, 1.0, 1.0};
-  expect_vector_3(fix, identity, expected);
+  tcapi::diag(ctx, matrix);
+
+  expect_vector_3(fix, matrix, expected);
 #else
   (void)fix;
 #endif
