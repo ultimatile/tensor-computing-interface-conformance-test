@@ -1336,8 +1336,7 @@ void test_diag_mat_to_vec(tcapi_test_fixture<TenT> &fix) {
 
 // Extracts distinct diagonal values from a diagonal tensor, the result of diag
 // on a first-order input, of which V1 says "Implementations may store the
-// result compactly when supported by the underlying TCF.", and the ones of
-// eye(3) when the backend has eye.
+// result compactly when supported by the underlying TCF."
 template <typename TenT>
 void test_diag_mat_to_vec_from_diagonal(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
@@ -1355,15 +1354,24 @@ void test_diag_mat_to_vec_from_diagonal(tcapi_test_fixture<TenT> &fix) {
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
 
   expect_vector_3(fix, vector, expected);
+#else
+  (void)fix;
+#endif
+}
 
-#ifndef TCAPICT_SKIP_EYE
-  // And from eye, whose entry returns "the N×N identity tensor as a diagonal
-  // tensor", which V1's own diag example extracts from.
+// --- diag: matrix to vector, from eye ---
+
+// Extracts the diagonal of eye(3), whose entry returns "the N×N identity
+// tensor as a diagonal tensor", as V1's own diag example does.
+template <typename TenT>
+void test_diag_mat_to_vec_from_eye(tcapi_test_fixture<TenT> &fix) {
+#if !defined(TCAPICT_SKIP_DIAG) && !defined(TCAPICT_SKIP_EYE) && \
+    defined(TCAPICT_HAS_DIAGONAL_CHECK)
+  auto &ctx = fix.context();
   auto identity = tcapi::eye<TenT>(ctx, 3);
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, identity));
   const double ones[3] = {1.0, 1.0, 1.0};
   expect_vector_3(fix, identity, ones);
-#endif
 #else
   (void)fix;
 #endif
@@ -1552,6 +1560,7 @@ void test_stack_last_axis(tcapi_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "tensor_manipulation", test_diag_vec_to_mat) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec_from_diagonal) \
+  X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec_from_eye) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_vec_to_mat_outofplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec_outofplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_stack_basic) \
