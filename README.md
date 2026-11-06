@@ -1,37 +1,38 @@
-# Tensor Computing Interface Conformance Test Suite (TCICT)
+# Tensor Computing Application Programming Interface Conformance Test Suite (TCAPICT)
 
-Header-only, test-framework-agnostic conformance tests for the [Tensor Computing Interface (TCI)](https://arxiv.org/abs/2512.23917) specification.
+Header-only, test-framework-agnostic conformance tests for the [Tensor Computing Application Programming Interface (TCAPI)](https://arxiv.org/abs/2512.23917) specification.
 
 ## Overview
 
-TCICT verifies that a TCI backend correctly implements the spec-defined API. Tests are written as template functions that throw `tcict::assertion_error` on failure, making them usable with any test framework (doctest, Google Test, Catch2) or standalone.
+TCAPICT verifies that a TCAPI backend correctly implements the spec-defined API. Tests are written as template functions that throw `tcapict::assertion_error` on failure, making them usable with any test framework (doctest, Google Test, Catch2) or standalone.
 
-Known TCI backend implementations:
-- [Cytnx backend](https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx)
+Known TCAPI backend implementations:
+- [Cytnx backend](https://github.com/r-ccs-cms/tcapi-backend-cytnx)
 
 ## Usage
 
 ### 1. Add as a git submodule
 
 ```bash
-git submodule add https://github.com/ultimatile/tensor-computing-interface-conformance-test.git external/tcict
+git submodule add https://github.com/ultimatile/tcapi-conformance-test.git external/tcapict
 ```
 
 ### 2. Add the include path
 
 ```cmake
-target_include_directories(my_tests PRIVATE ${CMAKE_SOURCE_DIR}/external/tcict/include)
+target_include_directories(my_tests PRIVATE ${CMAKE_SOURCE_DIR}/external/tcapict/include)
 ```
 
 ### 3. Register tests
 
 Use the provided doctest adapter to register all applicable conformance tests for each tensor type variant in a single macro call.
 
-The backend's TCI header must be included **before** the adapter, because some test templates call non-dependent `tci::` functions (e.g., `tci::create_context` in the fixture constructor) that are resolved during the first parsing phase.
+TCAPI V1 makes an implementation's API available through the single header `tcapi/tcapi.h`, and the suite includes that header itself, so the two includes below may come in either order.
+Define any macro the implementation's header reads before the first of them.
 
 ```cpp
-#include <my_backend/tci.h>           // backend first: declares tci::create_context, tci::zeros, ...
-#include <tcict/adapters/doctest.h>   // then the adapter, which pulls in the test templates
+#include <tcapi/tcapi.h>                // the implementation's API: tcapi::create_context, tcapi::zeros, ...
+#include <tcapict/adapters/doctest.h>   // the adapter, which pulls in the test templates
 
 #include <complex>
 
@@ -40,14 +41,14 @@ using MyTen_D  = my_backend::Tensor<double>;
 using MyTen_CF = my_backend::Tensor<std::complex<float>>;
 using MyTen_CD = my_backend::Tensor<std::complex<double>>;
 
-TCICT_DOCTEST_REGISTER_REAL(float,   MyTen_F)
-TCICT_DOCTEST_REGISTER_REAL(double,  MyTen_D)
-TCICT_DOCTEST_REGISTER_CPLX(cfloat,  MyTen_CF)
-TCICT_DOCTEST_REGISTER_CPLX(cdouble, MyTen_CD)
+TCAPICT_DOCTEST_REGISTER_REAL(float,   MyTen_F)
+TCAPICT_DOCTEST_REGISTER_REAL(double,  MyTen_D)
+TCAPICT_DOCTEST_REGISTER_CPLX(cfloat,  MyTen_CF)
+TCAPICT_DOCTEST_REGISTER_CPLX(cdouble, MyTen_CD)
 ```
 
-`TCICT_DOCTEST_REGISTER_REAL` registers every test that applies to real tensors (the full `ALL_TYPES` set plus the `REAL_ONLY` set, which holds `test_to_cplx_outofplace` and `test_convert_real_to_complex`).
-`TCICT_DOCTEST_REGISTER_CPLX` registers every test that applies to complex tensors (`ALL_TYPES` plus `CPLX_ONLY` tests such as `test_to_cplx_complex_to_complex`).
+`TCAPICT_DOCTEST_REGISTER_REAL` registers every test that applies to real tensors (the full `ALL_TYPES` set plus the `REAL_ONLY` set, which holds `test_to_cplx_outofplace` and `test_convert_real_to_complex`).
+`TCAPICT_DOCTEST_REGISTER_CPLX` registers every test that applies to complex tensors (`ALL_TYPES` plus `CPLX_ONLY` tests such as `test_to_cplx_complex_to_complex`).
 
 Constraints:
 - `tag` must be identifier-like; it is stringized into each `TEST_CASE` name to disambiguate type variants.
@@ -59,22 +60,22 @@ Constraints:
 If you need fine-grained control — for example, registering an individual test during incremental backend development before bulk registration is viable — define a per-test bridge instead:
 
 ```cpp
-#include <my_backend/tci.h>           // backend first
-#include <tcict/tcict.h>
+#include <tcapi/tcapi.h>
+#include <tcapict/tcapict.h>
 #include <doctest/doctest.h>
 
 #include <complex>
 
-#define TCICT_DOCTEST_CASE(category, test_func, TenT)          \
-  DOCTEST_TEST_CASE("TCICT: " category " - " #test_func) {     \
-    tcict::tci_test_fixture<TenT> fix;                         \
-    tcict::tests::test_func<TenT>(fix);                        \
+#define TCAPICT_DOCTEST_CASE(category, test_func, TenT)        \
+  DOCTEST_TEST_CASE("TCAPICT: " category " - " #test_func) {   \
+    tcapict::tcapi_test_fixture<TenT> fix;                     \
+    tcapict::tests::test_func<TenT>(fix);                      \
   }
 
 using MyTensor = my_backend::Tensor<std::complex<double>>;
 
-TCICT_DOCTEST_CASE("construction", test_zeros, MyTensor)
-TCICT_DOCTEST_CASE("construction", test_eye,   MyTensor)
+TCAPICT_DOCTEST_CASE("construction", test_zeros, MyTensor)
+TCAPICT_DOCTEST_CASE("construction", test_eye,   MyTensor)
 // ... register more tests
 ```
 
@@ -84,36 +85,36 @@ Prefer the bulk macros above unless you have a concrete reason to drop down to t
 
 ### 4. Skip unimplemented functions
 
-Define `TCICT_SKIP_*` macros to opt out of tests for functions a backend has not yet implemented. Each skip macro **excludes — at preprocessing time — the body of the test(s) it directly guards**, removing those references to the corresponding `tci::*` API:
+Define `TCAPICT_SKIP_*` macros to opt out of tests for functions a backend has not yet implemented. Each skip macro **excludes — at preprocessing time — the body of the test(s) it directly guards**, removing those references to the corresponding `tcapi::*` API:
 
 ```cmake
 target_compile_definitions(my_tests PRIVATE
-    TCICT_SKIP_QR
-    TCICT_SKIP_LQ
+    TCAPICT_SKIP_QR
+    TCAPICT_SKIP_LQ
 )
 ```
 
-A skipped test still compiles, registers as a test case, and immediately passes (it has no assertions). See `include/tcict/skip.h` for the full list. `TCICT_SKIP_SUPPORTED_TEN_TYPES` does the same for the `tci::supported_ten_types_t` catalog, which is a type rather than a function, and also skips `test_convert_precision`, which takes its destination types from the catalog.
+A skipped test still compiles, registers as a test case, and immediately passes (it has no assertions). See `include/tcapict/skip.h` for the full list. `TCAPICT_SKIP_SUPPORTED_TEN_TYPES` does the same for the `tcapi::supported_ten_types_t` catalog, which is a type rather than a function, and also skips `test_convert_precision`, which takes its destination types from the catalog.
 
-**Caveat: skip is per-test, not per-API.** The same `tci::*` function may be called as a setup / verification helper in unrelated tests. For example, `tci::get_elem` is used inside many tests beyond the one guarded by `TCICT_SKIP_GET_ELEM`. Skipping a single feature therefore does not guarantee that every reference to its API disappears — to compile against a backend that omits a particular declaration, you may need to skip every test that uses it.
-Some tests are guarded by the APIs they use as well: the tests that build or check tensors through the helpers in `include/tcict/elem_sweep.h` and `include/tcict/zeroth_order.h` — among them the `concatenate`, `stack` and `linear_combine` tests and most zeroth-order tests — call `set_elem`, `shape` and `get_elem` through them and, apart from the tests of the other constructors, build their inputs with `zeros`, so skipping any of those four also skips them (`TCICT_HAS_ELEM_SWEEP` in `include/tcict/skip.h`). The tests using the zeroth-order checks also need `order` and `size`, so skipping either of those skips them too (`TCICT_HAS_ZEROTH_ORDER_SWEEP`).
-The tests that check a diagonal tensor through `include/tcict/diagonal.h` — `test_eye`, the `svd`, `trunc_svd`, `eig` and `eigh` tests and three of the `diag` tests — call `order`, `shape`, `size` and `get_elem` through it, so skipping any of those four skips them too (`TCICT_HAS_DIAGONAL_CHECK`).
+**Caveat: skip is per-test, not per-API.** The same `tcapi::*` function may be called as a setup / verification helper in unrelated tests. For example, `tcapi::get_elem` is used inside many tests beyond the one guarded by `TCAPICT_SKIP_GET_ELEM`. Skipping a single feature therefore does not guarantee that every reference to its API disappears — to compile against a backend that omits a particular declaration, you may need to skip every test that uses it.
+Some tests are guarded by the APIs they use as well: the tests that build or check tensors through the helpers in `include/tcapict/elem_sweep.h` and `include/tcapict/zeroth_order.h` — among them the `concatenate`, `stack` and `linear_combine` tests and most zeroth-order tests — call `set_elem`, `shape` and `get_elem` through them and, apart from the tests of the other constructors, build their inputs with `zeros`, so skipping any of those four also skips them (`TCAPICT_HAS_ELEM_SWEEP` in `include/tcapict/skip.h`). The tests using the zeroth-order checks also need `order` and `size`, so skipping either of those skips them too (`TCAPICT_HAS_ZEROTH_ORDER_SWEEP`).
+The tests that check a diagonal tensor through `include/tcapict/diagonal.h` — `test_eye`, the `svd`, `trunc_svd`, `eig` and `eigh` tests and three of the `diag` tests — call `order`, `shape`, `size` and `get_elem` through it, so skipping any of those four skips them too (`TCAPICT_HAS_DIAGONAL_CHECK`).
 
 **Baseline requirement.** Some functions must always be declared, regardless of skip macros, because they are used as setup / teardown by every test fixture:
 
-- `tci::create_context`, `tci::destroy_context` (called by `tci_test_fixture`'s constructor/destructor)
-- `tci::tensor_traits<TenT>` and the type aliases it exports
+- `tcapi::create_context`, `tcapi::destroy_context` (called by `tcapi_test_fixture`'s constructor/destructor)
+- `tcapi::tensor_traits<TenT>` and the type aliases it exports
 
-A backend that does not provide these cannot use TCICT at all, with or without skip macros.
+A backend that does not provide these cannot use TCAPICT at all, with or without skip macros.
 
 ### 5. Skip tests for a specific precision (known precision-specific bugs)
 
-For factorization / iterative APIs where a backend has a known **precision-specific runtime bug** (e.g., a single-precision `eig` that compiles fine but returns wrong values), define the corresponding `TCICT_SKIP_<API>_SINGLE_PRECISION` macro to skip those tests **only for single-precision instantiations** (TenT whose `tci::real_t<TenT>` is `float`, covering both `float` and `std::complex<float>`):
+For factorization / iterative APIs where a backend has a known **precision-specific runtime bug** (e.g., a single-precision `eig` that compiles fine but returns wrong values), define the corresponding `TCAPICT_SKIP_<API>_SINGLE_PRECISION` macro to skip those tests **only for single-precision instantiations** (TenT whose `tcapi::real_t<TenT>` is `float`, covering both `float` and `std::complex<float>`):
 
 ```cmake
 target_compile_definitions(my_tests PRIVATE
-    TCICT_SKIP_EIG_SINGLE_PRECISION
-    TCICT_SKIP_EIGH_SINGLE_PRECISION
+    TCAPICT_SKIP_EIG_SINGLE_PRECISION
+    TCAPICT_SKIP_EIGH_SINGLE_PRECISION
 )
 ```
 
@@ -121,15 +122,15 @@ The corresponding double-precision instantiations continue to run.
 
 Available flags (10 APIs covered, factorization + iterative classes per `fixture.h`):
 
-- `TCICT_SKIP_EIG_SINGLE_PRECISION`, `TCICT_SKIP_EIGH_SINGLE_PRECISION`
-- `TCICT_SKIP_EIGVALS_SINGLE_PRECISION`, `TCICT_SKIP_EIGVALSH_SINGLE_PRECISION`
-- `TCICT_SKIP_SVD_SINGLE_PRECISION`, `TCICT_SKIP_TRUNC_SVD_SINGLE_PRECISION`
-- `TCICT_SKIP_QR_SINGLE_PRECISION`, `TCICT_SKIP_LQ_SINGLE_PRECISION`
-- `TCICT_SKIP_EXP_SINGLE_PRECISION`, `TCICT_SKIP_INVERSE_SINGLE_PRECISION`
+- `TCAPICT_SKIP_EIG_SINGLE_PRECISION`, `TCAPICT_SKIP_EIGH_SINGLE_PRECISION`
+- `TCAPICT_SKIP_EIGVALS_SINGLE_PRECISION`, `TCAPICT_SKIP_EIGVALSH_SINGLE_PRECISION`
+- `TCAPICT_SKIP_SVD_SINGLE_PRECISION`, `TCAPICT_SKIP_TRUNC_SVD_SINGLE_PRECISION`
+- `TCAPICT_SKIP_QR_SINGLE_PRECISION`, `TCAPICT_SKIP_LQ_SINGLE_PRECISION`
+- `TCAPICT_SKIP_EXP_SINGLE_PRECISION`, `TCAPICT_SKIP_INVERSE_SINGLE_PRECISION`
 
-**Different semantics from `TCICT_SKIP_<API>`.** Whole-API skip in section 4 excludes the test body **at preprocessing time** (`#ifndef`), so the API call disappears from that guarded test's body (other tests that reference the same `tci::*` API as a helper / setup still compile against it; see the per-test caveat in section 4). Precision skip is an **`if constexpr`-guarded runtime early return**: the body is still part of the function template and gets instantiated for every TenT, including the single-precision ones. API calls inside the body must therefore be valid for that precision at compile time.
+**Different semantics from `TCAPICT_SKIP_<API>`.** Whole-API skip in section 4 excludes the test body **at preprocessing time** (`#ifndef`), so the API call disappears from that guarded test's body (other tests that reference the same `tcapi::*` API as a helper / setup still compile against it; see the per-test caveat in section 4). Precision skip is an **`if constexpr`-guarded runtime early return**: the body is still part of the function template and gets instantiated for every TenT, including the single-precision ones. API calls inside the body must therefore be valid for that precision at compile time.
 
-This handles backends with runtime-buggy APIs (the call compiles but produces wrong values). For backends that intentionally make a (API × precision) combination compile-time-unavailable (via SFINAE / `static_assert` / `= delete`), use the whole-API `TCICT_SKIP_<API>` macro instead. A compile-time body-discard variant is planned (see [#50](https://github.com/ultimatile/tensor-computing-interface-conformance-test/issues/50)).
+This handles backends with runtime-buggy APIs (the call compiles but produces wrong values). For backends that intentionally make a (API × precision) combination compile-time-unavailable (via SFINAE / `static_assert` / `= delete`), use the whole-API `TCAPICT_SKIP_<API>` macro instead. A compile-time body-discard variant is planned (see [#50](https://github.com/ultimatile/tcapi-conformance-test/issues/50)).
 
 ## Test Categories
 
@@ -145,7 +146,7 @@ This handles backends with runtime-buggy APIs (the call compiles but produces wr
 ## Requirements
 
 - C++17
-- TCI headers (`tci/tensor_traits.h` and backend-specific trait specialization)
+- The implementation's `tcapi/tcapi.h`, with its `tcapi::tensor_traits` specializations for the tensor types under test
 
 ## Development
 

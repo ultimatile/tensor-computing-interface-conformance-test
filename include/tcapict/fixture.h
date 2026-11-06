@@ -1,24 +1,24 @@
 #pragma once
 
-#include <tci/tensor_traits.h>
+#include <tcapi/tcapi.h>
 
 #include <cstddef>
 #include <limits>
 #include <type_traits>
 
-namespace tcict {
+namespace tcapict {
 
-/// Test fixture that manages a TCI context.
+/// Test fixture that manages a TCAPI context.
 /// Backends may specialize this for custom context creation (e.g. GPU) or epsilon.
 template <typename TenT>
-struct tci_test_fixture {
-  tci::context_handle_t<TenT> ctx;
+struct tcapi_test_fixture {
+  tcapi::context_handle_t<TenT> ctx;
 
-  tci_test_fixture() { tci::create_context(ctx); }
-  ~tci_test_fixture() { tci::destroy_context(ctx); }
+  tcapi_test_fixture() { tcapi::create_context(ctx); }
+  ~tcapi_test_fixture() { tcapi::destroy_context(ctx); }
 
-  tci_test_fixture(const tci_test_fixture&) = delete;
-  tci_test_fixture& operator=(const tci_test_fixture&) = delete;
+  tcapi_test_fixture(const tcapi_test_fixture&) = delete;
+  tcapi_test_fixture& operator=(const tcapi_test_fixture&) = delete;
 
   auto& context() { return ctx; }
 
@@ -26,8 +26,8 @@ struct tci_test_fixture {
   /// The known-type branches match values empirically sufficient for the
   /// small test fixtures in this suite; the fallback scales machine epsilon
   /// to absorb O(N) accumulation errors for unfamiliar real_t types.
-  auto epsilon() -> tci::real_t<TenT> {
-    using real_type = tci::real_t<TenT>;
+  auto epsilon() -> tcapi::real_t<TenT> {
+    using real_type = tcapi::real_t<TenT>;
     if constexpr (std::is_same_v<real_type, float>) {
       return 1e-5F;
     } else if constexpr (std::is_same_v<real_type, double>) {
@@ -69,9 +69,9 @@ enum class tol_category {
 /// the fixture's `epsilon()`; the helper composes its result from
 /// `fix.epsilon()`, so any backend-defined epsilon flows through.
 template <typename TenT>
-auto tolerance(tci_test_fixture<TenT>& fix, tol_category cat,
-               std::size_t /*N*/ = 1) -> tci::real_t<TenT> {
-  using real_type = tci::real_t<TenT>;
+auto tolerance(tcapi_test_fixture<TenT>& fix, tol_category cat,
+               std::size_t /*N*/ = 1) -> tcapi::real_t<TenT> {
+  using real_type = tcapi::real_t<TenT>;
   const auto eps = fix.epsilon();
   switch (cat) {
     case tol_category::exact:
@@ -91,4 +91,4 @@ auto tolerance(tci_test_fixture<TenT>& fix, tol_category cat,
   }
 }
 
-}  // namespace tcict
+}  // namespace tcapict

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <tcict/assertion.h>
-#include <tcict/elem_helper.h>
-#include <tcict/fixture.h>
-#include <tcict/skip.h>
+#include <tcapict/assertion.h>
+#include <tcapict/elem_helper.h>
+#include <tcapict/fixture.h>
+#include <tcapict/skip.h>
 
 #include <cmath>
 #include <complex>
@@ -13,29 +13,29 @@
 #include <sstream>
 #include <type_traits>
 
-namespace tcict {
+namespace tcapict {
 
-// Guarded by TCICT_HAS_ELEM_SWEEP (include/tcict/skip.h), the element-API
+// Guarded by TCAPICT_HAS_ELEM_SWEEP (include/tcapict/skip.h), the element-API
 // condition every test using these helpers also requires: the helpers call
 // set_elem, shape and get_elem, and those tests build their inputs with zeros,
 // apart from the tests of another constructor, which build with that one.
-#if defined(TCICT_HAS_ELEM_SWEEP)
+#if defined(TCAPICT_HAS_ELEM_SWEEP)
 
 namespace detail {
 
 // Calls `f(coors)` for every coordinate of `shape`, the last bond advancing
 // fastest.
 template <typename TenT, typename F>
-void for_each_coors(const tci::shape_t<TenT> &shape, F f) {
+void for_each_coors(const tcapi::shape_t<TenT> &shape, F f) {
   const std::size_t order = shape.size();
   for (std::size_t b = 0; b < order; ++b) {
     if (shape[b] == 0) {
       return;
     }
   }
-  tci::elem_coors_t<TenT> coors(order, 0);
+  tcapi::elem_coors_t<TenT> coors(order, 0);
   while (true) {
-    f(static_cast<const tci::elem_coors_t<TenT> &>(coors));
+    f(static_cast<const tcapi::elem_coors_t<TenT> &>(coors));
     std::size_t b = order;
     while (true) {
       if (b == 0) {
@@ -61,13 +61,13 @@ void for_each_coors(const tci::shape_t<TenT> &shape, F f) {
 /// how a backend lays the elements out. Asserts that the coordinate has
 /// `shape`'s order and lies inside `shape`.
 template <typename TenT>
-auto ramp_over(const tci::shape_t<TenT> &shape, double offset) {
-  return [shape, offset](const tci::elem_coors_t<TenT> &coors) {
-    TCICT_ASSERT(coors.size() == shape.size());
+auto ramp_over(const tcapi::shape_t<TenT> &shape, double offset) {
+  return [shape, offset](const tcapi::elem_coors_t<TenT> &coors) {
+    TCAPICT_ASSERT(coors.size() == shape.size());
     double position = 0.0;
     for (std::size_t b = 0; b < shape.size(); ++b) {
-      TCICT_ASSERT(static_cast<std::size_t>(coors[b]) <
-                   static_cast<std::size_t>(shape[b]));
+      TCAPICT_ASSERT(static_cast<std::size_t>(coors[b]) <
+                     static_cast<std::size_t>(shape[b]));
       position = position * static_cast<double>(shape[b]) +
                  static_cast<double>(coors[b]);
     }
@@ -79,11 +79,11 @@ auto ramp_over(const tci::shape_t<TenT> &shape, double offset) {
 /// element of a concatenation result has in the input it came from.
 template <typename Coors>
 Coors shifted(const Coors &coors, std::size_t bond, std::size_t by) {
-  TCICT_ASSERT(bond < coors.size());
+  TCAPICT_ASSERT(bond < coors.size());
   if constexpr (std::is_signed_v<typename Coors::value_type>) {
-    TCICT_ASSERT(coors[bond] >= 0);
+    TCAPICT_ASSERT(coors[bond] >= 0);
   }
-  TCICT_ASSERT(static_cast<std::size_t>(coors[bond]) >= by);
+  TCAPICT_ASSERT(static_cast<std::size_t>(coors[bond]) >= by);
   Coors out = coors;
   out[bond] = static_cast<typename Coors::value_type>(
       static_cast<std::size_t>(coors[bond]) - by);
@@ -94,7 +94,7 @@ Coors shifted(const Coors &coors, std::size_t bond, std::size_t by) {
 /// has in the input `coors[bond]` it came from.
 template <typename Coors>
 Coors without_bond(const Coors &coors, std::size_t bond) {
-  TCICT_ASSERT(bond < coors.size());
+  TCAPICT_ASSERT(bond < coors.size());
   Coors out;
   for (std::size_t b = 0; b < coors.size(); ++b) {
     if (b != bond) {
@@ -104,15 +104,15 @@ Coors without_bond(const Coors &coors, std::size_t bond) {
   return out;
 }
 
-/// The element value `TCICT_SET_ELEMS` writes for the real value `v`: real
+/// The element value `TCAPICT_SET_ELEMS` writes for the real value `v`: real
 /// part `v` and, for a complex element type, imaginary part `-0.5 * v`.
 template <typename TenT> std::complex<double> written(double v) {
   return {v, is_complex_v<TenT> ? -0.5 * v : 0.0};
 }
 
-/// `written<TenT>(v)` as an element: the element `TCICT_SET_ELEMS` writes for
+/// `written<TenT>(v)` as an element: the element `TCAPICT_SET_ELEMS` writes for
 /// the real value `v`.
-template <typename TenT> tci::elem_t<TenT> written_elem(double v) {
+template <typename TenT> tcapi::elem_t<TenT> written_elem(double v) {
   const auto w = written<TenT>(v);
   return make_elem<TenT>(w.real(), w.imag());
 }
@@ -120,24 +120,24 @@ template <typename TenT> tci::elem_t<TenT> written_elem(double v) {
 /// Sets the element at every coordinate `coors` of `tensor` to the value with
 /// real part `v = value_at(coors)` and, for a complex element type, imaginary
 /// part `-0.5 * v`, so that an operation losing or conjugating imaginary parts
-/// is visible. Pairs with `TCICT_EXPECT_ELEMS`, so a test can build an input and
+/// is visible. Pairs with `TCAPICT_EXPECT_ELEMS`, so a test can build an input and
 /// check it with the same function; real-coefficient linear operations keep
 /// the imaginary part at `-0.5` times the real part. A std::exception from
 /// shape, set_elem or `value_at`, an assertion failing in `value_at` included,
 /// is reported at `file`:`line` as detail::nothrow_call reports it; call it
-/// through TCICT_SET_ELEMS, which passes the caller's location.
+/// through TCAPICT_SET_ELEMS, which passes the caller's location.
 template <typename TenT, typename ValueAt>
-void set_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
+void set_elems_at(const char *file, int line, tcapi_test_fixture<TenT> &fix,
                   TenT &tensor, ValueAt value_at) {
   auto &ctx = fix.context();
   const auto shape = detail::nothrow_call(
-      file, line, [&] { return tci::shape(ctx, tensor); });
+      file, line, [&] { return tcapi::shape(ctx, tensor); });
   detail::for_each_coors<TenT>(
-      shape, [&](const tci::elem_coors_t<TenT> &coors) {
+      shape, [&](const tcapi::elem_coors_t<TenT> &coors) {
         const auto elem = written_elem<TenT>(static_cast<double>(
             detail::nothrow_call(file, line, [&] { return value_at(coors); })));
         detail::nothrow_call(file, line,
-                             [&] { tci::set_elem(ctx, tensor, coors, elem); });
+                             [&] { tcapi::set_elem(ctx, tensor, coors, elem); });
       });
 }
 
@@ -147,17 +147,17 @@ void set_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
 /// `tol_category::exact` gives, admits only equality, and any other tolerance
 /// admits only a difference below it. A real
 /// `value_at` result `v` stands for `written<TenT>(v)`, the value
-/// `TCICT_SET_ELEMS` writes; a `std::complex<double>` result is compared as it
+/// `TCAPICT_SET_ELEMS` writes; a `std::complex<double>` result is compared as it
 /// is. For a real element type, the expected imaginary part is compared
 /// against zero. The
 /// shape is asserted first, so the sweep reads only coordinates the tensor has.
 /// A shape or element mismatch is reported at `file`:`line`. So is a
 /// std::exception from shape, get_elem or `value_at`, an assertion failing in
 /// `value_at` included, in the form detail::nothrow_call reports it. Call it
-/// through TCICT_EXPECT_ELEMS, which passes the caller's location.
+/// through TCAPICT_EXPECT_ELEMS, which passes the caller's location.
 template <typename TenT, typename ValueAt>
-void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
-                     const TenT &tensor, const tci::shape_t<TenT> &shape,
+void expect_elems_at(const char *file, int line, tcapi_test_fixture<TenT> &fix,
+                     const TenT &tensor, const tcapi::shape_t<TenT> &shape,
                      ValueAt value_at,
                      tol_category cat = tol_category::elementwise,
                      std::size_t n = 1) {
@@ -173,16 +173,16 @@ void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
     return oss.str();
   };
   const auto actual_shape = detail::nothrow_call(
-      file, line, [&] { return tci::shape(ctx, tensor); });
+      file, line, [&] { return tcapi::shape(ctx, tensor); });
   if (!(actual_shape == shape)) {
     detail::fail_at(file, line,
                     "shape " + shape_text(actual_shape) + " != expected " +
                         shape_text(shape));
   }
   detail::for_each_coors<TenT>(
-      shape, [&](const tci::elem_coors_t<TenT> &coors) {
+      shape, [&](const tcapi::elem_coors_t<TenT> &coors) {
         const auto elem = detail::nothrow_call(
-            file, line, [&] { return tci::get_elem(ctx, tensor, coors); });
+            file, line, [&] { return tcapi::get_elem(ctx, tensor, coors); });
         const auto value =
             detail::nothrow_call(file, line, [&] { return value_at(coors); });
         std::complex<double> expected;
@@ -217,15 +217,15 @@ void expect_elems_at(const char *file, int line, tci_test_fixture<TenT> &fix,
 
 #endif
 
-} // namespace tcict
+} // namespace tcapict
 
 /// expect_elems_at with the caller's file and line:
-/// TCICT_EXPECT_ELEMS(fix, tensor, shape, value_at[, cat[, n]]). The line is
+/// TCAPICT_EXPECT_ELEMS(fix, tensor, shape, value_at[, cat[, n]]). The line is
 /// one of the lines the invocation spans; which one, for an invocation spanning
 /// several, depends on the compiler.
-#define TCICT_EXPECT_ELEMS(...) ::tcict::expect_elems_at(__FILE__, __LINE__, __VA_ARGS__)
+#define TCAPICT_EXPECT_ELEMS(...) ::tcapict::expect_elems_at(__FILE__, __LINE__, __VA_ARGS__)
 
 /// set_elems_at with the caller's file and line:
-/// TCICT_SET_ELEMS(fix, tensor, value_at), the line chosen as for
-/// TCICT_EXPECT_ELEMS.
-#define TCICT_SET_ELEMS(...) ::tcict::set_elems_at(__FILE__, __LINE__, __VA_ARGS__)
+/// TCAPICT_SET_ELEMS(fix, tensor, value_at), the line chosen as for
+/// TCAPICT_EXPECT_ELEMS.
+#define TCAPICT_SET_ELEMS(...) ::tcapict::set_elems_at(__FILE__, __LINE__, __VA_ARGS__)

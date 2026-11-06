@@ -13,8 +13,8 @@ This repository's deliverable is the test suite, so the type is judged against t
 
 ## Local integration check with the cytnx backend
 
-`make integration-check` verifies the current tcict HEAD against the [cytnx
-backend](https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx)
+`make integration-check` verifies the current tcapict HEAD against the [cytnx
+backend](https://github.com/r-ccs-cms/tcapi-backend-cytnx)
 without the manual "copy headers / build / `git checkout`" routine.
 
 ### Default behavior
@@ -26,19 +26,20 @@ make integration-check
 This:
 
 0. Refuses to run while tracked files of this repo have uncommitted changes (see "Caveats").
-1. Clones cytnx (with submodules) into `./build/tensor-computing-interface-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard $CYTNX_REF`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF` (default under "Environment variables" below).
-2. Replaces `external/tcict/` content with this repo's tracked HEAD via `git archive HEAD | tar -xmf -`; `-m` stamps the extracted files with the current time, so the build recompiles against them.
-3. Builds the cytnx test target (`TCITests`).
+1. Clones cytnx (with submodules) into `./build/tcapi-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard $CYTNX_REF`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF` (default under "Environment variables" below).
+2. Refuses to continue unless the cytnx working tree's `.gitmodules` registers a submodule at the path `external/tcapict` and that submodule is initialized, since a cytnx revision that vendors this suite under another path cannot take the override.
+3. Replaces `external/tcapict/` content with this repo's tracked HEAD via `git archive HEAD | tar -xmf -`; `-m` stamps the extracted files with the current time, so the build recompiles against them.
+4. Builds the cytnx test target (`TCAPITests`).
 
 `build/` is gitignored, so the cloned backend and its cmake artefacts stay untracked.
 
 ### Use an existing cytnx checkout
 
 ```sh
-make integration-check CYTNX_BACKEND_DIR=$HOME/path/to/tensor-computing-interface-backend-cytnx
+make integration-check CYTNX_BACKEND_DIR=$HOME/path/to/tcapi-backend-cytnx
 ```
 
-When `CYTNX_BACKEND_DIR` is set in the environment, the script does **not** clone or modify the outer cytnx working tree — it only overrides `external/tcict/`. That checkout must already provide the signatures the suite calls; see `CYTNX_REF` under "Environment variables". To return to the auto-clone default, unset the variable rather than passing the default value explicitly.
+When `CYTNX_BACKEND_DIR` is set in the environment, the script does **not** clone or modify the outer cytnx working tree — it only overrides `external/tcapict/`. That checkout must already register and initialize `external/tcapict` as a submodule (step 2 above) and provide the signatures the suite calls; see `CYTNX_REF` under "Environment variables". To return to the auto-clone default, unset the variable rather than passing the default value explicitly.
 
 ### Run the tests
 
@@ -46,7 +47,7 @@ When `CYTNX_BACKEND_DIR` is set in the environment, the script does **not** clon
 make integration-test
 ```
 
-Builds, then runs `$CYTNX_BACKEND_DIR/build/test/TCITests` directly.
+Builds, then runs `$CYTNX_BACKEND_DIR/build/test/TCAPITests` directly.
 
 ### Restore the cytnx submodule
 
@@ -54,11 +55,11 @@ Builds, then runs `$CYTNX_BACKEND_DIR/build/test/TCITests` directly.
 make integration-restore
 ```
 
-Resets `$CYTNX_BACKEND_DIR/external/tcict` to cytnx's pinned submodule revision (`git submodule update --init --force external/tcict`) and runs `git clean -ffd` inside that path. The clean step is required: the override adds files that do not exist at the submodule pin (Makefile, CONTRIBUTING.md, scripts/, .gitignore), and a plain `submodule update --force` would leave those files as untracked.
+Resets `$CYTNX_BACKEND_DIR/external/tcapict` to cytnx's pinned submodule revision (`git submodule update --init --force external/tcapict`) and runs `git clean -ffd` inside that path. The clean step is required: the override adds files that do not exist at the submodule pin (Makefile, CONTRIBUTING.md, scripts/, .gitignore), and a plain `submodule update --force` would leave those files as untracked.
 
 ### Extra cmake configure args
 
-Some platforms need more than `-DTCI_BUILD_TESTS=ON` to configure the cytnx build. Pass the additional flags via `INTEGRATION_CMAKE_ARGS`:
+Some platforms need more than `-DTCAPI_BUILD_TESTS=ON` to configure the cytnx build. Pass the additional flags via `INTEGRATION_CMAKE_ARGS`:
 
 ```sh
 # macOS + Homebrew toolchain (matches cytnx's CMakePresets.json `brew-debug`)
@@ -72,23 +73,23 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 
 ### Caveats
 
-- The override copies tcict **HEAD** (last committed state), so `make integration-check` and `make integration-test` refuse to run while tracked files have uncommitted changes; commit or stash them first. Untracked files are not shipped either.
-- The script never writes to `external/tcict/.git*`, so `make integration-restore` always recovers the pinned state.
-- The `TCICT_SKIP_*` skip-macro matrix (cross-build with various skip-macro combinations) is deferred to a follow-up issue.
-- `make integration-restore` requires `CYTNX_BACKEND_DIR` to point at an actual git checkout (with `external/tcict` initialized as a submodule).
+- The override copies tcapict **HEAD** (last committed state), so `make integration-check` and `make integration-test` refuse to run while tracked files have uncommitted changes; commit or stash them first. Untracked files are not shipped either.
+- The script never writes to `external/tcapict/.git*`, so `make integration-restore` always recovers the pinned state.
+- The `TCAPICT_SKIP_*` skip-macro matrix (cross-build with various skip-macro combinations) is deferred to a follow-up issue.
+- `make integration-restore` requires `CYTNX_BACKEND_DIR` to point at an actual git checkout whose working-tree `.gitmodules` registers a submodule at the path `external/tcapict`.
 
 ### Environment variables
 
 | Variable | Default | Effect |
 |---|---|---|
-| `CYTNX_BACKEND_DIR` | `./build/tensor-computing-interface-backend-cytnx` | cytnx checkout to override into; **set** disables auto-clone/sync |
-| `CYTNX_REPO_URL` | `https://github.com/r-ccs-cms/tensor-computing-interface-backend-cytnx.git` | URL used only when auto-cloning the default path |
+| `CYTNX_BACKEND_DIR` | `./build/tcapi-backend-cytnx` | cytnx checkout to override into; **set** disables auto-clone/sync |
+| `CYTNX_REPO_URL` | `https://github.com/r-ccs-cms/tcapi-backend-cytnx.git` | URL used only when auto-cloning the default path |
 | `CYTNX_REF` | `origin/dev/tcapi-v1` | ref the default-path checkout is reset to on every run; it must provide the TCAPI V1 signatures this suite calls, such as `concatenate`, `stack` and `linear_combine` over `List<CRef<TenT>>`; the default is cytnx's TCAPI V1 integration branch |
 | `INTEGRATION_CMAKE_ARGS` | (empty) | extra args appended to the cmake configure command |
 
 ## Conventions for writing tests
 
-These apply to every header under `include/tcict/`; comments in the code refer to them by section name.
+These apply to every header under `include/tcapict/`; comments in the code refer to them by section name.
 
 ### Out-of-place inputs
 
@@ -101,12 +102,12 @@ The tests that read their input back after an out-of-place call assert a reading
 Each test reads every input back after its last call to the operation and asserts that its shape and elements are unchanged.
 That asserts the "not ... modified" of V1's words as they stand, not a reading of them as in "Out-of-place inputs"; the read-back cannot detect a copy, so "not copied" is not asserted.
 An input whose elements all hold one value would pass that read-back even after being reordered in place, so each input element gets a value no other input element has.
-Each input is built from a coordinate-to-value function, through `TCICT_SET_ELEMS` in `include/tcict/elem_sweep.h`, and both the read-back and the check of every element of the result are computed from the same functions, through `TCICT_EXPECT_ELEMS`; `ramp_over` there gives distinct values to distinct coordinates.
+Each input is built from a coordinate-to-value function, through `TCAPICT_SET_ELEMS` in `include/tcapict/elem_sweep.h`, and both the read-back and the check of every element of the result are computed from the same functions, through `TCAPICT_EXPECT_ELEMS`; `ramp_over` there gives distinct values to distinct coordinates.
 
-Each of the three operations, and each `linear_combine` overload, is called at least once through a named `tci::List<tci::CRef<TenT>>` variable, not only through a braced `{std::cref(a), ...}` list.
+Each of the three operations, and each `linear_combine` overload, is called at least once through a named `tcapi::List<tcapi::CRef<TenT>>` variable, not only through a braced `{std::cref(a), ...}` list.
 When `TenT` is copy-constructible, a braced list of `std::cref`s also initializes a `List<TenT>`, so a braced call alone compiles against a backend that still takes `List<TenT>`.
 A named `List<CRef<TenT>>` does not convert to `List<TenT>`, so that call compiles only against V1's parameter type.
-A call with a braced list names `TenT` explicitly, as in `tci::stack<TenT>(ctx, {std::cref(a), std::cref(b)}, 0)`, because no parameter of these functions deduces it from a braced list.
+A call with a braced list names `TenT` explicitly, as in `tcapi::stack<TenT>(ctx, {std::cref(a), std::cref(b)}, 0)`, because no parameter of these functions deduces it from a braced list.
 
 ### Callbacks the backend invokes
 
@@ -114,14 +115,14 @@ Coordinate maps, generators and traversal callbacks run inside the backend's fra
 The suite reads V1 as invoking them one at a time: V1's own `for_each` example accumulates into a plain variable, `[&tot](const float el) { tot += el; }`, and gives the result as `tot == 3.0`.
 So they neither assert, nor allocate, nor read a coordinate's components before checking the coordinate: that it has as many components as the tensor has bonds, and that each is less than its bond's dimension.
 Whatever a callback observes for the test, such as a flag for a malformed coordinate, a visit count or a running sum, it keeps in variables the test reads after the call returns, and the test asserts on those.
-A callback that receives a second-order coordinate makes that check with `coors_2d` in `include/tcict/elem_helper.h` before reading its components, and records a coordinate `coors_2d` rejects in a flag the test asserts is clear.
-Tests call `to_range` and `assign_from_range` on second-order tensors through `to_range_2d` and `assign_from_range_2d` in `include/tcict/range_2d.h`.
+A callback that receives a second-order coordinate makes that check with `coors_2d` in `include/tcapict/elem_helper.h` before reading its components, and records a coordinate `coors_2d` rejects in a flag the test asserts is clear.
+Tests call `to_range` and `assign_from_range` on second-order tensors through `to_range_2d` and `assign_from_range_2d` in `include/tcapict/range_2d.h`.
 
 ### Zeroth-order tensors
 
 TCAPI V1, under "Zeroth-Order and Diagonal Tensor Semantics": "TCAPI represents a scalar-valued **tensor** result as a zeroth-order tensor: empty shape `{}`, `size == 1`, and a single empty coordinate sequence."
-Where a test knows the element a zeroth-order `TenT` should hold, it checks the tensor through `TCICT_EXPECT_ZEROTH_ORDER` in `include/tcict/zeroth_order.h`: order 0, shape `{}` and size 1, then the sole element read at `{}` through `TCICT_EXPECT_ELEMS`.
-The results of `real` and `imag` of a complex tensor, and of `to_cplx` of a real one, have another tensor type; those results are checked through `TCICT_EXPECT_ZEROTH_ORDER_SHAPE`, which takes any tensor type, and `get_elem`, and so is the result of `random`, whose element is one of the values the generator returned.
+Where a test knows the element a zeroth-order `TenT` should hold, it checks the tensor through `TCAPICT_EXPECT_ZEROTH_ORDER` in `include/tcapict/zeroth_order.h`: order 0, shape `{}` and size 1, then the sole element read at `{}` through `TCAPICT_EXPECT_ELEMS`.
+The results of `real` and `imag` of a complex tensor, and of `to_cplx` of a real one, have another tensor type; those results are checked through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE`, which takes any tensor type, and `get_elem`, and so is the result of `random`, whose element is one of the values the generator returned.
 A callback that receives a coordinate of a zeroth-order tensor expects the empty one and flags any other, under "Callbacks the backend invokes", through `to_range_0d`, `assign_from_range_0d` or `visit_record_0d` in the same header.
 
 V1 goes on: "Operations whose definitions require selecting, reordering, inserting, removing, slicing, or partitioning bonds (`transpose`, `svd`, `qr`, `eig`, `expand`, `shrink`, `extract_sub`, `replace_sub`, ...) are not applicable to zeroth-order tensors."
@@ -129,14 +130,14 @@ V1 defines no exception for them, so nothing about calling them on a zeroth-orde
 No test calls the following on a zeroth-order tensor either, since the same sentence covers them: `concatenate`, which selects a bond, `stack`, which inserts one, and the operations that matricize, which partition bonds into rows and columns (`trunc_svd`, `lq`, `eigh`, `eigvals`, `eigvalsh`, `exp`, `inverse`).
 Nor does any call `diag`, whose input V1 requires to be first- or second-order.
 
-The zeroth-order tests assert nothing about `TenT{}`, the state `clear` and `move` leave, since V1 does not say what queries return on it; the `order == 0` assertions the existing `clear` and `move` tests make on it are left as they are, pending the open question on [#51](https://github.com/ultimatile/tensor-computing-interface-conformance-test/issues/51).
+The zeroth-order tests assert nothing about `TenT{}`, the state `clear` and `move` leave, since V1 does not say what queries return on it; the `order == 0` assertions the existing `clear` and `move` tests make on it are left as they are, pending the open question on [#51](https://github.com/ultimatile/tcapi-conformance-test/issues/51).
 Of `size_bytes` they assert only that it returns, as the tests of the other ranks do.
 
 ### Diagonal tensors
 
 TCAPI V1, under "Zeroth-Order and Diagonal Tensor Semantics": "A diagonal tensor's logical elements — including off-diagonal zeros — define its behavior regardless of storage."
 It names the tensors this covers: "`eye`, `diag` (order 1 → 2), and the `sigma`/`lambda_mat` outputs of `svd`/`trunc_svd`/`eig`/`eigh` are diagonal tensors."
-`test_eye` and the tests of `diag`, `svd`, `trunc_svd`, `eig` and `eigh` check each diagonal tensor they produce, and `test_diag_mat_to_vec_outofplace` the input it reads back, which it builds with `zeros` and so holds exact off-diagonal zeros, through `TCICT_EXPECT_DIAGONAL` in `include/tcict/diagonal.h`: order 2, shape `{n, n}` and size `n * n`, checked before any element is read, then every element against the expected diagonal.
+`test_eye` and the tests of `diag`, `svd`, `trunc_svd`, `eig` and `eigh` check each diagonal tensor they produce, and `test_diag_mat_to_vec_outofplace` the input it reads back, which it builds with `zeros` and so holds exact off-diagonal zeros, through `TCAPICT_EXPECT_DIAGONAL` in `include/tcapict/diagonal.h`: order 2, shape `{n, n}` and size `n * n`, checked before any element is read, then every element against the expected diagonal.
 Off-diagonal elements must be exactly zero, since V1 defines a diagonal tensor as one "whose off-diagonal elements are zero".
 The check takes any tensor type, with the context its input came with, because `sigma` and `eigh`'s `lambda_mat` are `real_ten_t<TenT>` and `eig`'s `lambda_mat` is `cplx_ten_t<TenT>`.
 V1 fixes the order of the diagonal for `svd` ("non-increasing order") and for `eigh` ("ascending order") but not for `trunc_svd` or `eig`, so the `trunc_svd` tests, and the `eig` tests wherever the eigenvalues are not all equal, compare the diagonal as a multiset, through `diag_order::any`.
