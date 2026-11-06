@@ -49,36 +49,37 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
 }  // namespace tcapict
 
 /// Assert that a condition is true.
-#define TCAPICT_ASSERT(cond)                                                                         \
+#define TCAPICT_ASSERT(cond)                                                                       \
   do {                                                                                             \
     if (!(cond)) {                                                                                 \
       std::ostringstream oss_;                                                                     \
       oss_ << __FILE__ << ":" << __LINE__ << ": assertion failed: " << #cond;                      \
-      throw ::tcapict::assertion_error(oss_.str());                                                  \
+      throw ::tcapict::assertion_error(oss_.str());                                                \
     }                                                                                              \
   } while (false)
 
 /// Assert that a condition is true, with a custom message.
-#define TCAPICT_ASSERT_MSG(cond, msg)                                                                \
+#define TCAPICT_ASSERT_MSG(cond, msg)                                                              \
   do {                                                                                             \
     if (!(cond)) {                                                                                 \
       std::ostringstream oss_;                                                                     \
       oss_ << __FILE__ << ":" << __LINE__ << ": " << (msg);                                        \
-      throw ::tcapict::assertion_error(oss_.str());                                                  \
+      throw ::tcapict::assertion_error(oss_.str());                                                \
     }                                                                                              \
   } while (false)
 
 /// Assert that |a - b| < epsilon (floating-point comparison).
-#define TCAPICT_ASSERT_CLOSE(a, b, epsilon)                                                          \
+#define TCAPICT_ASSERT_CLOSE(a, b, epsilon)                                                        \
   do {                                                                                             \
-    auto tcapict_a_ = (a);                                                                           \
-    auto tcapict_b_ = (b);                                                                           \
-    auto tcapict_eps_ = (epsilon);                                                                   \
-    if (!(std::abs(tcapict_a_ - tcapict_b_) < tcapict_eps_)) {                                           \
+    auto tcapict_a_ = (a);                                                                         \
+    auto tcapict_b_ = (b);                                                                         \
+    auto tcapict_eps_ = (epsilon);                                                                 \
+    if (!(std::abs(tcapict_a_ - tcapict_b_) < tcapict_eps_)) {                                     \
       std::ostringstream oss_;                                                                     \
-      oss_ << __FILE__ << ":" << __LINE__ << ": close assertion failed: |" << tcapict_a_ << " - "   \
-           << tcapict_b_ << "| = " << std::abs(tcapict_a_ - tcapict_b_) << " >= " << tcapict_eps_;        \
-      throw ::tcapict::assertion_error(oss_.str());                                                  \
+      oss_ << __FILE__ << ":" << __LINE__ << ": close assertion failed: |" << tcapict_a_ << " - " \
+           << tcapict_b_ << "| = " << std::abs(tcapict_a_ - tcapict_b_) << " >= "                  \
+           << tcapict_eps_;                                                                        \
+      throw ::tcapict::assertion_error(oss_.str());                                                \
     }                                                                                              \
   } while (false)
 
@@ -92,14 +93,14 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
 /// line is one of the lines the invocation spans; which one, for an invocation
 /// spanning several, depends on the compiler. Variadic so that the expression
 /// may contain commas.
-#define TCAPICT_NOTHROW_VALUE(...)                                                                   \
-  ::tcapict::detail::nothrow_call(__FILE__, __LINE__,                                                \
+#define TCAPICT_NOTHROW_VALUE(...)                                                                 \
+  ::tcapict::detail::nothrow_call(__FILE__, __LINE__,                                              \
                                [&]() -> decltype(auto) { return (__VA_ARGS__); })
 
 /// Assert that an expression does not throw a std::exception, reporting one at
 /// the macro's use as detail::nothrow_call does. Variadic so that the
 /// expression may contain commas.
-#define TCAPICT_ASSERT_NOTHROW(...)                                                                  \
+#define TCAPICT_ASSERT_NOTHROW(...)                                                                \
   do {                                                                                             \
-    ::tcapict::detail::nothrow_call(__FILE__, __LINE__, [&] { (void)(__VA_ARGS__); });               \
+    ::tcapict::detail::nothrow_call(__FILE__, __LINE__, [&] { (void)(__VA_ARGS__); });             \
   } while (false)

@@ -127,16 +127,16 @@
 // The do-while(false) wrapper is macro hygiene: it lets callers append
 // the usual statement-terminating `;` and prevents dangling-else issues
 // when the helper is used inside an unbraced `if`/`else`.
-#define TCAPICT_RETURN_IF_SINGLE_PRECISION                                       \
+#define TCAPICT_RETURN_IF_SINGLE_PRECISION                                     \
   do {                                                                         \
-    if constexpr (std::is_same_v<tcapi::real_t<TenT>, float>) {                  \
+    if constexpr (std::is_same_v<tcapi::real_t<TenT>, float>) {                \
       return;                                                                  \
     }                                                                          \
   } while (false)
 
 // Defined when the APIs the element-by-element tests need are all available;
 // see "Tests that build and check tensors element by element" above.
-#if !defined(TCAPICT_SKIP_ZEROS) && !defined(TCAPICT_SKIP_SET_ELEM) &&            \
+#if !defined(TCAPICT_SKIP_ZEROS) && !defined(TCAPICT_SKIP_SET_ELEM) &&        \
     !defined(TCAPICT_SKIP_GET_ELEM) && !defined(TCAPICT_SKIP_SHAPE)
 #define TCAPICT_HAS_ELEM_SWEEP
 #endif
@@ -144,7 +144,7 @@
 // Defined when, in addition, order and size are available: the zeroth-order
 // checks in include/tcapict/zeroth_order.h call them, so every test using those
 // checks needs them.
-#if defined(TCAPICT_HAS_ELEM_SWEEP) && !defined(TCAPICT_SKIP_ORDER) &&             \
+#if defined(TCAPICT_HAS_ELEM_SWEEP) && !defined(TCAPICT_SKIP_ORDER) &&         \
     !defined(TCAPICT_SKIP_SIZE)
 #define TCAPICT_HAS_ZEROTH_ORDER_SWEEP
 #endif
@@ -152,7 +152,7 @@
 // Defined when the APIs the diagonal check in include/tcapict/diagonal.h calls
 // are all available; see "Tests that build and check tensors element by
 // element" above.
-#if !defined(TCAPICT_SKIP_ORDER) && !defined(TCAPICT_SKIP_SHAPE) &&                \
+#if !defined(TCAPICT_SKIP_ORDER) && !defined(TCAPICT_SKIP_SHAPE) &&            \
     !defined(TCAPICT_SKIP_SIZE) && !defined(TCAPICT_SKIP_GET_ELEM)
 #define TCAPICT_HAS_DIAGONAL_CHECK
 #endif

@@ -41,7 +41,9 @@ Usage: $0 <subcommand>
 
 Subcommands:
   check     refuse if tracked tcapict files have uncommitted changes -> sync
-            (default-path only) -> override external/tcapict -> cmake build
+            (default-path only) -> refuse unless .gitmodules registers an
+            initialized submodule at external/tcapict -> override
+            external/tcapict -> cmake build
   test      same as check, then run \$CYTNX_BACKEND_DIR/build/test/TCAPITests
   restore   restore external/tcapict to the cytnx submodule pin
 
@@ -87,8 +89,7 @@ require_registered_submodule() {
   # to the checked-out revision's. A file under DEST cannot answer this: the
   # pinned suite revision may have another layout, and a reset to an older
   # cytnx revision can leave the newer layout behind as untracked files.
-  git -C "$CYTNX_BACKEND_DIR" config -f .gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null \
-    | awk '{ print $2 }' | grep -xF external/tcapict >/dev/null \
+  git -C "$CYTNX_BACKEND_DIR" config -f .gitmodules --get-regexp '^submodule\..*\.path$' '^external/tcapict$' >/dev/null 2>&1 \
     || fail "$CYTNX_BACKEND_DIR's .gitmodules registers no submodule at external/tcapict: the checked-out cytnx revision does not vendor this suite there"
 }
 

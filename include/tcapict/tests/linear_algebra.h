@@ -1768,8 +1768,8 @@ void test_svd_reconstruction(tcapi_test_fixture<TenT> &fix) {
 // reordering its columns does the same for l, so r and l are triangular
 // whatever order the bonds they do not keep flatten in.
 
-#if defined(TCAPICT_HAS_ELEM_SWEEP) &&                                           \
-    (!defined(TCAPICT_SKIP_SVD) || !defined(TCAPICT_SKIP_QR) ||                    \
+#if defined(TCAPICT_HAS_ELEM_SWEEP) &&                                         \
+    (!defined(TCAPICT_SKIP_SVD) || !defined(TCAPICT_SKIP_QR) ||                \
      !defined(TCAPICT_SKIP_LQ))
 namespace factor_check {
 
@@ -2129,7 +2129,7 @@ void on_dense_third_order(tcapi_test_fixture<TenT> &fix, Check check) {
 // --- svd: non-square matrices ---
 
 template <typename TenT> void test_svd_non_square(tcapi_test_fixture<TenT> &fix) {
-#if !defined(TCAPICT_SKIP_SVD) && defined(TCAPICT_HAS_DIAGONAL_CHECK) &&           \
+#if !defined(TCAPICT_SKIP_SVD) && defined(TCAPICT_HAS_DIAGONAL_CHECK) &&       \
     defined(TCAPICT_HAS_ELEM_SWEEP)
 #ifdef TCAPICT_SKIP_SVD_SINGLE_PRECISION
   TCAPICT_RETURN_IF_SINGLE_PRECISION;
@@ -2146,7 +2146,7 @@ template <typename TenT> void test_svd_non_square(tcapi_test_fixture<TenT> &fix)
 
 template <typename TenT>
 void test_svd_higher_order(tcapi_test_fixture<TenT> &fix) {
-#if !defined(TCAPICT_SKIP_SVD) && defined(TCAPICT_HAS_DIAGONAL_CHECK) &&           \
+#if !defined(TCAPICT_SKIP_SVD) && defined(TCAPICT_HAS_DIAGONAL_CHECK) &&       \
     defined(TCAPICT_HAS_ELEM_SWEEP)
 #ifdef TCAPICT_SKIP_SVD_SINGLE_PRECISION
   TCAPICT_RETURN_IF_SINGLE_PRECISION;

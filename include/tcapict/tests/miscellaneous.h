@@ -469,7 +469,7 @@ void test_convert_real_to_complex(tcapi_test_fixture<RealTenT> &fix) {
 // describes.
 template <typename TenT>
 void test_convert_precision(tcapi_test_fixture<TenT> &fix) {
-#if !defined(TCAPICT_SKIP_CONVERT) && !defined(TCAPICT_SKIP_SUPPORTED_TEN_TYPES) &&               \
+#if !defined(TCAPICT_SKIP_CONVERT) && !defined(TCAPICT_SKIP_SUPPORTED_TEN_TYPES) &&           \
     defined(TCAPICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
   const tcapi::shape_t<TenT> shape = {2, 3};

@@ -177,15 +177,15 @@ void expect_zeroth_order_at(const char *file, int line,
 /// expect_zeroth_order_at with the caller's file and line:
 /// TCAPICT_EXPECT_ZEROTH_ORDER(fix, tensor, value[, cat[, n]]), the line chosen as for
 /// TCAPICT_EXPECT_ELEMS.
-#define TCAPICT_EXPECT_ZEROTH_ORDER(...)                                         \
+#define TCAPICT_EXPECT_ZEROTH_ORDER(...)                                       \
   ::tcapict::expect_zeroth_order_at(__FILE__, __LINE__, __VA_ARGS__)
 
 /// set_zeroth_order_at with the caller's file and line:
 /// TCAPICT_SET_ZEROTH_ORDER(fix, tensor, v).
-#define TCAPICT_SET_ZEROTH_ORDER(...)                                            \
+#define TCAPICT_SET_ZEROTH_ORDER(...)                                          \
   ::tcapict::set_zeroth_order_at(__FILE__, __LINE__, __VA_ARGS__)
 
 /// expect_zeroth_order_shape_at with the caller's file and line:
 /// TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, tensor).
-#define TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE(...)                                   \
+#define TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE(...)                                 \
   ::tcapict::expect_zeroth_order_shape_at(__FILE__, __LINE__, __VA_ARGS__)

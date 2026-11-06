@@ -214,10 +214,10 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
 /// TCAPICT_EXPECT_DIAGONAL(ctx, tensor, expected, tol[, arrangement]).
 /// Variadic so a braced list of expected values passes through the
 /// preprocessor.
-#define TCAPICT_EXPECT_DIAGONAL(...)                                             \
+#define TCAPICT_EXPECT_DIAGONAL(...)                                           \
   ::tcapict::expect_diagonal_at(__FILE__, __LINE__, __VA_ARGS__)
 
 /// real_diagonal_of_at with the caller's file and line:
 /// TCAPICT_REAL_DIAGONAL_OF(ctx, tensor).
-#define TCAPICT_REAL_DIAGONAL_OF(...)                                            \
+#define TCAPICT_REAL_DIAGONAL_OF(...)                                          \
   ::tcapict::real_diagonal_of_at(__FILE__, __LINE__, __VA_ARGS__)

@@ -66,10 +66,10 @@ If you need fine-grained control — for example, registering an individual test
 
 #include <complex>
 
-#define TCAPICT_DOCTEST_CASE(category, test_func, TenT)          \
-  DOCTEST_TEST_CASE("TCAPICT: " category " - " #test_func) {     \
-    tcapict::tcapi_test_fixture<TenT> fix;                         \
-    tcapict::tests::test_func<TenT>(fix);                        \
+#define TCAPICT_DOCTEST_CASE(category, test_func, TenT)        \
+  DOCTEST_TEST_CASE("TCAPICT: " category " - " #test_func) {   \
+    tcapict::tcapi_test_fixture<TenT> fix;                     \
+    tcapict::tests::test_func<TenT>(fix);                      \
   }
 
 using MyTensor = my_backend::Tensor<std::complex<double>>;
