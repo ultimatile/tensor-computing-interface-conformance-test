@@ -1331,7 +1331,8 @@ void test_diag_mat_to_vec(tcapi_test_fixture<TenT> &fix) {
 
 // Extracts distinct diagonal values from a diagonal tensor, the result of diag
 // on a first-order input, of which V1 says "Implementations may store the
-// result compactly when supported by the underlying TCF."
+// result compactly when supported by the underlying TCF.", and the ones of
+// eye(3) when the backend has eye.
 template <typename TenT>
 void test_diag_mat_to_vec_from_diagonal(tcapi_test_fixture<TenT> &fix) {
 #ifndef TCAPICT_SKIP_DIAG
@@ -1343,13 +1344,21 @@ void test_diag_mat_to_vec_from_diagonal(tcapi_test_fixture<TenT> &fix) {
     tcapi::set_elem(ctx, vector, coors_of<TenT>(i), make_elem<TenT>(expected[i]));
   }
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
-  // The input is now second-order with nine elements, not the vector left as
-  // it was.
-  TCAPICT_ASSERT(tcapi::order(ctx, vector) == 2);
-  TCAPICT_ASSERT(tcapi::size(ctx, vector) == 9);
+  // The input is now the {3, 3} result, not the vector left as it was.
+  const tcapi::shape_t<TenT> square = {3, 3};
+  TCAPICT_ASSERT(tcapi::shape(ctx, vector) == square);
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
 
   expect_vector_3(fix, vector, expected);
+
+#ifndef TCAPICT_SKIP_EYE
+  // And from eye, whose entry returns "the N×N identity tensor as a diagonal
+  // tensor", which V1's own diag example extracts from.
+  auto identity = tcapi::eye<TenT>(ctx, 3);
+  TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, identity));
+  const double ones[3] = {1.0, 1.0, 1.0};
+  expect_vector_3(fix, identity, ones);
+#endif
 #else
   (void)fix;
 #endif
@@ -1395,10 +1404,10 @@ void test_diag_mat_to_vec_outofplace(tcapi_test_fixture<TenT> &fix) {
 
   expect_vector_3(fix, vector, expected);
 
-  // Input unchanged, every element read back; see "Out-of-place inputs" in
-  // CONTRIBUTING.md.
-  TCAPICT_ASSERT(tcapi::order(ctx, matrix) == 2);
-  TCAPICT_ASSERT(tcapi::size(ctx, matrix) == 9);
+  // Input unchanged, every element read back after its shape; see
+  // "Out-of-place inputs" in CONTRIBUTING.md.
+  const tcapi::shape_t<TenT> square = {3, 3};
+  TCAPICT_ASSERT(tcapi::shape(ctx, matrix) == square);
   for (std::size_t i = 0; i < 3; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
       const auto elem = tcapi::get_elem(ctx, matrix, coors_of<TenT>(i, j));

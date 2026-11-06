@@ -293,7 +293,8 @@ void test_random_zeroth_order(tcapi_test_fixture<TenT>& fix) {
   TCAPICT_ASSERT_MSG(calls == 1, "random did not invoke gen() exactly once");
   TCAPICT_EXPECT_ELEMS(
       fix, tensor, tcapi::shape_t<TenT>{},
-      [&](const tcapi::elem_coors_t<TenT> &) { return value_of_call(1); });
+      [&](const tcapi::elem_coors_t<TenT> &) { return value_of_call(1); },
+      tol_category::exact);
 #else
   (void)fix;
 #endif
