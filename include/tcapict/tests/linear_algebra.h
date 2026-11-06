@@ -1788,7 +1788,8 @@ namespace factor_check {
 /// The factor bond takes 'x', and 'y' its partner in a Gram contraction, so
 /// the labels stop at 'w': at most 23 of them.
 inline std::string bond_labels(std::size_t first, std::size_t count) {
-  TCAPICT_ASSERT(first + count <= static_cast<std::size_t>('x' - 'a'));
+  constexpr auto max_labels = static_cast<std::size_t>('x' - 'a');
+  TCAPICT_ASSERT(first <= max_labels && count <= max_labels - first);
   std::string labels;
   for (std::size_t b = 0; b < count; ++b) {
     labels += static_cast<char>('a' + first + b);
@@ -1964,6 +1965,7 @@ void expect_product(tcapi_test_fixture<TenT> &fix, const TenT &left,
                     const TenT &right, std::size_t k,
                     const tcapi::shape_t<TenT> &in_shape, ValueAt value_at) {
   auto &ctx = fix.context();
+  TCAPICT_ASSERT(k >= 1 && k < in_shape.size());
   const auto rows = bond_labels(0, k);
   const auto cols = bond_labels(k, in_shape.size() - k);
   TenT product;
