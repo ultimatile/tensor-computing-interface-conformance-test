@@ -84,7 +84,7 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 |---|---|---|
 | `CYTNX_BACKEND_DIR` | `./build/tcapi-backend-cytnx` | cytnx checkout to override into; **set** disables auto-clone/sync |
 | `CYTNX_REPO_URL` | `https://github.com/r-ccs-cms/tcapi-backend-cytnx.git` | URL used only when auto-cloning the default path |
-| `CYTNX_REF` | `origin/dev/tcapi-v1` | ref the default-path checkout is reset to on every run; it must provide the TCAPI V1 signatures this suite calls, such as `concatenate`, `stack` and `linear_combine` over `List<CRef<TenT>>`; the default is cytnx's TCAPI V1 integration branch |
+| `CYTNX_REF` | `origin/main` | ref the default-path checkout is reset to on every run; it must provide the TCAPI V1 signatures this suite calls, such as `concatenate`, `stack` and `linear_combine` over `List<CRef<TenT>>` |
 | `INTEGRATION_CMAKE_ARGS` | (empty) | extra args appended to the cmake configure command |
 
 ## Conventions for writing tests
