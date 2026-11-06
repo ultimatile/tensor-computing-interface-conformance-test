@@ -1,11 +1,11 @@
 #pragma once
 
-#include <tcict/assertion.h>
-#include <tcict/elem_helper.h>
-#include <tcict/elem_sweep.h>
-#include <tcict/fixture.h>
-#include <tcict/skip.h>
-#include <tcict/zeroth_order.h>
+#include <tcapict/assertion.h>
+#include <tcapict/elem_helper.h>
+#include <tcapict/elem_sweep.h>
+#include <tcapict/fixture.h>
+#include <tcapict/skip.h>
+#include <tcapict/zeroth_order.h>
 
 #include <atomic>
 #include <chrono>
@@ -17,7 +17,7 @@
 #include <system_error>
 #include <utility>
 
-namespace tcict {
+namespace tcapict {
 
 namespace detail {
 
@@ -55,7 +55,7 @@ public:
             std::chrono::steady_clock::now().time_since_epoch().count()) +
         "_" + std::to_string(counter++);
     path_ = (std::filesystem::temp_directory_path() /
-             (std::string("tcict_") + stem + "_" + tag + ".ten"))
+             (std::string("tcapict_") + stem + "_" + tag + ".ten"))
                 .string();
   }
   scratch_ten_file(const scratch_ten_file &) = delete;
@@ -77,30 +77,30 @@ namespace tests {
 // --- save/load roundtrip ---
 
 template <typename TenT>
-void test_save_load_roundtrip(tci_test_fixture<TenT>& fix) {
-#if !defined(TCICT_SKIP_SAVE) && !defined(TCICT_SKIP_LOAD)
+void test_save_load_roundtrip(tcapi_test_fixture<TenT>& fix) {
+#if !defined(TCAPICT_SKIP_SAVE) && !defined(TCAPICT_SKIP_LOAD)
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  auto tensor = tci::zeros<TenT>(ctx, {2, 2});
-  tci::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(1.0, 0.0));
-  tci::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(1.0, 0.0));
+  auto tensor = tcapi::zeros<TenT>(ctx, {2, 2});
+  tcapi::set_elem(ctx, tensor, {0, 0}, make_elem<TenT>(1.0, 0.0));
+  tcapi::set_elem(ctx, tensor, {1, 1}, make_elem<TenT>(1.0, 0.0));
 
-  std::string filepath = "/tmp/tcict_test_roundtrip";
+  std::string filepath = "/tmp/tcapict_test_roundtrip";
   // Remove stale file to ensure save actually writes
   std::remove(filepath.c_str());
 
-  TCICT_ASSERT_NOTHROW(tci::save(ctx, tensor, filepath));
+  TCAPICT_ASSERT_NOTHROW(tcapi::save(ctx, tensor, filepath));
 
   TenT loaded_tensor;
-  TCICT_ASSERT_NOTHROW(loaded_tensor = tci::load<TenT>(ctx, filepath));
+  TCAPICT_ASSERT_NOTHROW(loaded_tensor = tcapi::load<TenT>(ctx, filepath));
 
-  TCICT_ASSERT(tci::shape(ctx, loaded_tensor) == tci::shape(ctx, tensor));
+  TCAPICT_ASSERT(tcapi::shape(ctx, loaded_tensor) == tcapi::shape(ctx, tensor));
 
-  auto val00 = tci::get_elem(ctx, loaded_tensor, {0, 0});
-  auto val11 = tci::get_elem(ctx, loaded_tensor, {1, 1});
-  TCICT_ASSERT_CLOSE(real_part<TenT>(val00), 1.0, eps);
-  TCICT_ASSERT_CLOSE(real_part<TenT>(val11), 1.0, eps);
+  auto val00 = tcapi::get_elem(ctx, loaded_tensor, {0, 0});
+  auto val11 = tcapi::get_elem(ctx, loaded_tensor, {1, 1});
+  TCAPICT_ASSERT_CLOSE(real_part<TenT>(val00), 1.0, eps);
+  TCAPICT_ASSERT_CLOSE(real_part<TenT>(val11), 1.0, eps);
 
   std::remove(filepath.c_str());
 #else
@@ -111,21 +111,21 @@ void test_save_load_roundtrip(tci_test_fixture<TenT>& fix) {
 // --- load verifies data integrity against original ---
 
 template <typename TenT>
-void test_load_data_integrity(tci_test_fixture<TenT>& fix) {
-#if !defined(TCICT_SKIP_SAVE) && !defined(TCICT_SKIP_LOAD)
+void test_load_data_integrity(tcapi_test_fixture<TenT>& fix) {
+#if !defined(TCAPICT_SKIP_SAVE) && !defined(TCAPICT_SKIP_LOAD)
   auto& ctx = fix.context();
   auto eps = fix.epsilon();
 
-  auto original = tci::eye<TenT>(ctx, 2);
-  std::string filepath = "/tmp/tcict_test_load_integrity";
+  auto original = tcapi::eye<TenT>(ctx, 2);
+  std::string filepath = "/tmp/tcapict_test_load_integrity";
   // Remove stale file to ensure save actually writes
   std::remove(filepath.c_str());
-  tci::save(ctx, original, filepath);
+  tcapi::save(ctx, original, filepath);
 
   TenT loaded;
-  TCICT_ASSERT_NOTHROW(loaded = tci::load<TenT>(ctx, filepath));
-  TCICT_ASSERT(tci::shape(ctx, original) == tci::shape(ctx, loaded));
-  TCICT_ASSERT(tci::close(ctx, original, loaded, eps));
+  TCAPICT_ASSERT_NOTHROW(loaded = tcapi::load<TenT>(ctx, filepath));
+  TCAPICT_ASSERT(tcapi::shape(ctx, original) == tcapi::shape(ctx, loaded));
+  TCAPICT_ASSERT(tcapi::close(ctx, original, loaded, eps));
 
   std::remove(filepath.c_str());
 #else
@@ -136,21 +136,21 @@ void test_load_data_integrity(tci_test_fixture<TenT>& fix) {
 // --- save/load roundtrip: zeroth-order ---
 
 template <typename TenT>
-void test_save_load_zeroth_order(tci_test_fixture<TenT>& fix) {
-#if !defined(TCICT_SKIP_SAVE) && !defined(TCICT_SKIP_LOAD) && \
-    defined(TCICT_HAS_ZEROTH_ORDER_SWEEP)
+void test_save_load_zeroth_order(tcapi_test_fixture<TenT>& fix) {
+#if !defined(TCAPICT_SKIP_SAVE) && !defined(TCAPICT_SKIP_LOAD) && \
+    defined(TCAPICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
-  auto tensor = tci::zeros<TenT>(ctx, {});
-  TCICT_SET_ZEROTH_ORDER(fix, tensor, -6.5);
+  auto tensor = tcapi::zeros<TenT>(ctx, {});
+  TCAPICT_SET_ZEROTH_ORDER(fix, tensor, -6.5);
 
-  std::string filepath = "/tmp/tcict_test_zeroth_order_roundtrip";
+  std::string filepath = "/tmp/tcapict_test_zeroth_order_roundtrip";
   // Remove stale file to ensure save actually writes
   std::remove(filepath.c_str());
-  TCICT_ASSERT_NOTHROW(tci::save(ctx, tensor, filepath));
+  TCAPICT_ASSERT_NOTHROW(tcapi::save(ctx, tensor, filepath));
 
   TenT loaded;
-  TCICT_ASSERT_NOTHROW(loaded = tci::load<TenT>(ctx, filepath));
-  TCICT_EXPECT_ZEROTH_ORDER(fix, loaded, -6.5);
+  TCAPICT_ASSERT_NOTHROW(loaded = tcapi::load<TenT>(ctx, filepath));
+  TCAPICT_EXPECT_ZEROTH_ORDER(fix, loaded, -6.5);
   std::remove(filepath.c_str());
 #else
   (void)fix;
@@ -168,37 +168,37 @@ void test_save_load_zeroth_order(tci_test_fixture<TenT>& fix) {
 // file exists at the path the storage names and that every element loads
 // back.
 
-#if !defined(TCICT_SKIP_SAVE) && !defined(TCICT_SKIP_LOAD) && \
-    defined(TCICT_HAS_ELEM_SWEEP)
+#if !defined(TCAPICT_SKIP_SAVE) && !defined(TCAPICT_SKIP_LOAD) && \
+    defined(TCAPICT_HAS_ELEM_SWEEP)
 namespace io_check {
 
 // Saves a {2, 3} ramp through `save_to(ctx, tensor, path)`, asserts that the
 // file at `path` exists, loads it through `load_from(ctx, path)` and checks
 // every element exactly; `stem` names the scratch file.
 template <typename TenT, typename SaveTo, typename LoadFrom>
-void expect_round_trip(tci_test_fixture<TenT> &fix, const char *stem,
+void expect_round_trip(tcapi_test_fixture<TenT> &fix, const char *stem,
                        SaveTo save_to, LoadFrom load_from) {
   auto &ctx = fix.context();
-  const tci::shape_t<TenT> shape = {2, 3};
+  const tcapi::shape_t<TenT> shape = {2, 3};
   auto at = ramp_over<TenT>(shape, 1.0);
-  auto tensor = tci::zeros<TenT>(ctx, shape);
-  TCICT_SET_ELEMS(fix, tensor, at);
+  auto tensor = tcapi::zeros<TenT>(ctx, shape);
+  TCAPICT_SET_ELEMS(fix, tensor, at);
 
   const detail::scratch_ten_file file(stem);
-  TCICT_ASSERT_NOTHROW(save_to(ctx, tensor, file.str()));
-  TCICT_ASSERT(std::filesystem::exists(file.str()));
+  TCAPICT_ASSERT_NOTHROW(save_to(ctx, tensor, file.str()));
+  TCAPICT_ASSERT(std::filesystem::exists(file.str()));
   TenT loaded;
-  TCICT_ASSERT_NOTHROW(loaded = load_from(ctx, file.str()));
-  TCICT_EXPECT_ELEMS(fix, loaded, shape, at, tol_category::exact);
+  TCAPICT_ASSERT_NOTHROW(loaded = load_from(ctx, file.str()));
+  TCAPICT_EXPECT_ELEMS(fix, loaded, shape, at, tol_category::exact);
 }
 
 } // namespace io_check
 #endif
 
 template <typename TenT>
-void test_save_load_string_view(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_SAVE) && !defined(TCICT_SKIP_LOAD) && \
-    defined(TCICT_HAS_ELEM_SWEEP)
+void test_save_load_string_view(tcapi_test_fixture<TenT> &fix) {
+#if !defined(TCAPICT_SKIP_SAVE) && !defined(TCAPICT_SKIP_LOAD) && \
+    defined(TCAPICT_HAS_ELEM_SWEEP)
   // Each view ends before its buffer does. A backend reading the save view as
   // a null-terminated string through `data()` writes another file, so the
   // existence check fails; one reading the load view so looks for a file
@@ -209,11 +209,11 @@ void test_save_load_string_view(tci_test_fixture<TenT> &fix) {
         const std::string buffer = path + ".not_this_one";
         // A backend misreading the view writes here; remove it on every exit.
         const detail::removes_on_exit decoy(buffer);
-        tci::save(ctx, t, std::string_view(buffer).substr(0, path.size()));
+        tcapi::save(ctx, t, std::string_view(buffer).substr(0, path.size()));
       },
       [](auto &ctx, const std::string &path) {
         const std::string buffer = path + ".not_this_one";
-        return tci::load<TenT>(ctx,
+        return tcapi::load<TenT>(ctx,
                                std::string_view(buffer).substr(0, path.size()));
       });
 #else
@@ -222,18 +222,18 @@ void test_save_load_string_view(tci_test_fixture<TenT> &fix) {
 }
 
 template <typename TenT>
-void test_save_load_c_string(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_SAVE) && !defined(TCICT_SKIP_LOAD) && \
-    defined(TCICT_HAS_ELEM_SWEEP)
+void test_save_load_c_string(tcapi_test_fixture<TenT> &fix) {
+#if !defined(TCAPICT_SKIP_SAVE) && !defined(TCAPICT_SKIP_LOAD) && \
+    defined(TCAPICT_HAS_ELEM_SWEEP)
   io_check::expect_round_trip(
       fix, "c_string",
       [](auto &ctx, const TenT &t, const std::string &path) {
         const char *c_path = path.c_str();
-        tci::save(ctx, t, c_path);
+        tcapi::save(ctx, t, c_path);
       },
       [](auto &ctx, const std::string &path) {
         const char *c_path = path.c_str();
-        return tci::load<TenT>(ctx, c_path);
+        return tcapi::load<TenT>(ctx, c_path);
       });
 #else
   (void)fix;
@@ -241,27 +241,27 @@ void test_save_load_c_string(tci_test_fixture<TenT> &fix) {
 }
 
 template <typename TenT>
-void test_save_load_string_rvalue(tci_test_fixture<TenT> &fix) {
-#if !defined(TCICT_SKIP_SAVE) && !defined(TCICT_SKIP_LOAD) && \
-    defined(TCICT_HAS_ELEM_SWEEP)
+void test_save_load_string_rvalue(tcapi_test_fixture<TenT> &fix) {
+#if !defined(TCAPICT_SKIP_SAVE) && !defined(TCAPICT_SKIP_LOAD) && \
+    defined(TCAPICT_HAS_ELEM_SWEEP)
   io_check::expect_round_trip(
       fix, "string_rvalue",
       [](auto &ctx, const TenT &t, const std::string &path) {
-        tci::save(ctx, t, std::string(path));
+        tcapi::save(ctx, t, std::string(path));
       },
       [](auto &ctx, const std::string &path) {
-        return tci::load<TenT>(ctx, std::string(path));
+        return tcapi::load<TenT>(ctx, std::string(path));
       });
 #else
   (void)fix;
 #endif
 }
 
-}}  // namespace tcict::tests
+}}  // namespace tcapict::tests
 
 // Bulk registration helper: invokes X(..., "category", test_fn) once per test.
-// See include/tcict/adapters/doctest.h for usage.
-#define TCICT_FOREACH_IO_OPERATIONS_TEST_ALL_TYPES(X, ...) \
+// See include/tcapict/adapters/doctest.h for usage.
+#define TCAPICT_FOREACH_IO_OPERATIONS_TEST_ALL_TYPES(X, ...) \
   X(__VA_ARGS__, "io_operations", test_save_load_roundtrip) \
   X(__VA_ARGS__, "io_operations", test_load_data_integrity) \
   X(__VA_ARGS__, "io_operations", test_save_load_zeroth_order) \

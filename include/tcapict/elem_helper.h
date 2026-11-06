@@ -1,23 +1,23 @@
 #pragma once
 
-#include <tci/tensor_traits.h>
+#include <tcapi/tcapi.h>
 #include <complex>
 #include <cstddef>
 #include <type_traits>
 
-namespace tcict {
+namespace tcapict {
 
 /// Construct an element value from real and imaginary parts.
 /// For real tensor types, the imaginary part is ignored.
 /// Backends with non-standard element types (e.g. cuDoubleComplex) should specialize this.
 template <typename TenT>
-tci::elem_t<TenT> make_elem(double real, double imag = 0.0) {
-  using elem_type = tci::elem_t<TenT>;
-  using cplx_type = tci::cplx_t<TenT>;
+tcapi::elem_t<TenT> make_elem(double real, double imag = 0.0) {
+  using elem_type = tcapi::elem_t<TenT>;
+  using cplx_type = tcapi::cplx_t<TenT>;
   if constexpr (std::is_same_v<elem_type, cplx_type>) {
     return elem_type(real, imag);
   } else {
-    // NOLINTNEXTLINE(bugprone-narrowing-conversions) -- elem_t is always floating-point in TCI
+    // NOLINTNEXTLINE(bugprone-narrowing-conversions) -- elem_t is always floating-point in TCAPI
     return static_cast<elem_type>(real);
   }
 }
@@ -27,8 +27,8 @@ tci::elem_t<TenT> make_elem(double real, double imag = 0.0) {
 /// conversion, which list-initialization rejects, whenever `elem_coor_t`
 /// cannot represent every `std::size_t` value.
 template <typename TenT, typename... Ix>
-tci::elem_coors_t<TenT> coors_of(Ix... ix) {
-  return {static_cast<tci::elem_coor_t<TenT>>(ix)...};
+tcapi::elem_coors_t<TenT> coors_of(Ix... ix) {
+  return {static_cast<tcapi::elem_coor_t<TenT>>(ix)...};
 }
 
 /// Reads `coors` as a {row, col} coordinate of a `rows` x `cols` tensor.
@@ -49,9 +49,9 @@ bool coors_2d(const Coors& coors, std::ptrdiff_t rows, std::ptrdiff_t cols,
 /// Extract the real part of an element as double.
 /// Backends with non-standard element types should specialize.
 template <typename TenT>
-double real_part(tci::elem_t<TenT> elem) {
-  using elem_type = tci::elem_t<TenT>;
-  using cplx_type = tci::cplx_t<TenT>;
+double real_part(tcapi::elem_t<TenT> elem) {
+  using elem_type = tcapi::elem_t<TenT>;
+  using cplx_type = tcapi::cplx_t<TenT>;
   if constexpr (std::is_same_v<elem_type, cplx_type>) {
     return std::real(elem);
   } else {
@@ -62,9 +62,9 @@ double real_part(tci::elem_t<TenT> elem) {
 /// Extract the imaginary part of an element as double.
 /// Returns 0.0 for real tensor types.
 template <typename TenT>
-double imag_part(tci::elem_t<TenT> elem) {
-  using elem_type = tci::elem_t<TenT>;
-  using cplx_type = tci::cplx_t<TenT>;
+double imag_part(tcapi::elem_t<TenT> elem) {
+  using elem_type = tcapi::elem_t<TenT>;
+  using cplx_type = tcapi::cplx_t<TenT>;
   if constexpr (std::is_same_v<elem_type, cplx_type>) {
     return std::imag(elem);
   } else {
@@ -77,13 +77,13 @@ double imag_part(tci::elem_t<TenT> elem) {
 /// elements (e.g. verifying a non-zero imaginary part).
 template <typename TenT>
 inline constexpr bool is_complex_v
-    = std::is_same_v<tci::elem_t<TenT>, tci::cplx_t<TenT>>;
+    = std::is_same_v<tcapi::elem_t<TenT>, tcapi::cplx_t<TenT>>;
 
 /// True when the tensor type's real_t is single-precision (float).
 /// Tests can branch on this when accumulation-heavy operations need a
 /// coarser tolerance than the fixture's default epsilon.
 template <typename TenT>
 inline constexpr bool is_single_precision_v
-    = std::is_same_v<tci::real_t<TenT>, float>;
+    = std::is_same_v<tcapi::real_t<TenT>, float>;
 
-}  // namespace tcict
+}  // namespace tcapict
