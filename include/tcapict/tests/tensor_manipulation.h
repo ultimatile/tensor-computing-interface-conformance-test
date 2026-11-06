@@ -1238,9 +1238,11 @@ void test_expand_outofplace(tcapi_test_fixture<TenT> &fix) {
 #endif
 }
 
-#ifndef TCAPICT_SKIP_DIAG
-// expect_vector_3, diag_input_value and diag_input_matrix are called by the
-// diag tests only.
+#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
+// expect_vector_3 and diag_input_value are called by the diag tests only,
+// each of which requires TCAPICT_HAS_DIAGONAL_CHECK; diag_input_matrix, which
+// also calls zeros and set_elem, is compiled only when TCAPICT_HAS_ELEM_SWEEP
+// holds too, as for the tests that call it.
 
 // Asserts that a first-order tensor of length 3 holds `expected` in order.
 // `expected` is real, so for a complex element type the imaginary part is
@@ -1272,6 +1274,7 @@ inline double diag_input_value(const double (&diagonal)[3], std::size_t i,
   return i == j ? diagonal[i] : 0.25 + static_cast<double>(3 * i + j);
 }
 
+#ifdef TCAPICT_HAS_ELEM_SWEEP
 // A 3x3 matrix built with zeros and set_elem holding diag_input_value.
 template <typename TenT>
 TenT diag_input_matrix(tcapi_test_fixture<TenT> &fix,
@@ -1286,6 +1289,7 @@ TenT diag_input_matrix(tcapi_test_fixture<TenT> &fix,
   }
   return matrix;
 }
+#endif
 
 #endif
 
@@ -1314,7 +1318,8 @@ void test_diag_vec_to_mat(tcapi_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_diag_mat_to_vec(tcapi_test_fixture<TenT> &fix) {
-#ifndef TCAPICT_SKIP_DIAG
+#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_ELEM_SWEEP) && \
+    defined(TCAPICT_HAS_DIAGONAL_CHECK)
   auto &ctx = fix.context();
   const double expected[3] = {7.5, -8.5, 9.5};
   auto matrix = diag_input_matrix(fix, expected);
@@ -1335,7 +1340,7 @@ void test_diag_mat_to_vec(tcapi_test_fixture<TenT> &fix) {
 // eye(3) when the backend has eye.
 template <typename TenT>
 void test_diag_mat_to_vec_from_diagonal(tcapi_test_fixture<TenT> &fix) {
-#ifndef TCAPICT_SKIP_DIAG
+#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
   auto &ctx = fix.context();
   const double expected[3] = {7.5, -8.5, 9.5};
 
@@ -1344,9 +1349,9 @@ void test_diag_mat_to_vec_from_diagonal(tcapi_test_fixture<TenT> &fix) {
     tcapi::set_elem(ctx, vector, coors_of<TenT>(i), make_elem<TenT>(expected[i]));
   }
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
-  // The input is now the {3, 3} result, not the vector left as it was.
-  const tcapi::shape_t<TenT> square = {3, 3};
-  TCAPICT_ASSERT(tcapi::shape(ctx, vector) == square);
+  // The input is now that diagonal tensor, not the vector left as it was.
+  TCAPICT_EXPECT_DIAGONAL(ctx, vector, expected,
+                          tolerance(fix, tol_category::exact));
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
 
   expect_vector_3(fix, vector, expected);
@@ -1394,7 +1399,8 @@ void test_diag_vec_to_mat_outofplace(tcapi_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_diag_mat_to_vec_outofplace(tcapi_test_fixture<TenT> &fix) {
-#ifndef TCAPICT_SKIP_DIAG
+#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_ELEM_SWEEP) && \
+    defined(TCAPICT_HAS_DIAGONAL_CHECK)
   auto &ctx = fix.context();
   const double expected[3] = {4.5, -5.5, 6.5};
   auto matrix = diag_input_matrix(fix, expected);
@@ -1406,17 +1412,13 @@ void test_diag_mat_to_vec_outofplace(tcapi_test_fixture<TenT> &fix) {
 
   // Input unchanged, every element read back after its shape; see
   // "Out-of-place inputs" in CONTRIBUTING.md.
-  const tcapi::shape_t<TenT> square = {3, 3};
-  TCAPICT_ASSERT(tcapi::shape(ctx, matrix) == square);
-  for (std::size_t i = 0; i < 3; ++i) {
-    for (std::size_t j = 0; j < 3; ++j) {
-      const auto elem = tcapi::get_elem(ctx, matrix, coors_of<TenT>(i, j));
-      TCAPICT_ASSERT(real_part<TenT>(elem) == diag_input_value(expected, i, j));
-      if constexpr (is_complex_v<TenT>) {
-        TCAPICT_ASSERT(imag_part<TenT>(elem) == 0.0);
-      }
-    }
-  }
+  TCAPICT_EXPECT_ELEMS(
+      fix, matrix, {3, 3},
+      [&](const tcapi::elem_coors_t<TenT> &c) {
+        return std::complex<double>(diag_input_value(expected, c[0], c[1]),
+                                    0.0);
+      },
+      tol_category::exact);
 #else
   (void)fix;
 #endif

@@ -122,7 +122,7 @@ Tests call `to_range` and `assign_from_range` on second-order tensors through `t
 ### Zeroth-order tensors
 
 TCAPI V1, in the introduction to its core functions: "A zeroth-order tensor has empty shape, size 1, and a single empty coordinate sequence."
-Where a test knows the element a zeroth-order `TenT` should hold, it checks the tensor through `TCAPICT_EXPECT_ZEROTH_ORDER` in `include/tcapict/zeroth_order.h`: order 0, shape `{}` and size 1, then the sole element read at `{}` through `expect_elems_at` in `include/tcapict/elem_sweep.h`.
+Where a test knows the element a zeroth-order `TenT` should hold, it checks the tensor through `TCAPICT_EXPECT_ZEROTH_ORDER` in `include/tcapict/zeroth_order.h`: order 0, shape `{}` and size 1, then the sole element read at `{}` through `expect_elems_at` in `include/tcapict/elem_sweep.h`, unless it splits that check as `test_random_zeroth_order` below does.
 The results of `real` and `imag` of a complex tensor, and of `to_cplx` of a real one, have another tensor type; those results are checked through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE`, which takes any tensor type, and `get_elem`.
 `test_random_zeroth_order` checks its result through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE` before it asserts the generator's call count, and then the sole element through `TCAPICT_EXPECT_ELEMS`, so that a backend ignoring the empty shape is reported as such.
 A callback that receives a coordinate of a zeroth-order tensor expects the empty one and flags any other, under "Callbacks the backend invokes", through `to_range_0d`, `assign_from_range_0d` or `visit_record_0d` in the same header.
@@ -141,7 +141,7 @@ Of `size_bytes` they assert only that it returns, as the tests of the other rank
 
 TCAPI V1, in the introduction to its core functions: "TCAPI treats a diagonal tensor as an ordinary second-order tensor with shape {N,N} whose off-diagonal logical tensor elements are zero." and "Unless stated otherwise, TCAPI operations are defined by logical tensor elements, not by storage representation."
 Its entries name these diagonal tensors: `eye` returns "the N×N identity tensor as a diagonal tensor", `diag` of a first-order input and the `sigma` of `trunc_svd` and `lambda_mat` of `eig` are each "a second-order diagonal tensor", and the `sigma` of `svd` and `lambda_mat` of `eigh` are each "a real second-order diagonal tensor".
-`test_diag_mat_to_vec_from_diagonal` builds diagonal tensors with `diag`, and with `eye` when the backend has it, only as inputs to extract from, and checks only the shape of the first.
+`test_diag_mat_to_vec_from_diagonal` builds diagonal tensors with `diag`, and with `eye` when the backend has it, only as inputs to extract from, and checks the first through `TCAPICT_EXPECT_DIAGONAL`.
 `test_eye` and the other tests of `diag`, `svd`, `trunc_svd`, `eig` and `eigh` check each diagonal tensor they produce as a result through `TCAPICT_EXPECT_DIAGONAL` in `include/tcapict/diagonal.h`: order 2, shape `{n, n}` and size `n * n`, checked before any element is read, then every element against the expected diagonal.
 Off-diagonal elements must be exactly zero, since V1 defines a diagonal tensor as one "whose off-diagonal logical tensor elements are zero".
 The check takes any tensor type, with the context its input came with, because `sigma` and `eigh`'s `lambda_mat` are `real_ten_t<TenT>` and `eig`'s `lambda_mat` is `cplx_ten_t<TenT>`.

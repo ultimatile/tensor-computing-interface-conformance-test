@@ -68,11 +68,13 @@
 //
 // The tests that check a diagonal tensor through TCAPICT_EXPECT_DIAGONAL in
 // include/tcapict/diagonal.h, test_eye and the diag, svd, trunc_svd, eig and
-// eigh tests apart from test_diag_mat_to_vec, test_diag_mat_to_vec_outofplace
-// and test_diag_mat_to_vec_from_diagonal, which do not call it, reach order,
-// shape, size and get_elem through it, and defining any of TCAPICT_SKIP_ORDER,
+// eigh tests apart from test_diag_mat_to_vec and
+// test_diag_mat_to_vec_outofplace, which do not call it, reach order, shape,
+// size and get_elem through it, and defining any of TCAPICT_SKIP_ORDER,
 // TCAPICT_SKIP_SHAPE, TCAPICT_SKIP_SIZE or TCAPICT_SKIP_GET_ELEM skips them
-// too.
+// too. Those two build their input through a helper that calls zeros and
+// set_elem, and are skipped unless both TCAPICT_HAS_DIAGONAL_CHECK and
+// TCAPICT_HAS_ELEM_SWEEP hold.
 // TCAPICT_HAS_DIAGONAL_CHECK, defined below, holds exactly when none of those
 // four is skipped.
 //
