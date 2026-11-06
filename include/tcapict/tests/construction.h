@@ -275,16 +275,20 @@ template <typename TenT>
 void test_random_zeroth_order(tcapi_test_fixture<TenT>& fix) {
 #if !defined(TCAPICT_SKIP_RANDOM) && defined(TCAPICT_HAS_ZEROTH_ORDER_SWEEP)
   auto& ctx = fix.context();
+  // The k-th call (counting from 1) returns written<TenT>(value_of_call(k)).
+  auto value_of_call = [](std::size_t k) {
+    return 10.0 + static_cast<double>(k);
+  };
   std::size_t calls = 0;
-  auto gen = [&calls]() -> tcapi::elem_t<TenT> {
+  auto gen = [&calls, &value_of_call]() -> tcapi::elem_t<TenT> {
     ++calls;
-    return written_elem<TenT>(10.0 + static_cast<double>(calls));
+    return written_elem<TenT>(value_of_call(calls));
   };
 
   TenT tensor;
   TCAPICT_ASSERT_NOTHROW(tensor = tcapi::template random<TenT>(ctx, {}, gen));
   TCAPICT_ASSERT_MSG(calls == 1, "random did not invoke gen() exactly once");
-  TCAPICT_EXPECT_ZEROTH_ORDER(fix, tensor, 11.0);
+  TCAPICT_EXPECT_ZEROTH_ORDER(fix, tensor, value_of_call(1));
 #else
   (void)fix;
 #endif

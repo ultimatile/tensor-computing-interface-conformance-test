@@ -2331,10 +2331,9 @@ void test_eigvalsh_diagonal(tcapi_test_fixture<TenT> &fix) {
 
 // --- eigvals: distinct eigenvalues of a non-diagonal matrix ---
 
-// The input of test_eig_distinct, [[0, 1], [2, 1]], whose eigenvalues are -1
-// and 2; its diagonal (0, 1) holds neither, so a backend that returned the
-// input's diagonal fails. V1 fixes no order for eigvals' list, so it is
-// compared as a multiset.
+// [[0, 1], [2, 1]] has the eigenvalues -1 and 2; its diagonal (0, 1) holds
+// neither, so a backend that returned the input's diagonal fails. V1 fixes no
+// order for eigvals' list, so it is compared as a multiset.
 template <typename TenT>
 void test_eigvals_distinct(tcapi_test_fixture<TenT> &fix) {
 #ifndef TCAPICT_SKIP_EIGVALS
@@ -2373,8 +2372,8 @@ void test_eigvals_distinct(tcapi_test_fixture<TenT> &fix) {
 
 // --- eigvalsh: distinct eigenvalues in ascending order ---
 
-// The input of test_eigh_ascending, [[2, 1], [1, 2]], whose eigenvalues are 1
-// and 3; V1 returns them "in ascending order", and the input's diagonal (2, 2)
+// The symmetric [[2, 1], [1, 2]] has the eigenvalues 1 and 3; V1 returns them
+// "in ascending order", and the input's diagonal (2, 2)
 // holds neither.
 template <typename TenT>
 void test_eigvalsh_ascending(tcapi_test_fixture<TenT> &fix) {

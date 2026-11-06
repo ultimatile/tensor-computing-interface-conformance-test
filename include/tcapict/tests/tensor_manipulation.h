@@ -1289,28 +1289,47 @@ template <typename TenT>
 void test_diag_mat_to_vec(tcapi_test_fixture<TenT> &fix) {
 #ifndef TCAPICT_SKIP_DIAG
   auto &ctx = fix.context();
-  // Distinct diagonal values, so a reordered extraction does not pass.
+  // Distinct diagonal values, so a reordered extraction does not pass, and
+  // non-zero off-diagonal values, so neither does one that sums a row or a
+  // column.
   const double expected[3] = {7.5, -8.5, 9.5};
 
   auto matrix = tcapi::zeros<TenT>(ctx, {3, 3});
   for (std::size_t i = 0; i < 3; ++i) {
-    tcapi::set_elem(ctx, matrix, coors_of<TenT>(i, i),
-                    make_elem<TenT>(expected[i]));
+    for (std::size_t j = 0; j < 3; ++j) {
+      const double value =
+          i == j ? expected[i] : 0.25 + static_cast<double>(3 * i + j);
+      tcapi::set_elem(ctx, matrix, coors_of<TenT>(i, j),
+                      make_elem<TenT>(value));
+    }
   }
 
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, matrix));
 
   expect_vector_3(fix, matrix, expected);
+#else
+  (void)fix;
+#endif
+}
 
-  // The same values extracted from a diagonal tensor, the result of diag on a
-  // first-order input, of which V1 says "Implementations may store the result
-  // compactly when supported by the underlying TCF."
+// --- diag: matrix to vector, from a diagonal tensor ---
+
+// Extracts distinct diagonal values from a diagonal tensor, the result of diag
+// on a first-order input, of which V1 says "Implementations may store the
+// result compactly when supported by the underlying TCF."
+template <typename TenT>
+void test_diag_mat_to_vec_from_diagonal(tcapi_test_fixture<TenT> &fix) {
+#ifndef TCAPICT_SKIP_DIAG
+  auto &ctx = fix.context();
+  const double expected[3] = {7.5, -8.5, 9.5};
+
   auto vector = tcapi::zeros<TenT>(ctx, {3});
   for (std::size_t i = 0; i < 3; ++i) {
     tcapi::set_elem(ctx, vector, coors_of<TenT>(i), make_elem<TenT>(expected[i]));
   }
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
-  // The input is now the 3x3 diagonal tensor, not the vector left as it was.
+  // The input is now second-order with nine elements, not the vector left as
+  // it was.
   TCAPICT_ASSERT(tcapi::order(ctx, vector) == 2);
   TCAPICT_ASSERT(tcapi::size(ctx, vector) == 9);
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
@@ -1506,13 +1525,14 @@ void test_stack_last_axis(tcapi_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "tensor_manipulation", test_expand_outofplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_vec_to_mat) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec) \
+  X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec_from_diagonal) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_vec_to_mat_outofplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_diag_mat_to_vec_outofplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_stack_basic) \
   X(__VA_ARGS__, "tensor_manipulation", test_stack_last_axis)
 
-// REAL_ONLY: the test's input must be real, as its template parameter's name
-//   says.
+// REAL_ONLY: the test lifts a real tensor to complex and checks the zero
+//   imaginary parts it gains, so it takes only a real TenT.
 #define TCAPICT_FOREACH_TENSOR_MANIPULATION_TEST_REAL_ONLY(X, ...) \
   X(__VA_ARGS__, "tensor_manipulation", test_to_cplx_outofplace)
 

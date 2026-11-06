@@ -24,8 +24,8 @@
   TCAPICT_FOREACH_READ_ONLY_GETTERS_TEST_ALL_TYPES(X, __VA_ARGS__) \
   TCAPICT_FOREACH_TENSOR_MANIPULATION_TEST_ALL_TYPES(X, __VA_ARGS__)
 
-// Tests whose input must be real, as their template parameter's name,
-// RealTenT, says.
+// Tests that lift a real tensor to complex and check the zero imaginary parts
+// it gains, so they take only a real TenT.
 #define TCAPICT_FOREACH_TEST_REAL_ONLY(X, ...) \
   TCAPICT_FOREACH_MISCELLANEOUS_TEST_REAL_ONLY(X, __VA_ARGS__) \
   TCAPICT_FOREACH_TENSOR_MANIPULATION_TEST_REAL_ONLY(X, __VA_ARGS__)

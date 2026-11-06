@@ -580,8 +580,8 @@ template <typename TenT> void test_version(tcapi_test_fixture<TenT> &fix) {
   X(__VA_ARGS__, "miscellaneous", test_supported_ten_types) \
   X(__VA_ARGS__, "miscellaneous", test_version)
 
-// REAL_ONLY: the test's input must be real, as its template parameter's name
-//   says.
+// REAL_ONLY: the test lifts a real tensor to complex and checks the zero
+//   imaginary parts it gains, so it takes only a real TenT.
 #define TCAPICT_FOREACH_MISCELLANEOUS_TEST_REAL_ONLY(X, ...) \
   X(__VA_ARGS__, "miscellaneous", test_convert_real_to_complex)
 
