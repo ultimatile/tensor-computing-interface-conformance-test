@@ -249,7 +249,8 @@ void test_normalize_outofplace(tcapi_test_fixture<TenT> &fix) {
   auto original_norm = tcapi::normalize(ctx, original, normalized);
   TCAPICT_ASSERT_CLOSE(std::abs(original_norm), 3.0, tol);
 
-  // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
+  // The input is read back at {0, 0}; see "Out-of-place inputs" in
+  // CONTRIBUTING.md.
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, original, {0, 0})), 2.0,
                        tol);
 
@@ -605,10 +606,14 @@ template <typename TenT> void test_lq(tcapi_test_fixture<TenT> &fix) {
 
 // --- truncated SVD ---
 //
-// V1 calls sigma "a **real second-order diagonal tensor** of the retained
-// singular values with shape `{chi, chi}`". Unlike its svd entry, it does not
-// say in which order the diagonal holds them, so these tests compare sigma's
-// diagonal as a multiset, through diag_order::any.
+// V1: "The output `sigma` is a second-order diagonal tensor of retained
+// singular values with shape {χ,χ}, where χ is the retained bond dimension."
+// The entry also says the routine "follows the same matricization and SVD
+// convention as svd", and svd's entry says of its sigma "its diagonal
+// elements are the singular values in non-increasing order", but trunc_svd's
+// entry states no order for its own sigma. These tests assert none: they
+// compare sigma's diagonal as a multiset, through diag_order::any, which a
+// non-increasing sigma also passes.
 
 #if !defined(TCAPICT_SKIP_TRUNC_SVD) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
 // The singular values the trunc_svd fixture matrix is built from. Shared with
@@ -740,10 +745,11 @@ void trunc_svd_by_strategy(tcapi::context_handle_t<TenT> &ctx, const TenT &a,
 // merging them would collapse the per-case reporting and skip granularity that
 // buys.
 //
-// Guarded with the tests it serves, and for the same reason the fixture builder
-// above is: it calls both of them, and the diagonal check, so leaving it outside
-// would break the header for a backend that defines TCAPICT_SKIP_TRUNC_SVD or
-// skips an API that TCAPICT_HAS_DIAGONAL_CHECK requires.
+// Guarded, like every helper in this block, with the tests it serves: it calls
+// tcapi::trunc_svd through trunc_svd_by_strategy and the diagonal check, so
+// leaving it outside would break the header for a backend that defines
+// TCAPICT_SKIP_TRUNC_SVD or skips an API that TCAPICT_HAS_DIAGONAL_CHECK
+// requires.
 template <typename TenT>
 void trunc_svd_expect_retained_chi(tcapi_test_fixture<TenT> &fix, double scale, int chi_max,
                                    tcapi::real_t<TenT> s_min, int chi_min,
@@ -920,16 +926,19 @@ void test_trunc_svd_non_diagonal_input(tcapi_test_fixture<TenT> &fix) {
 
 // --- truncated SVD, overload (2): chi_max / s_min / chi_min / target_trunc_err ---
 //
-// V1's rule, with epsilon(chi) = sum_{i>=chi} s_i^2 / sum_{i<kappa} s_i^2:
+// V1's rule, with the truncation error for keeping chi values
+// epsilon(chi) = sum_{i>=chi} s_i^2 / sum_{i<kappa} s_i^2:
 //
-//   - Discard all s_i < s_min.
-//   - Among the survivors retain at least chi_min when possible; values below
-//     s_min are NOT restored to satisfy chi_min.
-//   - Grow chi in descending order until epsilon <= target_trunc_err or
-//     chi == chi_max.
+//   - "Discard all s_i < s_min."
+//   - "Among the singular values that survive the `s_min` cutoff, retain at
+//     least `chi_min` values when possible. If fewer than `chi_min` values
+//     survive the cutoff, retain all surviving values; values below `s_min`
+//     are not restored to satisfy `chi_min`."
+//   - "Increase χ (retaining additional values in descending order) until
+//     either ε ≤ target_trunc_err or χ = chi_max."
 //
-// That middle clause is what keeps the retained chi from being simply "the
-// smallest chi in [chi_min, chi_max] meeting the target": when fewer than
+// That middle clause is what keeps the retained chi from being simply the
+// smallest chi in [chi_min, chi_max] meeting the target: when fewer than
 // chi_min values clear s_min, the result is below chi_min.
 //
 // For the [3, 2, 1, 0.1] fixture, sum s_i^2 = 14.01 and the ladder runs
@@ -1051,19 +1060,20 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tcapi_test_fixture<
 
   // Equivalence is a claim about the whole decomposition, so compare every
   // output the two calls produce, not just the retained count. The sigmas are
-  // also compared with each other, as multisets, since V1 fixes no order for
-  // trunc_svd's diagonal.
+  // also compared with each other, as multisets, since the suite asserts no
+  // order for trunc_svd's diagonal.
   TCAPICT_ASSERT_CLOSE(err_general, err_simple, tol);
   TCAPICT_EXPECT_DIAGONAL(ctx, s_simple, TCAPICT_REAL_DIAGONAL_OF(ctx, s_general),
                           tol, diag_order::any);
 
   // The factors are compared through the product they reconstruct rather than
   // elementwise: for a spectrum with distinct singular values the columns of u
-  // are fixed only up to a phase, and, since V1 fixes no order for sigma's
-  // diagonal, up to a permutation shared with sigma, neither of which the two
-  // calls are obliged to choose identically, so an elementwise comparison would
-  // assert more than the equivalence claim. The reconstruction is invariant
-  // under both, and unlike a shape comparison it does read the factors' values.
+  // are fixed only up to a phase, and, since the suite asserts no order for
+  // sigma's diagonal, up to a permutation shared with sigma, neither of which
+  // the two calls are obliged to choose identically, so an elementwise
+  // comparison would assert more than the equivalence claim. The
+  // reconstruction is invariant under both, and unlike a shape comparison it
+  // does read the factors' values.
   using RealTenT = tcapi::real_ten_t<TenT>;
   auto reconstruct = [&ctx](const TenT &u_in, const RealTenT &s_in, const TenT &v_in) {
     const auto u_shape = tcapi::shape(ctx, u_in);
@@ -1103,11 +1113,11 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tcapi_test_fixture<
   TCAPICT_ASSERT(tcapi::close(ctx, reconstructed_general, reconstructed_simple, tol));
 
   // The two products agreeing does not show that sigma is paired with the
-  // right columns of u and v, since sigma's order is free: a shared route
-  // could pair them wrongly in both. So the product is also compared with the
-  // input's best rank-2 approximation. The fixture is diag(3, 2, 1, 0.1), whose
-  // singular vectors are the unit vectors, so that approximation is
-  // diag(3, 2, 0, 0).
+  // right columns of u and v, since the suite leaves sigma's order free: a
+  // shared route could pair them wrongly in both. So the product is also
+  // compared with the input's best rank-2 approximation. The fixture is
+  // diag(3, 2, 1, 0.1), whose singular vectors are the unit vectors, so that
+  // approximation is diag(3, 2, 0, 0).
   auto rank2 =
       tcapi::zeros<TenT>(ctx, {kTruncSvdFixtureRank, kTruncSvdFixtureRank});
   for (int i = 0; i < 2; ++i) {
@@ -1543,7 +1553,8 @@ void test_scale_outofplace(tcapi_test_fixture<TenT> &fix) {
                        tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, result, {1, 1})), -12.0,
                        tol);
-  // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
+  // The input is read back at {0, 0}; see "Out-of-place inputs" in
+  // CONTRIBUTING.md.
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {0, 0})), 3.0,
                        tol);
 #else
@@ -1615,8 +1626,9 @@ template <typename TenT> void test_trace_partial(tcapi_test_fixture<TenT> &fix) 
   TenT result;
   tcapi::trace(ctx, matrix, {{0, 1}}, result);
 
-  // TCAPI V1: "All bonds paired yields a scalar (zeroth-order)": order 0,
-  // shape {}, size 1, read at {}.
+  // TCAPI V1: "If all bonds are paired, the result is a zeroth-order tensor",
+  // so the result is checked for order 0, shape {}, size 1 and its element at
+  // {}.
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, result, std::complex<double>(5.0, 0.0),
                               tol_category::reduction, 2);
 #else
@@ -1764,9 +1776,8 @@ void test_svd_reconstruction(tcapi_test_fixture<TenT> &fix) {
 // where the triangular factor is itself second-order: r with one column bond
 // and l with one row bond. Reordering the rows of the matrix, A' -> P A',
 // turns a QR factorization Q R into (P Q) R, again a QR factorization with
-// the same r, and
-// reordering its columns does the same for l, so r and l are triangular
-// whatever order the bonds they do not keep flatten in.
+// the same r, and reordering its columns does the same for l, so r and l are
+// triangular whatever order the bonds they do not keep flatten in.
 
 #if defined(TCAPICT_HAS_ELEM_SWEEP) &&                                         \
     (!defined(TCAPICT_SKIP_SVD) || !defined(TCAPICT_SKIP_QR) ||                \

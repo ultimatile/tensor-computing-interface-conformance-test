@@ -113,7 +113,7 @@
 // (API × precision) combination compile-time-unavailable (via SFINAE /
 // `static_assert` / `= delete`), use the whole-API TCAPICT_SKIP_<API>
 // macro instead. A compile-time body-discard variant is planned; see
-// issue #50.
+// https://github.com/ultimatile/tcapi-conformance-test/issues/50.
 
 // `if constexpr`-guarded early return that fires when `tcapi::real_t<TenT>`
 // is `float` (i.e., TenT's real precision is single — covering both

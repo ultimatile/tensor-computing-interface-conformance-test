@@ -24,7 +24,8 @@
   TCAPICT_FOREACH_READ_ONLY_GETTERS_TEST_ALL_TYPES(X, __VA_ARGS__) \
   TCAPICT_FOREACH_TENSOR_MANIPULATION_TEST_ALL_TYPES(X, __VA_ARGS__)
 
-// Tests meaningful only for real TenT (e.g., tcapi::to_cplx input must be real).
+// Tests whose input must be real, as their template parameter's name,
+// RealTenT, says.
 #define TCAPICT_FOREACH_TEST_REAL_ONLY(X, ...) \
   TCAPICT_FOREACH_MISCELLANEOUS_TEST_REAL_ONLY(X, __VA_ARGS__) \
   TCAPICT_FOREACH_TENSOR_MANIPULATION_TEST_REAL_ONLY(X, __VA_ARGS__)

@@ -60,8 +60,12 @@ void test_size_bytes(tcapi_test_fixture<TenT>& fix) {
 #ifndef TCAPICT_SKIP_SIZE_BYTES
   auto& ctx = fix.context();
   auto tensor = tcapi::zeros<TenT>(ctx, {2, 3, 4});
-  // V1's entry for it is "Reports memory consumption in bytes": no formula, no
-  // lower bound. Callable-and-returns is the whole of what is portably
+  // V1's entry for it is "Return the physical memory footprint of `a` in
+  // bytes. A compactly stored diagonal tensor may use fewer bytes than a dense
+  // tensor with the same shape." Its example gives 96 bytes for a float32
+  // tensor of shape {3, 4, 2}; the suite reads that as the example's value,
+  // not as a formula every backend must meet, since the entry states none and
+  // no lower bound. Callable-and-returns is the whole of what is portably
   // assertable, so what this test and its second-order and zeroth-order
   // counterparts below give between them is that none of the three ranks makes
   // the call fail.

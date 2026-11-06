@@ -48,7 +48,8 @@ struct visit_record_0d {
     return true;
   }
 
-  // "Visits every element exactly once" over the one element, at {}.
+  // V1's for_each_with_coors: "For a zeroth-order tensor, the callable is
+  // invoked once with the empty coordinate sequence."
   void check() const {
     TCAPICT_ASSERT(!malformed_coordinate);
     TCAPICT_ASSERT(visits == 1);

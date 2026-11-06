@@ -19,8 +19,9 @@
 namespace tcapict {
 namespace detail {
 
-// Type helpers for tcapi::supported_ten_types_t. Each one takes any type and
-// treats one that is not a std::tuple as holding no tensor types, so the tests
+// Type helpers for tcapi::supported_ten_types_t. is_std_tuple, tuple_contains
+// and for_each_tuple_type take any type and treat one that is not a std::tuple
+// as holding no tensor types, so the tests
 // using them compile against a catalog of the wrong kind, and
 // test_supported_ten_types reports it through its assertion on
 // is_std_tuple_v.
@@ -387,7 +388,8 @@ void test_convert_data_integrity(tcapi_test_fixture<TenT> &fix) {
 
 // --- convert: zeroth-order ---
 
-// TCAPI V1: with Ten1T == Ten2T, convert is "equivalent to deep copy".
+// TCAPI V1: "If the source and destination have the same tensor type or tensor
+// kind, this routine is equivalent to a deep copy."
 template <typename TenT>
 void test_convert_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_CONVERT) && defined(TCAPICT_HAS_ZEROTH_ORDER_SWEEP)
@@ -450,9 +452,10 @@ void test_convert_real_to_complex(tcapi_test_fixture<RealTenT> &fix) {
 
 // --- convert: precision change ---
 
-// TCAPI V1: convert converts `t1` "into a destination tensor, possibly
-// changing the element type, the underlying TCF/backend, or both. Conversion
-// also supports precision changes within one TCF." The first sentence says
+// TCAPI V1: "Convert `t1` into a destination tensor, possibly changing the
+// element type, the underlying TCF/backend, or both. This includes
+// conversions between different floating-point precisions within the same
+// TCF." The first sentence says
 // what a conversion may change, not which pairs a backend supports; the second
 // is what V1 says convert supports, so the destinations are the types of
 // tcapi::supported_ten_types_t in TenT's TCF that hold TenT's kind of element,
@@ -508,14 +511,17 @@ void test_convert_precision(tcapi_test_fixture<TenT> &fix) {
 
 // --- supported_ten_types_t ---
 
-// TCAPI V1: "Each C++ implementation provides a compile-time catalog of its
-// tensor types through `tcapi::supported_ten_types_t` in `tcapi/tcapi.h`", a
-// std::tuple of them. "The catalog order is implementation-defined, and
-// context compatibility is backend-dependent. Standard tuple traits and
-// `tcapi::elem_t` expose its size, types, and element types". The test asserts
-// that the catalog is a std::tuple, and names tcapi::elem_t of each catalog
-// type, which fails to compile for a type whose traits do not expose one. It
-// also asserts a reading of "its tensor types": that the catalog holds TenT, a
+// TCAPI V1: "Each C++ TCAPI implementation exposes its concrete tensor types
+// through the namespace-level alias `tcapi::supported_ten_types_t`,
+// accessible through `tcapi/tcapi.h`", a std::tuple of them. "This is a
+// compile-time type catalog. Its ordering is implementation-defined. The
+// catalog lists the types provided by the implementation, while their
+// compatibility with a particular execution context remains
+// backend-dependent." Its size, types and element types "can be obtained
+// using standard tuple traits and `tcapi::elem_t`". The test asserts that the
+// catalog is a std::tuple, and names tcapi::elem_t of each catalog type, which
+// fails to compile for a type whose traits do not expose one. It also asserts
+// a reading of "its concrete tensor types": that the catalog holds TenT, a
 // type the backend registers with the suite, and tcapi::real_ten_t<TenT> and
 // tcapi::cplx_ten_t<TenT>, which V1 defines as tensor types and the backend's
 // functions return. It asserts neither the order nor anything about contexts.

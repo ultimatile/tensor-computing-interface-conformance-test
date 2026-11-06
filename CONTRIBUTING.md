@@ -93,16 +93,17 @@ These apply to every header under `include/tcapict/`; comments in the code refer
 
 ### Out-of-place inputs
 
-TCAPI V1: "Most mutating functions provide two overloads: (1) in-place and (2) out-of-place writing to a separate output."
-The tests that read their input back after an out-of-place call assert a reading of that sentence: that the input is unchanged.
+TCAPI V1: "In-place variants mutate the supplied tensor operand(s), whereas out-of-place variants leave all inputs unmodified".
+The tests that read their input back after an out-of-place call assert that "leave all inputs unmodified" for the elements they read.
 
 ### Inputs to multi-input operations
 
-`concatenate`, `stack` and `linear_combine` take their inputs as `List<CRef<TenT>>`, and TCAPI V1 says of them, under "Type System", "Auxiliary Types": "The referenced tensors are not copied, consumed, or modified and must stay alive for the call".
+`concatenate`, `stack` and `linear_combine` take their inputs as `List<CRef<TenT>>`, and TCAPI V1's entry for each of them says: "In the C++ interface, `ins` is a list of non-owning const references to existing tensors; the referenced tensor objects are not copied, consumed, or modified and must remain valid for the duration of the call."
 Each test reads every input back after its last call to the operation and asserts that its shape and elements are unchanged.
-That asserts the "not ... modified" of V1's words as they stand, not a reading of them as in "Out-of-place inputs"; the read-back cannot detect a copy, so "not copied" is not asserted.
+That asserts the "not ... modified"; the read-back cannot detect a copy, so "not copied" is not asserted.
 An input whose elements all hold one value would pass that read-back even after being reordered in place, so each input element gets a value no other input element has.
 Each input is built from a coordinate-to-value function, through `TCAPICT_SET_ELEMS` in `include/tcapict/elem_sweep.h`, and both the read-back and the check of every element of the result are computed from the same functions, through `TCAPICT_EXPECT_ELEMS`; `ramp_over` there gives distinct values to distinct coordinates.
+A zeroth-order input has one element, which no reordering can move, so the test of `linear_combine` on zeroth-order inputs sets each input's element to a value the other input does not hold through `TCAPICT_SET_ZEROTH_ORDER`, and reads it back and checks the result through `TCAPICT_EXPECT_ZEROTH_ORDER`.
 
 Each of the three operations, and each `linear_combine` overload, is called at least once through a named `tcapi::List<tcapi::CRef<TenT>>` variable, not only through a braced `{std::cref(a), ...}` list.
 When `TenT` is copy-constructible, a braced list of `std::cref`s also initializes a `List<TenT>`, so a braced call alone compiles against a backend that still takes `List<TenT>`.
@@ -113,32 +114,35 @@ A call with a braced list names `TenT` explicitly, as in `tcapi::stack<TenT>(ctx
 
 Coordinate maps, generators and traversal callbacks run inside the backend's frames, which a conformance suite cannot assume are able to carry an exception.
 The suite reads V1 as invoking them one at a time: V1's own `for_each` example accumulates into a plain variable, `[&tot](const float el) { tot += el; }`, and gives the result as `tot == 3.0`.
-So they neither assert, nor allocate, nor read a coordinate's components before checking the coordinate: that it has as many components as the tensor has bonds, and that each is less than its bond's dimension.
+So they do not assert, do not allocate, and read a coordinate's components only after checking the coordinate: that it has as many components as the tensor has bonds, and that each is less than its bond's dimension.
 Whatever a callback observes for the test, such as a flag for a malformed coordinate, a visit count or a running sum, it keeps in variables the test reads after the call returns, and the test asserts on those.
 A callback that receives a second-order coordinate makes that check with `coors_2d` in `include/tcapict/elem_helper.h` before reading its components, and records a coordinate `coors_2d` rejects in a flag the test asserts is clear.
 Tests call `to_range` and `assign_from_range` on second-order tensors through `to_range_2d` and `assign_from_range_2d` in `include/tcapict/range_2d.h`.
 
 ### Zeroth-order tensors
 
-TCAPI V1, under "Zeroth-Order and Diagonal Tensor Semantics": "TCAPI represents a scalar-valued **tensor** result as a zeroth-order tensor: empty shape `{}`, `size == 1`, and a single empty coordinate sequence."
-Where a test knows the element a zeroth-order `TenT` should hold, it checks the tensor through `TCAPICT_EXPECT_ZEROTH_ORDER` in `include/tcapict/zeroth_order.h`: order 0, shape `{}` and size 1, then the sole element read at `{}` through `TCAPICT_EXPECT_ELEMS`.
-The results of `real` and `imag` of a complex tensor, and of `to_cplx` of a real one, have another tensor type; those results are checked through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE`, which takes any tensor type, and `get_elem`, and so is the result of `random`, whose element is one of the values the generator returned.
+TCAPI V1, in the introduction to its core functions: "A zeroth-order tensor has empty shape, size 1, and a single empty coordinate sequence."
+Where a test knows the element a zeroth-order `TenT` should hold, it checks the tensor through `TCAPICT_EXPECT_ZEROTH_ORDER` in `include/tcapict/zeroth_order.h`: order 0, shape `{}` and size 1, then the sole element read at `{}` through `expect_elems_at` in `include/tcapict/elem_sweep.h`.
+The results of `real` and `imag` of a complex tensor, and of `to_cplx` of a real one, have another tensor type; those results are checked through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE`, which takes any tensor type, and `get_elem`.
 A callback that receives a coordinate of a zeroth-order tensor expects the empty one and flags any other, under "Callbacks the backend invokes", through `to_range_0d`, `assign_from_range_0d` or `visit_record_0d` in the same header.
 
-V1 goes on: "Operations whose definitions require selecting, reordering, inserting, removing, slicing, or partitioning bonds (`transpose`, `svd`, `qr`, `eig`, `expand`, `shrink`, `extract_sub`, `replace_sub`, ...) are not applicable to zeroth-order tensors."
+V1 goes on: "Operations whose definitions require selecting, reordering, inserting, removing, slicing, or partitioning existing bonds are not applicable to zeroth-order tensors unless explicitly specified by the operation."
+It names no such operation. The suite reads `transpose`, `svd`, `qr`, `eig`, `expand`, `shrink`, `extract_sub` and `replace_sub` as such operations, and none of their entries specifies a zeroth-order case.
 V1 defines no exception for them, so nothing about calling them on a zeroth-order tensor is assertable, and no test calls them on one.
-No test calls the following on a zeroth-order tensor either, since the same sentence covers them: `concatenate`, which selects a bond, `stack`, which inserts one, and the operations that matricize, which partition bonds into rows and columns (`trunc_svd`, `lq`, `eigh`, `eigvals`, `eigvalsh`, `exp`, `inverse`).
+No test calls the following on a zeroth-order tensor either, since the suite reads the same sentence as covering them, and their entries specify no zeroth-order case: `concatenate`, which selects a bond, `stack`, which inserts one, and the operations that matricize, which partition bonds into rows and columns (`trunc_svd`, `lq`, `eigh`, `eigvals`, `eigvalsh`, `exp`, `inverse`).
 Nor does any call `diag`, whose input V1 requires to be first- or second-order.
+The suite reads the operations its zeroth-order tests do call as requiring no existing bond of a zeroth-order operand; `contract` is among them, since such an operand takes the empty label list `""`.
 
 The zeroth-order tests assert nothing about `TenT{}`, the state `clear` and `move` leave, since V1 does not say what queries return on it; the `order == 0` assertions the existing `clear` and `move` tests make on it are left as they are, pending the open question on [#51](https://github.com/ultimatile/tcapi-conformance-test/issues/51).
 Of `size_bytes` they assert only that it returns, as the tests of the other ranks do.
 
 ### Diagonal tensors
 
-TCAPI V1, under "Zeroth-Order and Diagonal Tensor Semantics": "A diagonal tensor's logical elements — including off-diagonal zeros — define its behavior regardless of storage."
-It names the tensors this covers: "`eye`, `diag` (order 1 → 2), and the `sigma`/`lambda_mat` outputs of `svd`/`trunc_svd`/`eig`/`eigh` are diagonal tensors."
+TCAPI V1, in the introduction to its core functions: "TCAPI treats a diagonal tensor as an ordinary second-order tensor with shape {N,N} whose off-diagonal logical tensor elements are zero." and "Unless stated otherwise, TCAPI operations are defined by logical tensor elements, not by storage representation."
+Its entries name the diagonal tensors the suite meets: `eye` returns "the N×N identity tensor as a diagonal tensor", `diag` of a first-order input and the `sigma` of `trunc_svd` and `lambda_mat` of `eig` are each "a second-order diagonal tensor", and the `sigma` of `svd` and `lambda_mat` of `eigh` are each "a real second-order diagonal tensor".
 `test_eye` and the tests of `diag`, `svd`, `trunc_svd`, `eig` and `eigh` check each diagonal tensor they produce, and `test_diag_mat_to_vec_outofplace` the input it reads back, which it builds with `zeros` and so holds exact off-diagonal zeros, through `TCAPICT_EXPECT_DIAGONAL` in `include/tcapict/diagonal.h`: order 2, shape `{n, n}` and size `n * n`, checked before any element is read, then every element against the expected diagonal.
-Off-diagonal elements must be exactly zero, since V1 defines a diagonal tensor as one "whose off-diagonal elements are zero".
+Off-diagonal elements must be exactly zero, since V1 defines a diagonal tensor as one "whose off-diagonal logical tensor elements are zero".
 The check takes any tensor type, with the context its input came with, because `sigma` and `eigh`'s `lambda_mat` are `real_ten_t<TenT>` and `eig`'s `lambda_mat` is `cplx_ten_t<TenT>`.
-V1 fixes the order of the diagonal for `svd` ("non-increasing order") and for `eigh` ("ascending order") but not for `trunc_svd` or `eig`, so the `trunc_svd` tests, and the `eig` tests wherever the eigenvalues are not all equal, compare the diagonal as a multiset, through `diag_order::any`.
+V1 fixes the order of the diagonal for `svd` ("non-increasing order") and for `eigh` ("ascending order").
+It states none for `eig`, nor for the `sigma` of `trunc_svd`, whose entry says only that the routine "follows the same matricization and SVD convention as svd"; so the `trunc_svd` tests, and the `eig` tests wherever the eigenvalues are not all equal, compare the diagonal as a multiset, through `diag_order::any`.
 `eigvals` and `eigvalsh` return first-order lists, and their tests assert order 1.
