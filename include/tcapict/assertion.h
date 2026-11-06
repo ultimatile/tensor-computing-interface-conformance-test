@@ -95,7 +95,7 @@ template <typename F> decltype(auto) nothrow_call(const char* file, int line, F&
 /// may contain commas.
 #define TCAPICT_NOTHROW_VALUE(...)                                                                 \
   ::tcapict::detail::nothrow_call(__FILE__, __LINE__,                                              \
-                               [&]() -> decltype(auto) { return (__VA_ARGS__); })
+                                 [&]() -> decltype(auto) { return (__VA_ARGS__); })
 
 /// Assert that an expression does not throw a std::exception, reporting one at
 /// the macro's use as detail::nothrow_call does. Variadic so that the

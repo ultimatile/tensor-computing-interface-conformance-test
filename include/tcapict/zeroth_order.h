@@ -72,7 +72,7 @@ void to_range_0d(tcapi::context_handle_t<TenT> &ctx, const TenT &a,
   TCAPICT_ASSERT_NOTHROW(
       tcapi::to_range(ctx, a, first, detail::map_0d<TenT>(malformed)));
   TCAPICT_ASSERT_MSG(!malformed, "to_range_0d: the backend passed a non-empty "
-                               "coordinate for a zeroth-order tensor");
+                                 "coordinate for a zeroth-order tensor");
 }
 #endif
 
@@ -88,7 +88,7 @@ void assign_from_range_0d(tcapi::context_handle_t<TenT> &ctx, RandomIt first,
                            ctx, tcapi::shape_t<TenT>{}, first,
                            detail::map_0d<TenT>(malformed)));
   TCAPICT_ASSERT_MSG(!malformed, "assign_from_range_0d: the backend passed a "
-                               "non-empty coordinate for shape {}");
+                                 "non-empty coordinate for shape {}");
   TCAPICT_ASSERT(tcapi::shape(ctx, out).empty());
 }
 #endif

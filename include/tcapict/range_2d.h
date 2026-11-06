@@ -61,8 +61,8 @@ void to_range_2d(tcapi::context_handle_t<TenT>& ctx, const TenT& a,
                            static_cast<std::ptrdiff_t>(shape[1]), layout,
                            malformed)));
   TCAPICT_ASSERT_MSG(!malformed,
-                   "to_range_2d: the backend passed a coordinate outside the "
-                   "tensor's shape");
+                     "to_range_2d: the backend passed a coordinate outside the "
+                     "tensor's shape");
 }
 #endif
 
@@ -85,8 +85,8 @@ void assign_from_range_2d(tcapi::context_handle_t<TenT>& ctx,
                                static_cast<std::ptrdiff_t>(shape[1]), layout,
                                malformed)));
   TCAPICT_ASSERT_MSG(!malformed,
-                   "assign_from_range_2d: the backend passed a coordinate "
-                   "outside the given shape");
+                     "assign_from_range_2d: the backend passed a coordinate "
+                     "outside the given shape");
   TCAPICT_ASSERT(tcapi::shape(ctx, out) == shape);
 }
 #endif

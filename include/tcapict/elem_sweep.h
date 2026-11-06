@@ -67,7 +67,7 @@ auto ramp_over(const tcapi::shape_t<TenT> &shape, double offset) {
     double position = 0.0;
     for (std::size_t b = 0; b < shape.size(); ++b) {
       TCAPICT_ASSERT(static_cast<std::size_t>(coors[b]) <
-                   static_cast<std::size_t>(shape[b]));
+                     static_cast<std::size_t>(shape[b]));
       position = position * static_cast<double>(shape[b]) +
                  static_cast<double>(coors[b]);
     }

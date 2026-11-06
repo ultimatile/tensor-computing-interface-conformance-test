@@ -247,7 +247,7 @@ template <typename TenT> void test_to_range(tcapi_test_fixture<TenT> &fix) {
 
   for (int i = 0; i < 6; ++i) {
     TCAPICT_ASSERT_CLOSE(real_part<TenT>(container[i]), static_cast<double>(i),
-                       eps);
+                         eps);
     if constexpr (is_complex_v<TenT>) {
       TCAPICT_ASSERT_CLOSE(imag_part<TenT>(container[i]), 0.0, eps);
     }

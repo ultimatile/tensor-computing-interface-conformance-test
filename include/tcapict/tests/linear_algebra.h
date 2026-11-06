@@ -149,7 +149,7 @@ void test_linear_combine_single(tcapi_test_fixture<TenT> &fix) {
   // v (2.25 - 3i) keeps an imaginary part in the result.
   const std::complex<double> s(3.0, is_complex_v<TenT> ? -1.5 : 0.0);
   tcapi::List<tcapi::elem_t<TenT>> single_coef = {make_elem<TenT>(s.real(),
-                                                              s.imag())};
+                                                                  s.imag())};
   auto scaled = TCAPICT_NOTHROW_VALUE(
       tcapi::linear_combine<TenT>(ctx, single_list, single_coef));
   TCAPICT_EXPECT_ELEMS(fix, scaled, {1, 1}, [&](const auto &x) {
@@ -181,7 +181,7 @@ void test_linear_combine_zeroth_order(tcapi_test_fixture<TenT> &fix) {
   tcapi::List<tcapi::CRef<TenT>> ins = {std::cref(tensor_a), std::cref(tensor_b)};
   auto sum = TCAPICT_NOTHROW_VALUE(tcapi::linear_combine<TenT>(ctx, ins));
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, sum, written<TenT>(1.25) + written<TenT>(-3.5),
-                            tol_category::reduction, 2);
+                              tol_category::reduction, 2);
 
   const std::complex<double> s_a(0.5, is_complex_v<TenT> ? 0.25 : 0.0);
   const std::complex<double> s_b(2.0, is_complex_v<TenT> ? -1.0 : 0.0);
@@ -219,9 +219,9 @@ void test_normalize_inplace(tcapi_test_fixture<TenT> &fix) {
 
   // Verify normalized values
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {0, 0})), 0.6,
-                     tol);
+                       tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {0, 1})), 0.8,
-                     tol);
+                       tol);
 
   // New norm should be 1
   auto new_norm = tcapi::norm(ctx, tensor);
@@ -251,13 +251,13 @@ void test_normalize_outofplace(tcapi_test_fixture<TenT> &fix) {
 
   // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, original, {0, 0})), 2.0,
-                     tol);
+                       tol);
 
   // Normalized tensor
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, normalized, {0, 0})),
-                     2.0 / 3.0, tol);
+                       2.0 / 3.0, tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, normalized, {2, 0})),
-                     1.0 / 3.0, tol);
+                       1.0 / 3.0, tol);
 
   auto new_norm = tcapi::norm(ctx, normalized);
   TCAPICT_ASSERT_CLOSE(new_norm, 1.0, tol);
@@ -281,7 +281,7 @@ void test_normalize_edge_cases(tcapi_test_fixture<TenT> &fix) {
   auto norm1 = tcapi::normalize(ctx, single_elem);
   TCAPICT_ASSERT_CLOSE(std::abs(norm1), 7.0, tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, single_elem, {1, 1})),
-                     1.0, tol);
+                       1.0, tol);
 
   // Zero tensor
   auto zero_tensor = tcapi::zeros<TenT>(ctx, {2, 2});
@@ -317,7 +317,7 @@ void test_normalize_zeroth_order(tcapi_test_fixture<TenT> &fix) {
   const auto original_in = tcapi::normalize(ctx, input, output);
   TCAPICT_ASSERT_CLOSE(original_in, std::abs(w_in), tol);
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, output, w_in / std::abs(w_in),
-                            tol_category::reduction);
+                              tol_category::reduction);
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, input, 3.0);
 #else
   (void)fix;
@@ -411,7 +411,7 @@ void test_contract_dot_product(tcapi_test_fixture<TenT> &fix) {
   // tensor (order 0, shape {}, size 1), read at the empty coordinate {}.
   // dot = 1*4 + 2*5 + 3*6 = 32
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, c, std::complex<double>(32.0, 0.0),
-                            tol_category::reduction, 3);
+                              tol_category::reduction, 3);
 #else
   (void)fix;
 #endif
@@ -482,7 +482,7 @@ void test_contract_zeroth_order(tcapi_test_fixture<TenT> &fix) {
   TenT st;
   tcapi::contract(ctx, s, "", t, "", st, "");
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, st, written<TenT>(1.5) * written<TenT>(-2.0),
-                            tol_category::reduction);
+                              tol_category::reduction);
 #else
   (void)fix;
 #endif
@@ -529,9 +529,9 @@ template <typename TenT> void test_qr(tcapi_test_fixture<TenT> &fix) {
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 3; ++j)
       tcapi::set_elem(ctx, matrix,
-                    {static_cast<tcapi::elem_coor_t<TenT>>(i),
-                     static_cast<tcapi::elem_coor_t<TenT>>(j)},
-                    make_elem<TenT>(i * 3 + j + 1));
+                      {static_cast<tcapi::elem_coor_t<TenT>>(i),
+                       static_cast<tcapi::elem_coor_t<TenT>>(j)},
+                      make_elem<TenT>(i * 3 + j + 1));
 
   TenT q, r;
   tcapi::qr(ctx, matrix, 1, q, r);
@@ -542,7 +542,7 @@ template <typename TenT> void test_qr(tcapi_test_fixture<TenT> &fix) {
   TenT reconstructed;
   tcapi::contract(ctx, q, "ij", r, "jk", reconstructed, "ik");
   TCAPICT_ASSERT(tcapi::close(ctx, reconstructed, matrix,
-                          tolerance(fix, tol_category::factorization)));
+                              tolerance(fix, tol_category::factorization)));
 
   // Verify Q†Q ≈ I (orthogonality)
   TenT q_dag;
@@ -554,7 +554,7 @@ template <typename TenT> void test_qr(tcapi_test_fixture<TenT> &fix) {
   auto bond_dim = tcapi::shape(ctx, q)[1];
   auto identity = tcapi::eye<TenT>(ctx, bond_dim);
   TCAPICT_ASSERT(tcapi::close(ctx, qtq, identity,
-                          tolerance(fix, tol_category::factorization)));
+                              tolerance(fix, tol_category::factorization)));
 #else
   (void)fix;
 #endif
@@ -572,9 +572,9 @@ template <typename TenT> void test_lq(tcapi_test_fixture<TenT> &fix) {
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 3; ++j)
       tcapi::set_elem(ctx, matrix,
-                    {static_cast<tcapi::elem_coor_t<TenT>>(i),
-                     static_cast<tcapi::elem_coor_t<TenT>>(j)},
-                    make_elem<TenT>(i * 3 + j + 1));
+                      {static_cast<tcapi::elem_coor_t<TenT>>(i),
+                       static_cast<tcapi::elem_coor_t<TenT>>(j)},
+                      make_elem<TenT>(i * 3 + j + 1));
 
   TenT l, q;
   tcapi::lq(ctx, matrix, 1, l, q);
@@ -585,7 +585,7 @@ template <typename TenT> void test_lq(tcapi_test_fixture<TenT> &fix) {
   TenT reconstructed;
   tcapi::contract(ctx, l, "ij", q, "jk", reconstructed, "ik");
   TCAPICT_ASSERT(tcapi::close(ctx, reconstructed, matrix,
-                          tolerance(fix, tol_category::factorization)));
+                              tolerance(fix, tol_category::factorization)));
 
   // Verify QQ† ≈ I (orthogonality)
   TenT q_dag;
@@ -597,7 +597,7 @@ template <typename TenT> void test_lq(tcapi_test_fixture<TenT> &fix) {
   auto bond_dim = tcapi::shape(ctx, q)[0];
   auto identity = tcapi::eye<TenT>(ctx, bond_dim);
   TCAPICT_ASSERT(tcapi::close(ctx, qqt, identity,
-                          tolerance(fix, tol_category::factorization)));
+                              tolerance(fix, tol_category::factorization)));
 #else
   (void)fix;
 #endif
@@ -666,7 +666,7 @@ TenT trunc_svd_test_matrix(typename tcapi::tensor_traits<TenT>::context_handle_t
   for (int i = 0; i < kTruncSvdFixtureRank; ++i) {
     const auto coor = static_cast<tcapi::elem_coor_t<TenT>>(i);
     tcapi::set_elem(ctx, matrix, {coor, coor},
-                  make_elem<TenT>(kTruncSvdFixtureSvs[i] * scale));
+                    make_elem<TenT>(kTruncSvdFixtureSvs[i] * scale));
   }
   return matrix;
 }
@@ -725,8 +725,8 @@ void trunc_svd_by_strategy(tcapi::context_handle_t<TenT> &ctx, const TenT &a,
                            tcapi::real_t<TenT> s_min, int chi_min,
                            tcapi::real_t<TenT> target_trunc_err) {
   tcapi::trunc_svd(ctx, a, static_cast<tcapi::order_t<TenT>>(num_of_bds_as_row), u, sigma, v_dag,
-                 trunc_err, static_cast<tcapi::bond_dim_t<TenT>>(chi_max), s_min,
-                 static_cast<tcapi::bond_dim_t<TenT>>(chi_min), target_trunc_err);
+                   trunc_err, static_cast<tcapi::bond_dim_t<TenT>>(chi_max), s_min,
+                   static_cast<tcapi::bond_dim_t<TenT>>(chi_min), target_trunc_err);
 }
 
 // Helper: run overload (2) on the fixture spectrum and assert sigma, which
@@ -762,7 +762,7 @@ void trunc_svd_expect_retained_chi(tcapi_test_fixture<TenT> &fix, double scale, 
   // The tolerance is absolute, so it scales with the values it bounds; epsilon,
   // a ratio, keeps the unscaled one.
   TCAPICT_EXPECT_DIAGONAL(ctx, s_diag, trunc_svd_fixture_svs(expected_chi, scale),
-                        tol * scale, diag_order::any);
+                          tol * scale, diag_order::any);
   TCAPICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(expected_chi), tol);
 }
 #endif
@@ -781,12 +781,12 @@ template <typename TenT> void test_trunc_svd(tcapi_test_fixture<TenT> &fix) {
 
   TCAPICT_ASSERT_NOTHROW(
       tcapi::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
-                     static_cast<tcapi::bond_dim_t<TenT>>(2), 0.5));
+                       static_cast<tcapi::bond_dim_t<TenT>>(2), 0.5));
 
   // s_min = 0.5 discards 0.1, and chi_max = 2 keeps 3 and 2 of the rest.
   TCAPICT_EXPECT_DIAGONAL(ctx, s_diag, trunc_svd_fixture_svs(2),
-                        tolerance(fix, tol_category::factorization),
-                        diag_order::any);
+                          tolerance(fix, tol_category::factorization),
+                          diag_order::any);
   TCAPICT_ASSERT(trunc_err >= 0.0);
 #else
   (void)fix;
@@ -811,13 +811,13 @@ void test_trunc_svd_trunc_err_value(tcapi_test_fixture<TenT> &fix) {
   tcapi::real_t<TenT> trunc_err = -1.0;
 
   tcapi::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
-                 static_cast<tcapi::bond_dim_t<TenT>>(2), 0.0);
+                   static_cast<tcapi::bond_dim_t<TenT>>(2), 0.0);
 
   TCAPICT_EXPECT_DIAGONAL(ctx, s_diag, trunc_svd_fixture_svs(2),
-                        tolerance(fix, tol_category::factorization),
-                        diag_order::any);
+                          tolerance(fix, tol_category::factorization),
+                          diag_order::any);
   TCAPICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(2),
-                     tolerance(fix, tol_category::factorization));
+                       tolerance(fix, tol_category::factorization));
 #else
   (void)fix;
 #endif
@@ -839,13 +839,13 @@ void test_trunc_svd_trunc_err_no_truncation(tcapi_test_fixture<TenT> &fix) {
 
   // chi_max = 10 > 4 (kappa), s_min = 0 → keep all SVs
   tcapi::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
-                 static_cast<tcapi::bond_dim_t<TenT>>(10), 0.0);
+                   static_cast<tcapi::bond_dim_t<TenT>>(10), 0.0);
 
   TCAPICT_EXPECT_DIAGONAL(ctx, s_diag, trunc_svd_fixture_svs(4),
-                        tolerance(fix, tol_category::factorization),
-                        diag_order::any);
+                          tolerance(fix, tol_category::factorization),
+                          diag_order::any);
   TCAPICT_ASSERT_CLOSE(trunc_err, 0.0,
-                     tolerance(fix, tol_category::factorization));
+                       tolerance(fix, tol_category::factorization));
 #else
   (void)fix;
 #endif
@@ -867,16 +867,16 @@ void test_trunc_svd_trunc_err_bounded(tcapi_test_fixture<TenT> &fix) {
 
   // Keep only 1 SV: discard [2, 1, 0.1]
   tcapi::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
-                 static_cast<tcapi::bond_dim_t<TenT>>(1), 0.0);
+                   static_cast<tcapi::bond_dim_t<TenT>>(1), 0.0);
 
   TCAPICT_EXPECT_DIAGONAL(ctx, s_diag, trunc_svd_fixture_svs(1),
-                        tolerance(fix, tol_category::factorization),
-                        diag_order::any);
+                          tolerance(fix, tol_category::factorization),
+                          diag_order::any);
   TCAPICT_ASSERT(trunc_err >= 0.0);
   TCAPICT_ASSERT(trunc_err <= 1.0);
 
   TCAPICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon<TenT>(1),
-                     tolerance(fix, tol_category::factorization));
+                       tolerance(fix, tol_category::factorization));
 #else
   (void)fix;
 #endif
@@ -905,14 +905,14 @@ void test_trunc_svd_non_diagonal_input(tcapi_test_fixture<TenT> &fix) {
   tcapi::real_ten_t<TenT> s_diag;
   tcapi::real_t<TenT> trunc_err = -1.0;
   tcapi::trunc_svd(ctx, matrix, 1, u, s_diag, v_dag, trunc_err,
-                 static_cast<tcapi::bond_dim_t<TenT>>(1),
-                 static_cast<tcapi::real_t<TenT>>(0.0));
+                   static_cast<tcapi::bond_dim_t<TenT>>(1),
+                   static_cast<tcapi::real_t<TenT>>(0.0));
 
   const double svs[] = {std::sqrt(15.0 + std::sqrt(221.0)),
                         std::sqrt(15.0 - std::sqrt(221.0))};
   TCAPICT_EXPECT_DIAGONAL(ctx, s_diag, {svs[0]}, tol, diag_order::any);
   TCAPICT_ASSERT_CLOSE(trunc_err, trunc_svd_expected_epsilon_from<TenT>(svs, 2, 1),
-                     tol);
+                       tol);
 #else
   (void)fix;
 #endif
@@ -1036,7 +1036,7 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tcapi_test_fixture<
   tcapi::real_t<TenT> err_simple = -1.0;
   auto matrix_simple = trunc_svd_test_matrix<TenT>(ctx);
   tcapi::trunc_svd(ctx, matrix_simple, 1, u_simple, s_simple, v_dag_simple, err_simple,
-                 static_cast<tcapi::bond_dim_t<TenT>>(2), static_cast<tcapi::real_t<TenT>>(0.0));
+                   static_cast<tcapi::bond_dim_t<TenT>>(2), static_cast<tcapi::real_t<TenT>>(0.0));
 
   // No chi below chi_max = 2 reaches epsilon <= 0, so both calls must stop at
   // 2, keep the singular values 3 and 2, and report epsilon(2). Assert that
@@ -1044,9 +1044,9 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tcapi_test_fixture<
   // cannot supply on their own. Both sigmas are checked here, before any of
   // their elements is read below.
   TCAPICT_EXPECT_DIAGONAL(ctx, s_general, trunc_svd_fixture_svs(2), tol,
-                        diag_order::any);
+                          diag_order::any);
   TCAPICT_EXPECT_DIAGONAL(ctx, s_simple, trunc_svd_fixture_svs(2), tol,
-                        diag_order::any);
+                          diag_order::any);
   TCAPICT_ASSERT_CLOSE(err_general, trunc_svd_expected_epsilon<TenT>(2), tol);
 
   // Equivalence is a claim about the whole decomposition, so compare every
@@ -1055,7 +1055,7 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tcapi_test_fixture<
   // trunc_svd's diagonal.
   TCAPICT_ASSERT_CLOSE(err_general, err_simple, tol);
   TCAPICT_EXPECT_DIAGONAL(ctx, s_simple, TCAPICT_REAL_DIAGONAL_OF(ctx, s_general),
-                        tol, diag_order::any);
+                          tol, diag_order::any);
 
   // The factors are compared through the product they reconstruct rather than
   // elementwise: for a spectrum with distinct singular values the columns of u
@@ -1070,9 +1070,9 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tcapi_test_fixture<
     // u is {4, 2}: its rows are the fixture's and its bond is sigma's, already
     // checked to be {2, 2}. Assert that before reading either along it.
     TCAPICT_ASSERT(u_shape.size() == 2 &&
-                 u_shape[0] == static_cast<tcapi::bond_dim_t<TenT>>(
-                                   kTruncSvdFixtureRank) &&
-                 u_shape[1] == 2);
+                   u_shape[0] == static_cast<tcapi::bond_dim_t<TenT>>(
+                                     kTruncSvdFixtureRank) &&
+                   u_shape[1] == 2);
     auto scaled = tcapi::copy(ctx, u_in);
     for (tcapi::bond_dim_t<TenT> j = 0; j < u_shape[1]; ++j) {
       const auto cj_sigma = static_cast<tcapi::elem_coor_t<RealTenT>>(j);
@@ -1083,16 +1083,16 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tcapi_test_fixture<
         const auto cj = static_cast<tcapi::elem_coor_t<TenT>>(j);
         const auto elem = tcapi::get_elem(ctx, u_in, {ci, cj});
         tcapi::set_elem(ctx, scaled, {ci, cj},
-                      make_elem<TenT>(real_part<TenT>(elem) * sj,
-                                      imag_part<TenT>(elem) * sj));
+                        make_elem<TenT>(real_part<TenT>(elem) * sj,
+                                        imag_part<TenT>(elem) * sj));
       }
     }
     // v_dag is {2, 4}, sigma's bond and the fixture's columns, before the
     // contraction over its bond.
     const auto v_shape = tcapi::shape(ctx, v_in);
     TCAPICT_ASSERT(v_shape.size() == 2 && v_shape[0] == 2 &&
-                 v_shape[1] == static_cast<tcapi::bond_dim_t<TenT>>(
-                                   kTruncSvdFixtureRank));
+                   v_shape[1] == static_cast<tcapi::bond_dim_t<TenT>>(
+                                     kTruncSvdFixtureRank));
     TenT product;
     tcapi::contract(ctx, scaled, "ik", v_in, "kj", product, "ij");
     return product;
@@ -1113,7 +1113,7 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tcapi_test_fixture<
   for (int i = 0; i < 2; ++i) {
     const auto coor = static_cast<tcapi::elem_coor_t<TenT>>(i);
     tcapi::set_elem(ctx, rank2, {coor, coor},
-                  make_elem<TenT>(kTruncSvdFixtureSvs[i]));
+                    make_elem<TenT>(kTruncSvdFixtureSvs[i]));
   }
   TCAPICT_ASSERT(tcapi::close(ctx, reconstructed_general, rank2, tol));
 #else
@@ -1199,11 +1199,11 @@ void test_trunc_svd_target_err_boundary_is_inclusive(tcapi_test_fixture<TenT> &f
   tcapi::real_t<TenT> epsilon_at_one = -1.0;
   auto matrix_pinned = build();
   tcapi::trunc_svd(ctx, matrix_pinned, 1, u_pinned, s_pinned, v_dag_pinned, epsilon_at_one,
-                 static_cast<tcapi::bond_dim_t<TenT>>(1), static_cast<tcapi::real_t<TenT>>(0.0));
+                   static_cast<tcapi::bond_dim_t<TenT>>(1), static_cast<tcapi::real_t<TenT>>(0.0));
 
   TCAPICT_EXPECT_DIAGONAL(ctx, s_pinned, {5.0}, tol, diag_order::any);
   TCAPICT_ASSERT_CLOSE(epsilon_at_one, trunc_svd_expected_epsilon_from<TenT>(kSvs, kRank, 1),
-                     tol);
+                       tol);
 
   // Now let the same epsilon arrive as the target. chi = 1 is admissible under
   // `<=` and inadmissible under `<`.
@@ -1271,7 +1271,7 @@ template <typename TenT> void test_eig_identity(tcapi_test_fixture<TenT> &fix) {
   tcapi::eig(ctx, matrix, 1, eigenvals, eigenvecs);
 
   TCAPICT_EXPECT_DIAGONAL(ctx, eigenvals, {1.0, 1.0},
-                        tolerance(fix, tol_category::factorization));
+                          tolerance(fix, tol_category::factorization));
 
   TCAPICT_ASSERT(tcapi::order(ctx, eigenvecs) == 2);
 #else
@@ -1302,8 +1302,8 @@ template <typename TenT> void test_eig_distinct(tcapi_test_fixture<TenT> &fix) {
   tcapi::eig(ctx, matrix, 1, eigenvals, eigenvecs);
 
   TCAPICT_EXPECT_DIAGONAL(ctx, eigenvals, {-1.0, 2.0},
-                        tolerance(fix, tol_category::factorization),
-                        diag_order::any);
+                          tolerance(fix, tol_category::factorization),
+                          diag_order::any);
 #else
   (void)fix;
 #endif
@@ -1324,7 +1324,7 @@ template <typename TenT> void test_eigh_identity(tcapi_test_fixture<TenT> &fix) 
   tcapi::eigh(ctx, matrix, 1, eigenvals, eigenvecs);
 
   TCAPICT_EXPECT_DIAGONAL(ctx, eigenvals, {1.0, 1.0},
-                        tolerance(fix, tol_category::factorization));
+                          tolerance(fix, tol_category::factorization));
   TCAPICT_ASSERT(tcapi::order(ctx, eigenvecs) == 2);
 #else
   (void)fix;
@@ -1354,7 +1354,7 @@ void test_eigh_ascending(tcapi_test_fixture<TenT> &fix) {
   tcapi::eigh(ctx, matrix, 1, eigenvals, eigenvecs);
 
   TCAPICT_EXPECT_DIAGONAL(ctx, eigenvals, {1.0, 3.0},
-                        tolerance(fix, tol_category::factorization));
+                          tolerance(fix, tol_category::factorization));
 #else
   (void)fix;
 #endif
@@ -1377,7 +1377,7 @@ template <typename TenT> void test_exp_identity(tcapi_test_fixture<TenT> &fix) {
   // exp(I) = e*I
   double expected_e = std::exp(1.0);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, result, {1, 1})),
-                     expected_e, eps);
+                       expected_e, eps);
   TCAPICT_ASSERT_CLOSE(std::abs(tcapi::get_elem(ctx, result, {0, 1})), 0.0, eps);
 #else
   (void)fix;
@@ -1401,9 +1401,9 @@ template <typename TenT> void test_exp_diagonal(tcapi_test_fixture<TenT> &fix) {
   tcapi::exp(ctx, diagonal, 1, result);
 
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, result, {0, 0})),
-                     std::exp(1.0), eps);
+                       std::exp(1.0), eps);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, result, {1, 1})),
-                     std::exp(2.0), eps);
+                       std::exp(2.0), eps);
   TCAPICT_ASSERT_CLOSE(std::abs(tcapi::get_elem(ctx, result, {0, 1})), 0.0, eps);
   TCAPICT_ASSERT_CLOSE(std::abs(tcapi::get_elem(ctx, result, {1, 0})), 0.0, eps);
 #else
@@ -1426,9 +1426,9 @@ template <typename TenT> void test_exp_zero(tcapi_test_fixture<TenT> &fix) {
   tcapi::exp(ctx, zero_matrix, 1, result);
 
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, result, {0, 0})), 1.0,
-                     eps);
+                       eps);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, result, {1, 1})), 1.0,
-                     eps);
+                       eps);
   TCAPICT_ASSERT_CLOSE(std::abs(tcapi::get_elem(ctx, result, {0, 1})), 0.0, eps);
 #else
   (void)fix;
@@ -1484,13 +1484,13 @@ template <typename TenT> void test_inverse(tcapi_test_fixture<TenT> &fix) {
   TCAPICT_ASSERT_NOTHROW(tcapi::inverse(ctx, matrix, 1, inv));
 
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, inv, {0, 0})), 0.6,
-                     eps);
+                       eps);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, inv, {0, 1})), -0.7,
-                     eps);
+                       eps);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, inv, {1, 0})), -0.2,
-                     eps);
+                       eps);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, inv, {1, 1})), 0.4,
-                     eps);
+                       eps);
 #else
   (void)fix;
 #endif
@@ -1512,13 +1512,13 @@ template <typename TenT> void test_scale_inplace(tcapi_test_fixture<TenT> &fix) 
   tcapi::scale(ctx, tensor, make_elem<TenT>(0.5));
 
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {0, 0})), 1.0,
-                     tol);
+                       tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {0, 1})), 2.0,
-                     tol);
+                       tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {1, 0})), 3.0,
-                     tol);
+                       tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {1, 1})), 4.0,
-                     tol);
+                       tol);
 #else
   (void)fix;
 #endif
@@ -1540,12 +1540,12 @@ void test_scale_outofplace(tcapi_test_fixture<TenT> &fix) {
   tcapi::scale(ctx, tensor, make_elem<TenT>(-2.0), result);
 
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, result, {0, 0})), -6.0,
-                     tol);
+                       tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, result, {1, 1})), -12.0,
-                     tol);
+                       tol);
   // Input unchanged; see "Out-of-place inputs" in CONTRIBUTING.md.
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {0, 0})), 3.0,
-                     tol);
+                       tol);
 #else
   (void)fix;
 #endif
@@ -1562,9 +1562,9 @@ template <typename TenT> void test_scale_by_zero(tcapi_test_fixture<TenT> &fix) 
   tcapi::scale(ctx, tensor, make_elem<TenT>(0.0));
 
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {0, 0})), 0.0,
-                     tol);
+                       tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {1, 1})), 0.0,
-                     tol);
+                       tol);
 #else
   (void)fix;
 #endif
@@ -1585,7 +1585,7 @@ void test_scale_zeroth_order(tcapi_test_fixture<TenT> &fix) {
   TCAPICT_SET_ZEROTH_ORDER(fix, tensor, 2.0);
   tcapi::scale(ctx, tensor, s_elem);
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, tensor, written<TenT>(2.0) * s,
-                            tol_category::elementwise);
+                              tol_category::elementwise);
 
   // Out of place; the input is read back, see "Out-of-place inputs" in
   // CONTRIBUTING.md.
@@ -1594,7 +1594,7 @@ void test_scale_zeroth_order(tcapi_test_fixture<TenT> &fix) {
   TenT output;
   tcapi::scale(ctx, input, s_elem, output);
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, output, written<TenT>(-0.5) * s,
-                            tol_category::elementwise);
+                              tol_category::elementwise);
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, input, -0.5);
 #else
   (void)fix;
@@ -1618,7 +1618,7 @@ template <typename TenT> void test_trace_partial(tcapi_test_fixture<TenT> &fix) 
   // TCAPI V1: "All bonds paired yields a scalar (zeroth-order)": order 0,
   // shape {}, size 1, read at {}.
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, result, std::complex<double>(5.0, 0.0),
-                            tol_category::reduction, 2);
+                              tol_category::reduction, 2);
 #else
   (void)fix;
 #endif
@@ -1673,7 +1673,7 @@ template <typename TenT> void test_svd_basic(tcapi_test_fixture<TenT> &fix) {
   // sigma is the {2, 2} diagonal tensor holding the singular values 3 and 1
   // in non-increasing order.
   TCAPICT_EXPECT_DIAGONAL(ctx, s_diag, {3.0, 1.0},
-                        tolerance(fix, tol_category::factorization));
+                          tolerance(fix, tol_category::factorization));
 
   // U and V† are (2, 2): their outer bonds are the input's, and their bond
   // with sigma is sigma's, {2, 2} as checked above.
@@ -1732,8 +1732,8 @@ void test_svd_reconstruction(tcapi_test_fixture<TenT> &fix) {
     for (tcapi::elem_coor_t<TenT> i = 0; i < 2; ++i) {
       auto elem = tcapi::get_elem(ctx, u, {i, j});
       tcapi::set_elem(ctx, u_scaled, {i, j},
-                    make_elem<TenT>(real_part<TenT>(elem) * sj,
-                                    imag_part<TenT>(elem) * sj));
+                      make_elem<TenT>(real_part<TenT>(elem) * sj,
+                                      imag_part<TenT>(elem) * sj));
     }
   }
 
@@ -1745,7 +1745,7 @@ void test_svd_reconstruction(tcapi_test_fixture<TenT> &fix) {
   tcapi::contract(ctx, u_scaled, "ik", v_dag, "kj", reconstructed, "ij");
 
   TCAPICT_ASSERT(tcapi::close(ctx, reconstructed, matrix,
-                          tolerance(fix, tol_category::factorization)));
+                              tolerance(fix, tol_category::factorization)));
 #else
   (void)fix;
 #endif
@@ -1829,7 +1829,7 @@ template <typename TenT> struct sparse_values {
       TCAPICT_ASSERT(entry.first.size() == shape.size());
       for (std::size_t b = 0; b < shape.size(); ++b) {
         TCAPICT_ASSERT(static_cast<std::size_t>(entry.first[b]) <
-                     static_cast<std::size_t>(shape[b]));
+                       static_cast<std::size_t>(shape[b]));
       }
       tcapi::set_elem(ctx, tensor, entry.first, make_elem<TenT>(entry.second));
     }
@@ -1862,7 +1862,7 @@ template <typename TenT> struct dense_values {
         shape, [&](const tcapi::elem_coors_t<TenT> &coors) {
           const auto v = (*this)(coors);
           tcapi::set_elem(ctx, tensor, coors,
-                        make_elem<TenT>(v.real(), v.imag()));
+                          make_elem<TenT>(v.real(), v.imag()));
         });
   }
 };
@@ -1888,7 +1888,7 @@ void expect_orthonormal_columns(tcapi_test_fixture<TenT> &fix, const TenT &f,
   TenT gram;
   tcapi::contract(ctx, f_conj, rows + "x", f, rows + "y", gram, "xy");
   TCAPICT_EXPECT_ELEMS(fix, gram, {bond, bond}, identity_at<TenT>,
-                     tol_category::factorization);
+                       tol_category::factorization);
 }
 
 /// Asserts that f contracted with conj(f) over the `count` bonds after f's
@@ -1906,7 +1906,7 @@ void expect_orthonormal_rows(tcapi_test_fixture<TenT> &fix, const TenT &f,
   TenT gram;
   tcapi::contract(ctx, f, "x" + cols, f_conj, "y" + cols, gram, "xy");
   TCAPICT_EXPECT_ELEMS(fix, gram, {bond, bond}, identity_at<TenT>,
-                     tol_category::factorization);
+                       tol_category::factorization);
 }
 
 /// Asserts that every element of the second-order `t` with
@@ -1958,7 +1958,7 @@ void expect_product(tcapi_test_fixture<TenT> &fix, const TenT &left,
   TenT product;
   tcapi::contract(ctx, left, rows + "x", right, "x" + cols, product, rows + cols);
   TCAPICT_EXPECT_ELEMS(fix, product, in_shape, value_at,
-                     tol_category::factorization);
+                       tol_category::factorization);
 }
 
 #if !defined(TCAPICT_SKIP_SVD) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
@@ -1991,7 +1991,7 @@ void check_svd(tcapi_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
     // non-negative and non-increasing, and sigma diagonal around it.
     const auto s_shape = tcapi::shape(ctx, sigma);
     TCAPICT_ASSERT(s_shape.size() == 2 && s_shape[0] == bond &&
-                 s_shape[1] == bond);
+                   s_shape[1] == bond);
     const auto diagonal = TCAPICT_REAL_DIAGONAL_OF(ctx, sigma);
     for (std::size_t i = 0; i < diagonal.size(); ++i) {
       TCAPICT_ASSERT(diagonal[i] >= 0.0);
@@ -2008,8 +2008,8 @@ void check_svd(tcapi_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
         tcapi::get_elem(ctx, sigma, coors_of<RealTenT>(j, j)));
     const auto e = tcapi::get_elem(ctx, u, c);
     tcapi::set_elem(ctx, u_scaled, c,
-                  make_elem<TenT>(real_part<TenT>(e) * s,
-                                  imag_part<TenT>(e) * s));
+                    make_elem<TenT>(real_part<TenT>(e) * s,
+                                    imag_part<TenT>(e) * s));
   });
   expect_product(fix, u_scaled, v_dag, k, in_shape, value_at);
 
@@ -2306,11 +2306,11 @@ void test_eigvalsh_diagonal(tcapi_test_fixture<TenT> &fix) {
 
   using RealTenT = tcapi::real_ten_t<TenT>;
   TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(tcapi::get_elem(ctx, eigenvalues, {0})),
-                     1.0, tol);
+                       1.0, tol);
   TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(tcapi::get_elem(ctx, eigenvalues, {1})),
-                     2.0, tol);
+                       2.0, tol);
   TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(tcapi::get_elem(ctx, eigenvalues, {2})),
-                     3.0, tol);
+                       3.0, tol);
 #else
   (void)fix;
 #endif

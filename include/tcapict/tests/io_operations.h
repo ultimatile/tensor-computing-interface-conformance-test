@@ -214,7 +214,7 @@ void test_save_load_string_view(tcapi_test_fixture<TenT> &fix) {
       [](auto &ctx, const std::string &path) {
         const std::string buffer = path + ".not_this_one";
         return tcapi::load<TenT>(ctx,
-                               std::string_view(buffer).substr(0, path.size()));
+                                 std::string_view(buffer).substr(0, path.size()));
       });
 #else
   (void)fix;

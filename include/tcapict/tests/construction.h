@@ -123,7 +123,7 @@ void test_eye(tcapi_test_fixture<TenT>& fix) {
   // arithmetic) and exact zeros off it (see "Diagonal tensors" in
   // CONTRIBUTING.md).
   TCAPICT_EXPECT_DIAGONAL(ctx, identity, {1.0, 1.0, 1.0},
-                        tolerance(fix, tol_category::exact));
+                          tolerance(fix, tol_category::exact));
 #else
   (void)fix;
 #endif
@@ -152,7 +152,7 @@ void test_eye_to_range(tcapi_test_fixture<TenT>& fix) {
       auto elem = container[i * 3 + j];
       // Unwritten slot, as distinct from a slot written with a wrong value.
       TCAPICT_ASSERT(std::abs(real_part<TenT>(elem) - real_part<TenT>(sentinel))
-                   > tol);
+                     > tol);
       // eye's elements are exact: eye does no floating-point arithmetic
       // (tol_category::exact in fixture.h), and its off-diagonal zeros are
       // exact as "Diagonal tensors" in CONTRIBUTING.md says.
@@ -293,7 +293,7 @@ void test_random_zeroth_order(tcapi_test_fixture<TenT>& fix) {
                        imag_part<TenT>(elem) == w.imag());
   }
   TCAPICT_ASSERT_MSG(returned_by_gen,
-                   "the sole element is none of the values gen() returned");
+                     "the sole element is none of the values gen() returned");
 #else
   (void)fix;
 #endif
