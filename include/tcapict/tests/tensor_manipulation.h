@@ -180,7 +180,9 @@ void test_imag_extraction(tcapi_test_fixture<TenT> &fix) {
     TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 2.71, tol);
     TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.58, tol);
   } else {
-    // Real input: tcapi::imag returns a zero tensor per TCAPI spec.
+    // Real input. V1: "If `tcapi::elem_t<TenT>` is already real, the function
+    // returns a real-valued tensor of the same shape whose elements are all
+    // zero."
     TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(elem00), 0.0, tol);
     TCAPICT_ASSERT_CLOSE(real_part<RealTenT>(elem11), 0.0, tol);
   }
@@ -259,8 +261,8 @@ void test_cplx_conj_inplace(tcapi_test_fixture<TenT> &fix) {
 
   tcapi::cplx_conj(ctx, tensor);
 
-  // Real parts unchanged for both real and complex (cplx_conj on real tensors
-  // is a no-op per TCAPI spec); imaginary parts only exist for complex.
+  // Real parts unchanged for both real and complex: of a real TenT V1 says
+  // "(1) performs no change". Imaginary parts only exist for complex.
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {0, 0})), 1.0,
                        tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, tensor, {0, 1})), -3.0,
@@ -298,10 +300,9 @@ void test_cplx_conj_outofplace(tcapi_test_fixture<TenT> &fix) {
   TenT output;
   tcapi::cplx_conj(ctx, input, output);
 
-  // Real parts hold for both real and complex (cplx_conj out-of-place is a
-  // deep copy for real tensors per TCAPI spec); imaginary parts only exist for
-  // complex. `input` is read back at {0, 0}; see "Out-of-place inputs" in
-  // CONTRIBUTING.md.
+  // Real parts hold for both real and complex: of a real TenT V1 says "(2)
+  // produces a deep copy". Imaginary parts only exist for complex. `input` is
+  // read back at {0, 0}; see "Out-of-place inputs" in CONTRIBUTING.md.
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, input, {0, 0})), 3.14,
                        tol);
   TCAPICT_ASSERT_CLOSE(real_part<TenT>(tcapi::get_elem(ctx, output, {0, 0})), 3.14,
@@ -1238,7 +1239,8 @@ void test_expand_outofplace(tcapi_test_fixture<TenT> &fix) {
 }
 
 #ifndef TCAPICT_SKIP_DIAG
-// expect_vector_3 is called by the diag tests only.
+// expect_vector_3, diag_input_value and diag_input_matrix are called by the
+// diag tests only.
 
 // Asserts that a first-order tensor of length 3 holds `expected` in order.
 // `expected` is real, so for a complex element type the imaginary part is
@@ -1258,6 +1260,31 @@ void expect_vector_3(tcapi_test_fixture<TenT> &fix, const TenT &tensor,
       TCAPICT_ASSERT(imag_part<TenT>(elem) == 0.0);
     }
   }
+}
+
+// The element at (i, j) of the 3x3 input of the matrix-to-vector diag tests:
+// `diagonal[i]` on the diagonal, which is distinct so that a reordered
+// extraction does not pass, and the distinct non-zero 0.25 + 3i + j off it, so
+// that neither does one that sums a row or a column. Every value is exact in
+// single precision.
+inline double diag_input_value(const double (&diagonal)[3], std::size_t i,
+                               std::size_t j) {
+  return i == j ? diagonal[i] : 0.25 + static_cast<double>(3 * i + j);
+}
+
+// A 3x3 matrix built with zeros and set_elem holding diag_input_value.
+template <typename TenT>
+TenT diag_input_matrix(tcapi_test_fixture<TenT> &fix,
+                       const double (&diagonal)[3]) {
+  auto &ctx = fix.context();
+  auto matrix = tcapi::zeros<TenT>(ctx, {3, 3});
+  for (std::size_t i = 0; i < 3; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      tcapi::set_elem(ctx, matrix, coors_of<TenT>(i, j),
+                      make_elem<TenT>(diag_input_value(diagonal, i, j)));
+    }
+  }
+  return matrix;
 }
 
 #endif
@@ -1289,20 +1316,8 @@ template <typename TenT>
 void test_diag_mat_to_vec(tcapi_test_fixture<TenT> &fix) {
 #ifndef TCAPICT_SKIP_DIAG
   auto &ctx = fix.context();
-  // Distinct diagonal values, so a reordered extraction does not pass, and
-  // non-zero off-diagonal values, so neither does one that sums a row or a
-  // column.
   const double expected[3] = {7.5, -8.5, 9.5};
-
-  auto matrix = tcapi::zeros<TenT>(ctx, {3, 3});
-  for (std::size_t i = 0; i < 3; ++i) {
-    for (std::size_t j = 0; j < 3; ++j) {
-      const double value =
-          i == j ? expected[i] : 0.25 + static_cast<double>(3 * i + j);
-      tcapi::set_elem(ctx, matrix, coors_of<TenT>(i, j),
-                      make_elem<TenT>(value));
-    }
-  }
+  auto matrix = diag_input_matrix(fix, expected);
 
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, matrix));
 
@@ -1370,29 +1385,29 @@ void test_diag_vec_to_mat_outofplace(tcapi_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_diag_mat_to_vec_outofplace(tcapi_test_fixture<TenT> &fix) {
-#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
+#ifndef TCAPICT_SKIP_DIAG
   auto &ctx = fix.context();
-  // Distinct diagonal values rather than an identity: all-ones cannot tell a
-  // correct extraction from a reordered one. Building the input with `zeros`
-  // also keeps eye out of this test, so a backend that implements diag but
-  // skips eye can still run it.
   const double expected[3] = {4.5, -5.5, 6.5};
-
-  auto matrix = tcapi::zeros<TenT>(ctx, {3, 3});
-  for (std::size_t i = 0; i < 3; ++i) {
-    tcapi::set_elem(ctx, matrix, coors_of<TenT>(i, i),
-                    make_elem<TenT>(expected[i]));
-  }
+  auto matrix = diag_input_matrix(fix, expected);
 
   TenT vector;
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, matrix, vector));
 
   expect_vector_3(fix, vector, expected);
 
-  // Input unchanged, values included, not just order and size; see
-  // "Out-of-place inputs" in CONTRIBUTING.md.
-  TCAPICT_EXPECT_DIAGONAL(ctx, matrix, expected,
-                          tolerance(fix, tol_category::exact));
+  // Input unchanged, every element read back; see "Out-of-place inputs" in
+  // CONTRIBUTING.md.
+  TCAPICT_ASSERT(tcapi::order(ctx, matrix) == 2);
+  TCAPICT_ASSERT(tcapi::size(ctx, matrix) == 9);
+  for (std::size_t i = 0; i < 3; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      const auto elem = tcapi::get_elem(ctx, matrix, coors_of<TenT>(i, j));
+      TCAPICT_ASSERT(real_part<TenT>(elem) == diag_input_value(expected, i, j));
+      if constexpr (is_complex_v<TenT>) {
+        TCAPICT_ASSERT(imag_part<TenT>(elem) == 0.0);
+      }
+    }
+  }
 #else
   (void)fix;
 #endif

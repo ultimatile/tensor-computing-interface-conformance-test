@@ -291,7 +291,9 @@ void test_random_zeroth_order(tcapi_test_fixture<TenT>& fix) {
   // is reported as such rather than as a wrong number of calls.
   TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE(ctx, tensor);
   TCAPICT_ASSERT_MSG(calls == 1, "random did not invoke gen() exactly once");
-  TCAPICT_EXPECT_ZEROTH_ORDER(fix, tensor, value_of_call(1));
+  TCAPICT_EXPECT_ELEMS(
+      fix, tensor, tcapi::shape_t<TenT>{},
+      [&](const tcapi::elem_coors_t<TenT> &) { return value_of_call(1); });
 #else
   (void)fix;
 #endif

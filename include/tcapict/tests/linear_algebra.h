@@ -1068,9 +1068,9 @@ void test_trunc_svd_target_err_zero_matches_chi_max_overload(tcapi_test_fixture<
 
   // The factors are compared through the product they reconstruct rather than
   // elementwise: for a spectrum with distinct singular values the columns of u
-  // are fixed only up to a phase, and, since the suite asserts no order for
-  // sigma's diagonal, up to a permutation shared with sigma, neither of which
-  // the two calls are obliged to choose identically, so an elementwise
+  // are fixed only up to a phase, and, since trunc_svd's entry states no order
+  // for its sigma, up to a permutation shared with sigma, neither of which the
+  // two calls are obliged to choose identically, so an elementwise
   // comparison would assert more than the equivalence claim. The
   // reconstruction is invariant under both, and unlike a shape comparison it
   // does read the factors' values.
