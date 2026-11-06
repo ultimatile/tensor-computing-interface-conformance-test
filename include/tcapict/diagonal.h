@@ -119,8 +119,8 @@ void expect_diagonal_at(const char *file, int line, Ctx &ctx,
       const double re = real_part<DiagT>(elem);
       const double im = imag_part<DiagT>(elem);
       if (i != j) {
-        // V1: a diagonal tensor's off-diagonal elements are zero, so no
-        // tolerance applies.
+        // V1 defines a diagonal tensor as one "whose off-diagonal logical
+        // tensor elements are zero", so no tolerance applies.
         if (re != 0.0 || im != 0.0) {
           std::string value = text(re);
           if constexpr (is_complex_v<DiagT>) {

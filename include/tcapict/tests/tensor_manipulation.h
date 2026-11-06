@@ -1238,12 +1238,12 @@ void test_expand_outofplace(tcapi_test_fixture<TenT> &fix) {
 #endif
 }
 
-#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
-// expect_vector_3 and diag_input_value are called by the diag tests only,
-// each of which requires TCAPICT_HAS_DIAGONAL_CHECK; diag_input_matrix, which
-// also calls zeros and set_elem, is compiled only when TCAPICT_HAS_ELEM_SWEEP
-// holds too, as for the tests that call it.
+#ifndef TCAPICT_SKIP_DIAG
+// Helpers called by the diag tests only, each compiled under the condition of
+// the APIs it calls: expect_vector_3 calls order, size and get_elem;
+// diag_input_value calls none; diag_input_matrix calls zeros and set_elem.
 
+#ifdef TCAPICT_HAS_DIAGONAL_CHECK
 // Asserts that a first-order tensor of length 3 holds `expected` in order.
 // `expected` is real, so for a complex element type the imaginary part is
 // expected to be zero and is checked as such.
@@ -1263,6 +1263,7 @@ void expect_vector_3(tcapi_test_fixture<TenT> &fix, const TenT &tensor,
     }
   }
 }
+#endif
 
 // The element at (i, j) of the 3x3 input of the matrix-to-vector diag tests:
 // `diagonal[i]` on the diagonal, and the distinct non-zero 0.25 + 3i + j off
@@ -1275,7 +1276,10 @@ inline double diag_input_value(const double (&diagonal)[3], std::size_t i,
 }
 
 #ifdef TCAPICT_HAS_ELEM_SWEEP
-// A 3x3 matrix built with zeros and set_elem holding diag_input_value.
+// A 3x3 matrix built with zeros and set_elem holding
+// written_elem<TenT>(diag_input_value(...)): for a complex TenT each element
+// also has the non-zero imaginary part -0.5 times its real part, so an
+// extraction that drops or conjugates imaginary parts does not pass.
 template <typename TenT>
 TenT diag_input_matrix(tcapi_test_fixture<TenT> &fix,
                        const double (&diagonal)[3]) {
@@ -1284,7 +1288,7 @@ TenT diag_input_matrix(tcapi_test_fixture<TenT> &fix,
   for (std::size_t i = 0; i < 3; ++i) {
     for (std::size_t j = 0; j < 3; ++j) {
       tcapi::set_elem(ctx, matrix, coors_of<TenT>(i, j),
-                      make_elem<TenT>(diag_input_value(diagonal, i, j)));
+                      written_elem<TenT>(diag_input_value(diagonal, i, j)));
     }
   }
   return matrix;
@@ -1318,15 +1322,17 @@ void test_diag_vec_to_mat(tcapi_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_diag_mat_to_vec(tcapi_test_fixture<TenT> &fix) {
-#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_ELEM_SWEEP) && \
-    defined(TCAPICT_HAS_DIAGONAL_CHECK)
+#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
   const double expected[3] = {7.5, -8.5, 9.5};
   auto matrix = diag_input_matrix(fix, expected);
 
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, matrix));
 
-  expect_vector_3(fix, matrix, expected);
+  TCAPICT_EXPECT_ELEMS(
+      fix, matrix, {3},
+      [&](const tcapi::elem_coors_t<TenT> &c) { return expected[c[0]]; },
+      tol_category::exact);
 #else
   (void)fix;
 #endif
@@ -1407,8 +1413,7 @@ void test_diag_vec_to_mat_outofplace(tcapi_test_fixture<TenT> &fix) {
 
 template <typename TenT>
 void test_diag_mat_to_vec_outofplace(tcapi_test_fixture<TenT> &fix) {
-#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_ELEM_SWEEP) && \
-    defined(TCAPICT_HAS_DIAGONAL_CHECK)
+#if !defined(TCAPICT_SKIP_DIAG) && defined(TCAPICT_HAS_ELEM_SWEEP)
   auto &ctx = fix.context();
   const double expected[3] = {4.5, -5.5, 6.5};
   auto matrix = diag_input_matrix(fix, expected);
@@ -1416,15 +1421,17 @@ void test_diag_mat_to_vec_outofplace(tcapi_test_fixture<TenT> &fix) {
   TenT vector;
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, matrix, vector));
 
-  expect_vector_3(fix, vector, expected);
+  TCAPICT_EXPECT_ELEMS(
+      fix, vector, {3},
+      [&](const tcapi::elem_coors_t<TenT> &c) { return expected[c[0]]; },
+      tol_category::exact);
 
   // Input unchanged, every element read back after its shape; see
   // "Out-of-place inputs" in CONTRIBUTING.md.
   TCAPICT_EXPECT_ELEMS(
       fix, matrix, {3, 3},
       [&](const tcapi::elem_coors_t<TenT> &c) {
-        return std::complex<double>(diag_input_value(expected, c[0], c[1]),
-                                    0.0);
+        return diag_input_value(expected, c[0], c[1]);
       },
       tol_category::exact);
 #else

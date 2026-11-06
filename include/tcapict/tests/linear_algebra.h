@@ -408,8 +408,9 @@ void test_contract_dot_product(tcapi_test_fixture<TenT> &fix) {
   TenT c;
   tcapi::contract(ctx, a, "i", b, "i", c, "");
 
-  // TCAPI V1: a contract with an empty output label list yields a zeroth-order
-  // tensor (order 0, shape {}, size 1), read at the empty coordinate {}.
+  // TCAPI V1's contract entry: "If γ is empty, the result is a zeroth-order
+  // tensor", γ being the result's label list, empty here; so the result is
+  // checked for order 0, shape {}, size 1 and its element at {}.
   // dot = 1*4 + 2*5 + 3*6 = 32
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, c, std::complex<double>(32.0, 0.0),
                               tol_category::reduction, 3);

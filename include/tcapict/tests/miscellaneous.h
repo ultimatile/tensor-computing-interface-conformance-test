@@ -92,11 +92,12 @@ void test_close_different(tcapi_test_fixture<TenT> &fix) {
 
 // --- close: zeroth-order ---
 
-// TCAPI V1: close succeeds iff the shapes match and the largest elementwise
-// |a_i - b_i| is at most epsilon. Against an equal tensor it is true; against
-// another value, or for a complex element type a difference in the imaginary
-// part alone, it is false; and against a shape-{1} tensor holding the same
-// value it is false, since {} and {1} differ.
+// TCAPI V1: "The comparison succeeds iff shape(a)=shape(b)" and the largest
+// elementwise |a_i - b_i| is at most epsilon, "where |·| denotes absolute
+// value, or modulus for complex values". Against an equal tensor it is true;
+// against another value, or for a complex element type a difference in the
+// imaginary part alone, it is false; and against a shape-{1} tensor holding
+// the same value it is false, since {} and {1} differ.
 template <typename TenT>
 void test_close_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 #if !defined(TCAPICT_SKIP_CLOSE) && defined(TCAPICT_HAS_ELEM_SWEEP)
@@ -132,11 +133,12 @@ void test_close_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 
 // --- close: the maximum of the differences, not their norm ---
 
-// TCAPI V1: close succeeds iff the shapes match and the largest elementwise
-// |a_i - b_i| is at most epsilon. Two differences of 0.375 against epsilon
-// 0.5 have maximum 0.375, so close is true, while their Frobenius norm,
-// sqrt(2) * 0.375 ~ 0.53, exceeds 0.5. One difference of 0.625 makes it
-// false. Every value is a binary fraction, so the differences are exact.
+// TCAPI V1: "The comparison succeeds iff shape(a)=shape(b)" and the largest
+// elementwise |a_i - b_i| is at most epsilon, "where |·| denotes absolute
+// value, or modulus for complex values". Two differences of 0.375 against
+// epsilon 0.5 have maximum 0.375, so close is true, while their Frobenius
+// norm, sqrt(2) * 0.375 ~ 0.53, exceeds 0.5. One difference of 0.625 makes
+// it false. Every value is a binary fraction, so the differences are exact.
 template <typename TenT>
 void test_close_maximum_norm(tcapi_test_fixture<TenT> &fix) {
 #ifndef TCAPICT_SKIP_CLOSE
@@ -409,9 +411,9 @@ void test_convert_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 
 // --- convert: real to complex element type ---
 
-// TCAPI V1: convert converts `t1` "into a destination tensor, possibly
-// changing the element type, the underlying TCF/backend, or both", writing
-// the result into `t2`, the tensor on the destination context, so the test
+// TCAPI V1: "Convert `t1` into a destination tensor, possibly changing the
+// element type, the underlying TCF/backend, or both", and "the result is
+// written into `t2`", the tensor on the destination context, so the test
 // reads it through that context. Converting a real tensor to
 // tcapi::cplx_ten_t<RealTenT> keeps each value as its real part with a zero
 // imaginary part, the one reading that preserves the values; every value here

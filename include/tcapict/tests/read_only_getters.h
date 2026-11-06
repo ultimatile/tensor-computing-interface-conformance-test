@@ -100,8 +100,9 @@ void test_set_get_elem(tcapi_test_fixture<TenT>& fix) {
 
 // --- get_elem / set_elem: zeroth-order ---
 
-// TCAPI V1: for a zeroth-order tensor, `coors` is the empty sequence {}, and
-// get_elem returns and set_elem updates the sole element.
+// TCAPI V1, of get_elem: "For a zeroth-order tensor, `coors` is the empty
+// coordinate sequence, and the function returns the sole element." Of
+// set_elem, the same sentence ends "the function updates the sole element".
 template <typename TenT>
 void test_set_get_elem_zeroth_order(tcapi_test_fixture<TenT>& fix) {
 #if !defined(TCAPICT_SKIP_GET_ELEM) && !defined(TCAPICT_SKIP_SET_ELEM) && \

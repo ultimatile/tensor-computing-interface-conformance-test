@@ -75,12 +75,13 @@
 // too. TCAPICT_HAS_DIAGONAL_CHECK, defined below, holds exactly when none of
 // those four is skipped.
 //
-// test_diag_mat_to_vec, test_diag_mat_to_vec_outofplace and
-// test_diag_mat_to_vec_from_eye read their result through order, size and
-// get_elem, and are skipped unless TCAPICT_HAS_DIAGONAL_CHECK holds. The first
-// two also build their input through a helper that calls zeros and set_elem,
-// and are skipped unless TCAPICT_HAS_ELEM_SWEEP holds too; the third is
-// skipped when TCAPICT_SKIP_EYE is defined. Not every call a test makes in its
+// test_diag_mat_to_vec and test_diag_mat_to_vec_outofplace build their input
+// through a helper that calls zeros and set_elem and check their result
+// through TCAPICT_EXPECT_ELEMS, so they are skipped unless
+// TCAPICT_HAS_ELEM_SWEEP holds. test_diag_mat_to_vec_from_eye reads its result
+// through order, size and get_elem, and is skipped unless
+// TCAPICT_HAS_DIAGONAL_CHECK holds or when TCAPICT_SKIP_EYE is defined. Not
+// every call a test makes in its
 // own body is reflected in its guard, the zeros and set_elem other diag tests
 // use to build a vector among them; see
 // https://github.com/ultimatile/tcapi-conformance-test/issues/66.
