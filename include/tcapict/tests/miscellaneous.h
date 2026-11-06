@@ -19,11 +19,11 @@
 namespace tcapict {
 namespace detail {
 
-// Type helpers for tcapi::supported_ten_types_t. is_std_tuple, tuple_contains
-// and for_each_tuple_type take any type and treat one that is not a std::tuple
-// as holding no tensor types, so the tests using them compile against a
-// catalog of the wrong kind, and test_supported_ten_types reports it through
-// its assertion on is_std_tuple_v.
+// Type helpers for tcapi::supported_ten_types_t. tuple_contains and
+// for_each_tuple_type take any type and treat one that is not a std::tuple as
+// holding no tensor types, so the tests using them compile against a catalog
+// of the wrong kind, and test_supported_ten_types reports it through its
+// assertion on is_std_tuple_v, which is false for such a type.
 
 template <typename T> struct type_tag {
   using type = T;

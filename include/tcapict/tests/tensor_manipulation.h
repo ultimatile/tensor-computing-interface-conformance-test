@@ -999,12 +999,12 @@ template <typename TenT> void test_transpose(tcapi_test_fixture<TenT> &fix) {
 
   // V1 says only "Permute tensor bonds according to the permutation
   // `new_order`. Element values are preserved; only their coordinates are
-  // permuted", and both of its examples use orders that are their own
-  // inverses, so which way the permutation runs is a reading. The suite reads
-  // new bond p as old bond new_order[p]: the {2, 3, 4} input becomes
-  // {4, 2, 3}, and out[k, i, j] == a[i, j, k]. The coordinate map follows from
-  // that reading, so no convention for the linear order of elements enters
-  // into it.
+  // permuted (the memory layout may also change).", and both of its examples
+  // use orders that are their own inverses, so which way the permutation runs
+  // is a reading. The suite reads new bond p as old bond new_order[p]: the
+  // {2, 3, 4} input becomes {4, 2, 3}, and out[k, i, j] == a[i, j, k]. The
+  // coordinate map follows from that reading, so no convention for the linear
+  // order of elements enters into it.
   const tcapi::shape_t<TenT> expected_shape = {4, 2, 3};
   expect_ramp_2x3x4(fix, transposed, expected_shape,
                     [](std::size_t i, std::size_t j, std::size_t k) {
@@ -1310,6 +1310,9 @@ void test_diag_mat_to_vec(tcapi_test_fixture<TenT> &fix) {
     tcapi::set_elem(ctx, vector, coors_of<TenT>(i), make_elem<TenT>(expected[i]));
   }
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
+  // The input is now the 3x3 diagonal tensor, not the vector left as it was.
+  TCAPICT_ASSERT(tcapi::order(ctx, vector) == 2);
+  TCAPICT_ASSERT(tcapi::size(ctx, vector) == 9);
   TCAPICT_ASSERT_NOTHROW(tcapi::diag(ctx, vector));
 
   expect_vector_3(fix, vector, expected);
