@@ -938,7 +938,7 @@ void test_trunc_svd_non_diagonal_input(tcapi_test_fixture<TenT> &fix) {
 //     survive the cutoff, retain all surviving values; values below `s_min`
 //     are not restored to satisfy `chi_min`."
 //   - "Increase χ (retaining additional values in descending order) until
-//     either ϵ ≤ target_trunc_err or χ = chi_max."
+//     either ε ≤ target_trunc_err or χ = chi_max."
 //
 // That middle clause is what keeps the retained chi from being simply the
 // smallest chi in [chi_min, chi_max] meeting the target: when fewer than

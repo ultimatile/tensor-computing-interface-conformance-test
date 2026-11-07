@@ -47,9 +47,9 @@ private:
 // extension.
 inline removes_on_exit scratch_ten_file(const char *stem) {
   static std::atomic<unsigned long> counter{0};
-  std::random_device rd;
+  static const auto process_draw = std::random_device{}();
   const auto tag =
-      std::to_string(rd()) + "_" +
+      std::to_string(process_draw) + "_" +
       std::to_string(
           std::chrono::steady_clock::now().time_since_epoch().count()) +
       "_" + std::to_string(counter++);

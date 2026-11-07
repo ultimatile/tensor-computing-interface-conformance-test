@@ -73,7 +73,7 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 
 ### Caveats
 
-- The override copies tcapict **HEAD** (last committed state), which is why step 0 refuses, in `make integration-check` and `make integration-test` alike; commit or stash first. Untracked files are not shipped either.
+- The override copies tcapict **HEAD** (last committed state), which is why step 0 refuses on uncommitted changes, in `make integration-check` and `make integration-test` alike; commit or stash them first. Untracked files are not shipped either.
 - The `TCAPICT_SKIP_*` skip-macro matrix (cross-build with various skip-macro combinations) is deferred to a follow-up issue.
 - `make integration-restore` acts on the same checkout (`CYTNX_BACKEND_DIR`, or the default path), which must exist and be a git checkout that meets step 2's first condition, the `.gitmodules` registration; its second does not apply, so the submodule need not be initialized.
 
