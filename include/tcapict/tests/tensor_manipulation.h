@@ -1261,7 +1261,6 @@ void expect_vector_3(tcapi_test_fixture<TenT> &fix, const TenT &tensor,
 }
 #endif
 
-// The value diag_input_matrix writes at (i, j), through written_elem:
 // `diagonal[i]` on the diagonal, and the distinct non-zero 0.25 + 3i + j off
 // it, exact in single precision, so that an extraction that sums a row or a
 // column does not pass. Callers pass distinct diagonal values that are exact
