@@ -1982,9 +1982,9 @@ void expect_product(tcapi_test_fixture<TenT> &fix, const TenT &left,
 
 #if !defined(TCAPICT_SKIP_SVD) && defined(TCAPICT_HAS_DIAGONAL_CHECK)
 /// svd of `input`, whose elements `value_at` gives, with `k` row bonds: the
-/// factor shapes; sigma's diagonal against `singular_values` in TCAPI V1's
-/// non-increasing order when they are given, and otherwise sigma's shape and
-/// that its diagonal, read back, is non-negative and non-increasing with
+/// factor shapes and sigma's; sigma's diagonal against `singular_values` in
+/// TCAPI V1's non-increasing order when they are given, and otherwise that its
+/// diagonal, read back, is non-negative and non-increasing with
 /// off-diagonal elements exactly zero; u * sigma * v_dag reproduces the
 /// input; u has orthonormal columns and v_dag orthonormal rows.
 template <typename TenT, typename ValueAt>
@@ -1995,25 +1995,21 @@ void check_svd(tcapi_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
   const auto in_shape = tcapi::shape(ctx, input);
   const auto [u_shape, v_shape] = factor_shapes<TenT>(in_shape, k);
   const auto order = in_shape.size();
-  const auto bond = u_shape.back();
-  TCAPICT_ASSERT_MSG(singular_values.empty() ||
-                         singular_values.size() == static_cast<std::size_t>(bond),
-                     "check_svd: singular_values do not number the factor bond");
 
   TenT u, v_dag;
   RealTenT sigma;
   tcapi::svd(ctx, input, static_cast<tcapi::order_t<TenT>>(k), u, sigma, v_dag);
   TCAPICT_ASSERT(tcapi::shape(ctx, u) == u_shape);
   TCAPICT_ASSERT(tcapi::shape(ctx, v_dag) == v_shape);
+  const auto bond = u_shape.back();
+  const tcapi::shape_t<RealTenT> sigma_shape = {bond, bond};
+  TCAPICT_ASSERT(tcapi::shape(ctx, sigma) == sigma_shape);
   const auto tol = tolerance(fix, tol_category::factorization);
   if (!singular_values.empty()) {
     TCAPICT_EXPECT_DIAGONAL(ctx, sigma, singular_values, tol);
   } else {
     // Values not known in closed form: sigma's diagonal, read back, must be
     // non-negative and non-increasing, and sigma diagonal around it.
-    const auto s_shape = tcapi::shape(ctx, sigma);
-    TCAPICT_ASSERT(s_shape.size() == 2 && s_shape[0] == bond &&
-                   s_shape[1] == bond);
     const auto diagonal = TCAPICT_REAL_DIAGONAL_OF(ctx, sigma);
     for (std::size_t i = 0; i < diagonal.size(); ++i) {
       TCAPICT_ASSERT(diagonal[i] >= 0.0);

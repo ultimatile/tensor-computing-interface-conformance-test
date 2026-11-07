@@ -121,9 +121,10 @@ Tests call `to_range` and `assign_from_range` on second-order tensors through `t
 ### Zeroth-order tensors
 
 TCAPI V1, in the introduction to its core functions: "A zeroth-order tensor has empty shape, size 1, and a single empty coordinate sequence."
-The results of `real` and `imag` of a complex tensor, and of `to_cplx` of a real one, have another tensor type; those results are checked through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE` in `include/tcapict/zeroth_order.h`, which takes any tensor type, and `get_elem`.
+Where a test knows the element a zeroth-order `TenT` should hold, it checks the tensor through `TCAPICT_EXPECT_ZEROTH_ORDER` in `include/tcapict/zeroth_order.h`: order 0, shape `{}` and size 1, then the sole element read at `{}` through `expect_elems_at` in `include/tcapict/elem_sweep.h`, unless it splits that check as `test_random_zeroth_order` below does.
+The results of `real` and `imag` of a complex tensor, and of `to_cplx` of a real one, have another tensor type; those results are checked through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE`, which takes any tensor type, and `get_elem`.
 `test_random_zeroth_order` checks its result through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE` before it asserts the generator's call count, and then the sole element through `TCAPICT_EXPECT_ELEMS`, so that a backend ignoring the empty shape is reported as such.
-A callback that receives a coordinate of a zeroth-order tensor expects the empty one and flags any other, under "Callbacks the backend invokes", through `to_range_0d`, `assign_from_range_0d` or `visit_record_0d` in `include/tcapict/zeroth_order.h`.
+A callback that receives a coordinate of a zeroth-order tensor expects the empty one and flags any other, under "Callbacks the backend invokes", through `to_range_0d`, `assign_from_range_0d` or `visit_record_0d` in the same header.
 
 TCAPI V1 goes on: "Operations whose definitions require selecting, reordering, inserting, removing, slicing, or partitioning existing bonds are not applicable to zeroth-order tensors unless explicitly specified by the operation."
 It names no such operation. The suite reads `transpose`, `svd`, `qr`, `eig`, `expand`, `shrink`, `extract_sub` and `replace_sub` as such operations, and none of their entries specifies a zeroth-order case.
