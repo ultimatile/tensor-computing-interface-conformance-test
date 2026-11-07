@@ -1451,7 +1451,8 @@ void test_diag_mat_to_vec_outofplace(tcapi_test_fixture<TenT> &fix) {
   TCAPICT_EXPECT_ELEMS(
       fix, matrix, {3, 3},
       [&](const tcapi::elem_coors_t<TenT> &c) {
-        return diag_input_value(expected, c[0], c[1]);
+        return diag_input_value(expected, static_cast<std::size_t>(c[0]),
+                                static_cast<std::size_t>(c[1]));
       },
       tol_category::exact);
 #else

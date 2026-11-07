@@ -1995,20 +1995,21 @@ void check_svd(tcapi_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
   const auto in_shape = tcapi::shape(ctx, input);
   const auto [u_shape, v_shape] = factor_shapes<TenT>(in_shape, k);
   const auto order = in_shape.size();
+  const auto bond = u_shape.back();
+  // Checked before svd is called, so that a wrong count is reported as the
+  // caller's whatever svd does.
+  TCAPICT_ASSERT_MSG(singular_values.empty() ||
+                         singular_values.size() == static_cast<std::size_t>(bond),
+                     "check_svd: the caller's singular_values do not number "
+                     "the factor bond (a suite error, not the backend's)");
 
   TenT u, v_dag;
   RealTenT sigma;
   tcapi::svd(ctx, input, static_cast<tcapi::order_t<TenT>>(k), u, sigma, v_dag);
   TCAPICT_ASSERT(tcapi::shape(ctx, u) == u_shape);
   TCAPICT_ASSERT(tcapi::shape(ctx, v_dag) == v_shape);
-  const auto bond = u_shape.back();
   const auto tol = tolerance(fix, tol_category::factorization);
   if (!singular_values.empty()) {
-    // Both branches leave sigma asserted at {bond, bond}, so the sweep below
-    // reads only coordinates sigma has.
-    TCAPICT_ASSERT_MSG(singular_values.size() == static_cast<std::size_t>(bond),
-                       "check_svd: the caller's singular_values do not number "
-                       "the factor bond (a suite error, not the backend's)");
     TCAPICT_EXPECT_DIAGONAL(ctx, sigma, singular_values, tol);
   } else {
     // Values not known in closed form: sigma's diagonal, read back, must be
@@ -2024,7 +2025,9 @@ void check_svd(tcapi_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
     TCAPICT_EXPECT_DIAGONAL(ctx, sigma, diagonal, tol);
   }
 
-  // u with each element on factor-bond coordinate j scaled by sigma's {j, j}.
+  // Both branches above assert sigma at {bond, bond}, so this sweep reads only
+  // coordinates sigma has: u with each element on factor-bond coordinate j
+  // scaled by sigma's {j, j}.
   auto u_scaled = tcapi::copy(ctx, u);
   detail::for_each_coors<TenT>(u_shape, [&](const tcapi::elem_coors_t<TenT> &c) {
     const auto j = c.back();
