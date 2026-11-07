@@ -32,6 +32,7 @@ public:
     std::error_code ec;
     std::filesystem::remove(path_, ec);
   }
+  const std::string &str() const { return path_; }
 
 private:
   std::string path_;
@@ -46,9 +47,8 @@ private:
 // call forms it makes, not how a backend treats a path without an extension.
 class scratch_ten_file {
 public:
-  explicit scratch_ten_file(const char *stem)
-      : path_(unique_path(stem)), removal_(path_) {}
-  const std::string &str() const { return path_; }
+  explicit scratch_ten_file(const char *stem) : removal_(unique_path(stem)) {}
+  const std::string &str() const { return removal_.str(); }
 
 private:
   static std::string unique_path(const char *stem) {
@@ -64,7 +64,6 @@ private:
         .string();
   }
 
-  std::string path_;
   removes_on_exit removal_;
 };
 
