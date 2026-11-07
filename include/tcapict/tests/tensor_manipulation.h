@@ -1242,8 +1242,8 @@ void test_expand_outofplace(tcapi_test_fixture<TenT> &fix) {
 // Helpers called by the diag tests only, each compiled under a condition that
 // covers the APIs it calls: expect_vector_3, which calls order, size and
 // get_elem, under TCAPICT_HAS_DIAGONAL_CHECK; diag_input_value, which calls
-// none, under no further condition; and diag_input_matrix, which calls zeros,
-// shape and set_elem, under TCAPICT_HAS_ELEM_SWEEP.
+// none, under no further condition; and diag_input_matrix, which calls zeros
+// and set_elem, under TCAPICT_HAS_ELEM_SWEEP.
 
 #ifdef TCAPICT_HAS_DIAGONAL_CHECK
 // Asserts that a first-order tensor of length 3 holds `expected` in order.
@@ -1279,21 +1279,21 @@ inline double diag_input_value(const double (&diagonal)[3], std::size_t i,
 }
 
 #ifdef TCAPICT_HAS_ELEM_SWEEP
-// A 3x3 matrix built with zeros and TCAPICT_SET_ELEMS from diag_input_value:
-// for a complex TenT each element also has the imaginary part -0.5 times its
-// real part, so an extraction that drops or conjugates imaginary parts does
-// not pass.
+// A 3x3 matrix built with zeros and set_elem holding
+// written_elem<TenT>(diag_input_value(...)): for a complex TenT each element
+// also has the non-zero imaginary part -0.5 times its real part, so an
+// extraction that drops or conjugates imaginary parts does not pass.
 template <typename TenT>
 TenT diag_input_matrix(tcapi_test_fixture<TenT> &fix,
                        const double (&diagonal)[3]) {
   auto &ctx = fix.context();
   auto matrix = tcapi::zeros<TenT>(ctx, {3, 3});
-  const tcapi::shape_t<TenT> shape_3x3 = {3, 3};
-  TCAPICT_ASSERT(tcapi::shape(ctx, matrix) == shape_3x3);
-  TCAPICT_SET_ELEMS(fix, matrix, [&](const tcapi::elem_coors_t<TenT> &c) {
-    return diag_input_value(diagonal, static_cast<std::size_t>(c[0]),
-                            static_cast<std::size_t>(c[1]));
-  });
+  for (std::size_t i = 0; i < 3; ++i) {
+    for (std::size_t j = 0; j < 3; ++j) {
+      tcapi::set_elem(ctx, matrix, coors_of<TenT>(i, j),
+                      written_elem<TenT>(diag_input_value(diagonal, i, j)));
+    }
+  }
   return matrix;
 }
 #endif
@@ -1446,8 +1446,7 @@ void test_diag_mat_to_vec_outofplace(tcapi_test_fixture<TenT> &fix) {
   TCAPICT_EXPECT_ELEMS(
       fix, matrix, {3, 3},
       [&](const tcapi::elem_coors_t<TenT> &c) {
-        return diag_input_value(expected, static_cast<std::size_t>(c[0]),
-                                static_cast<std::size_t>(c[1]));
+        return diag_input_value(expected, c[0], c[1]);
       },
       tol_category::exact);
 #else

@@ -75,7 +75,7 @@
 // below, holds exactly when none of those four is skipped.
 //
 // test_diag_mat_to_vec, test_diag_mat_to_vec_outofplace and
-// test_diag_mat_to_vec_from_diagonal build their input with zeros, shape and
+// test_diag_mat_to_vec_from_diagonal build their input with zeros and
 // set_elem and check their result through TCAPICT_EXPECT_ELEMS, so they are
 // skipped unless TCAPICT_HAS_ELEM_SWEEP holds. test_diag_mat_to_vec_from_eye
 // reads its result through order, size and get_elem; it is skipped when
