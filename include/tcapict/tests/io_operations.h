@@ -32,43 +32,32 @@ public:
     std::error_code ec;
     std::filesystem::remove(path_, ec);
   }
-
-private:
-  std::string path_;
-};
-
-// A file path under the system temporary directory, removed when the object
-// goes out of scope, an assertion failing before then included. A
-// per-process counter keeps it distinct from the paths of other objects in
-// this process; std::random_device and the clock make a collision with
-// another process's path unlikely, not impossible. Its `.ten` extension is
-// the one TCAPI V1's own `save` example uses, so a test using it asserts the
-// call forms it makes, not how a backend treats a path without an extension.
-class scratch_ten_file {
-public:
-  explicit scratch_ten_file(const char *stem) {
-    static std::atomic<unsigned long> counter{0};
-    std::random_device rd;
-    const auto tag =
-        std::to_string(rd()) + "_" +
-        std::to_string(
-            std::chrono::steady_clock::now().time_since_epoch().count()) +
-        "_" + std::to_string(counter++);
-    path_ = (std::filesystem::temp_directory_path() /
-             (std::string("tcapict_") + stem + "_" + tag + ".ten"))
-                .string();
-  }
-  scratch_ten_file(const scratch_ten_file &) = delete;
-  scratch_ten_file &operator=(const scratch_ten_file &) = delete;
-  ~scratch_ten_file() {
-    std::error_code ec;
-    std::filesystem::remove(path_, ec);
-  }
   const std::string &str() const { return path_; }
 
 private:
   std::string path_;
 };
+
+// A file path under the system temporary directory, as a removes_on_exit. A
+// per-process counter keeps it distinct from the other paths this function
+// returns in this process; std::random_device and the clock make a collision
+// with another process's path unlikely, not impossible. Its `.ten` extension
+// is the one TCAPI V1's own `save` example uses, so a test using it asserts
+// the call forms it makes, not how a backend treats a path without an
+// extension.
+inline removes_on_exit scratch_ten_file(const char *stem) {
+  static std::atomic<unsigned long> counter{0};
+  static const auto process_draw = std::random_device{}();
+  const auto tag =
+      std::to_string(process_draw) + "_" +
+      std::to_string(
+          std::chrono::steady_clock::now().time_since_epoch().count()) +
+      "_" + std::to_string(counter++);
+  return removes_on_exit(
+      (std::filesystem::temp_directory_path() /
+       (std::string("tcapict_") + stem + "_" + tag + ".ten"))
+          .string());
+}
 
 } // namespace detail
 
@@ -143,15 +132,13 @@ void test_save_load_zeroth_order(tcapi_test_fixture<TenT>& fix) {
   auto tensor = tcapi::zeros<TenT>(ctx, {});
   TCAPICT_SET_ZEROTH_ORDER(fix, tensor, -6.5);
 
-  std::string filepath = "/tmp/tcapict_test_zeroth_order_roundtrip";
-  // Remove stale file to ensure save actually writes
-  std::remove(filepath.c_str());
+  const auto file = detail::scratch_ten_file("zeroth_order_roundtrip");
+  std::string filepath = file.str();
   TCAPICT_ASSERT_NOTHROW(tcapi::save(ctx, tensor, filepath));
 
   TenT loaded;
   TCAPICT_ASSERT_NOTHROW(loaded = tcapi::load<TenT>(ctx, filepath));
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, loaded, -6.5);
-  std::remove(filepath.c_str());
 #else
   (void)fix;
 #endif
@@ -184,7 +171,7 @@ void expect_round_trip(tcapi_test_fixture<TenT> &fix, const char *stem,
   auto tensor = tcapi::zeros<TenT>(ctx, shape);
   TCAPICT_SET_ELEMS(fix, tensor, at);
 
-  const detail::scratch_ten_file file(stem);
+  const auto file = detail::scratch_ten_file(stem);
   TCAPICT_ASSERT_NOTHROW(save_to(ctx, tensor, file.str()));
   TCAPICT_ASSERT(std::filesystem::exists(file.str()));
   TenT loaded;

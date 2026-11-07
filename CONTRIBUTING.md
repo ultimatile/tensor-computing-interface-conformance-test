@@ -25,7 +25,7 @@ make integration-check
 
 This:
 
-0. Refuses to run while tracked files of this repo have uncommitted changes (see "Caveats").
+0. Refuses to run while tracked files of this repo have uncommitted changes, or when `git diff` fails while checking for them.
 1. Clones cytnx (with submodules) into `./build/tcapi-backend-cytnx/` if it does not yet exist, then runs `git fetch`, `git reset --hard $CYTNX_REF`, and `git submodule update --init --recursive --force` on every invocation so the checkout always tracks `$CYTNX_REF` (default under "Environment variables" below).
 2. Refuses to continue unless the cytnx working tree's `.gitmodules` registers a submodule at the path `external/tcapict` and that submodule is initialized, since a cytnx revision that vendors this suite under another path cannot take the override.
 3. Replaces `external/tcapict/` content with this repo's tracked HEAD via `git archive HEAD | tar -xmf -`; `-m` stamps the extracted files with the current time, so the build recompiles against them.
@@ -39,7 +39,7 @@ This:
 make integration-check CYTNX_BACKEND_DIR=$HOME/path/to/tcapi-backend-cytnx
 ```
 
-When `CYTNX_BACKEND_DIR` is set in the environment, the script does **not** clone or modify the outer cytnx working tree — it only overrides `external/tcapict/`. That checkout must already register and initialize `external/tcapict` as a submodule (step 2 above) and provide the signatures the suite calls; see `CYTNX_REF` under "Environment variables". To return to the auto-clone default, unset the variable rather than passing the default value explicitly.
+When `CYTNX_BACKEND_DIR` is set in the environment, the script skips step 1: it does **not** clone, fetch or reset that checkout. Steps 0 and 2–4 still run, so the script overrides `external/tcapict/` and configures and builds in `$CYTNX_BACKEND_DIR/build`, and the checkout must pass step 2 and provide the signatures the suite calls; see `CYTNX_REF` under "Environment variables". To return to the auto-clone default, unset the variable rather than passing the default value explicitly.
 
 ### Run the tests
 
@@ -73,9 +73,9 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 
 ### Caveats
 
-- The override copies tcapict **HEAD** (last committed state), so `make integration-check` and `make integration-test` refuse to run while tracked files have uncommitted changes; commit or stash them first. Untracked files are not shipped either.
+- The override copies tcapict **HEAD** (last committed state), which is why step 0 refuses on uncommitted changes, in `make integration-check` and `make integration-test` alike; commit or stash them first. Untracked files are not shipped either.
 - The `TCAPICT_SKIP_*` skip-macro matrix (cross-build with various skip-macro combinations) is deferred to a follow-up issue.
-- `make integration-restore` requires `CYTNX_BACKEND_DIR` to point at an actual git checkout whose working-tree `.gitmodules` registers a submodule at the path `external/tcapict`.
+- `make integration-restore` acts on the same checkout (`CYTNX_BACKEND_DIR`, or the default path), which must exist and be a git checkout that meets step 2's first condition, the `.gitmodules` registration; its second does not apply, so the submodule need not be initialized.
 
 ### Environment variables
 
