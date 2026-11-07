@@ -1998,7 +1998,9 @@ void check_svd(tcapi_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
   const auto bond = u_shape.back();
   TCAPICT_ASSERT_MSG(singular_values.empty() ||
                          singular_values.size() == static_cast<std::size_t>(bond),
-                     "check_svd: singular_values do not number the factor bond");
+                     "check_svd: " + std::to_string(singular_values.size()) +
+                         " singular_values for a factor bond of " +
+                         std::to_string(bond));
 
   TenT u, v_dag;
   RealTenT sigma;
