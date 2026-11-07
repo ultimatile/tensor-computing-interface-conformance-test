@@ -60,10 +60,10 @@ struct visit_record_0d {
   }
 };
 
-// Each wrapper is guarded by the skip macro of the API it wraps, as in
-// include/tcapict/range_2d.h, and by TCAPICT_HAS_ELEM_SWEEP, which every test
-// calling it also requires: the wrappers call tcapi::shape, which a backend
-// defining TCAPICT_SKIP_SHAPE need not declare.
+// Each wrapper is guarded by the skip macro of the API it wraps and by
+// TCAPICT_HAS_ELEM_SWEEP, which every test calling it also requires: the
+// wrappers call tcapi::shape, which a backend defining TCAPICT_SKIP_SHAPE need
+// not declare.
 
 #if !defined(TCAPICT_SKIP_TO_RANGE) && defined(TCAPICT_HAS_ELEM_SWEEP)
 /// `to_range` of a zeroth-order `a` into a one-element range at `first`.

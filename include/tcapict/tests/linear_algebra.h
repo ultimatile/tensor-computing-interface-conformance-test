@@ -1928,9 +1928,10 @@ void expect_orthonormal_rows(tcapi_test_fixture<TenT> &fix, const TenT &f,
 }
 
 /// Asserts that every element of the second-order `t` with `zero_at(row, col)`
-/// is exactly zero, as TCAPI V1's "upper triangular" and "lower triangular" say
-/// of r and l, through TCAPICT_EXPECT_ELEMS with an exact tolerance: zero where
-/// `zero_at` holds, and elsewhere the element read back.
+/// is exactly zero, as TCAPI V1's "upper triangular (upper trapezoidal if I<J)"
+/// and "lower triangular (lower trapezoidal if I>J)" say of r and l, through
+/// TCAPICT_EXPECT_ELEMS with an exact tolerance: zero where `zero_at` holds,
+/// and elsewhere the element read back.
 template <typename TenT, typename ZeroAt>
 void expect_zero_where(tcapi_test_fixture<TenT> &fix, const TenT &t,
                        ZeroAt zero_at) {
@@ -1994,13 +1995,18 @@ void check_svd(tcapi_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
   const auto in_shape = tcapi::shape(ctx, input);
   const auto [u_shape, v_shape] = factor_shapes<TenT>(in_shape, k);
   const auto order = in_shape.size();
+  const auto bond = u_shape.back();
+  TCAPICT_ASSERT_MSG(singular_values.empty() ||
+                         singular_values.size() == static_cast<std::size_t>(bond),
+                     "check_svd: " + std::to_string(singular_values.size()) +
+                         " singular_values for a factor bond of " +
+                         std::to_string(bond));
 
   TenT u, v_dag;
   RealTenT sigma;
   tcapi::svd(ctx, input, static_cast<tcapi::order_t<TenT>>(k), u, sigma, v_dag);
   TCAPICT_ASSERT(tcapi::shape(ctx, u) == u_shape);
   TCAPICT_ASSERT(tcapi::shape(ctx, v_dag) == v_shape);
-  const auto bond = u_shape.back();
   const auto tol = tolerance(fix, tol_category::factorization);
   if (!singular_values.empty()) {
     TCAPICT_EXPECT_DIAGONAL(ctx, sigma, singular_values, tol);

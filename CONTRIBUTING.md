@@ -74,7 +74,6 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 ### Caveats
 
 - The override copies tcapict **HEAD** (last committed state), so `make integration-check` and `make integration-test` refuse to run while tracked files have uncommitted changes; commit or stash them first. Untracked files are not shipped either.
-- The script never writes to `external/tcapict/.git*`, so `make integration-restore` always recovers the pinned state.
 - The `TCAPICT_SKIP_*` skip-macro matrix (cross-build with various skip-macro combinations) is deferred to a follow-up issue.
 - `make integration-restore` requires `CYTNX_BACKEND_DIR` to point at an actual git checkout whose working-tree `.gitmodules` registers a submodule at the path `external/tcapict`.
 
