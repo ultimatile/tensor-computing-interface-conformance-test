@@ -46,7 +46,12 @@ private:
 // call forms it makes, not how a backend treats a path without an extension.
 class scratch_ten_file {
 public:
-  explicit scratch_ten_file(const char *stem) {
+  explicit scratch_ten_file(const char *stem)
+      : path_(unique_path(stem)), removal_(path_) {}
+  const std::string &str() const { return path_; }
+
+private:
+  static std::string unique_path(const char *stem) {
     static std::atomic<unsigned long> counter{0};
     std::random_device rd;
     const auto tag =
@@ -54,20 +59,13 @@ public:
         std::to_string(
             std::chrono::steady_clock::now().time_since_epoch().count()) +
         "_" + std::to_string(counter++);
-    path_ = (std::filesystem::temp_directory_path() /
-             (std::string("tcapict_") + stem + "_" + tag + ".ten"))
-                .string();
+    return (std::filesystem::temp_directory_path() /
+            (std::string("tcapict_") + stem + "_" + tag + ".ten"))
+        .string();
   }
-  scratch_ten_file(const scratch_ten_file &) = delete;
-  scratch_ten_file &operator=(const scratch_ten_file &) = delete;
-  ~scratch_ten_file() {
-    std::error_code ec;
-    std::filesystem::remove(path_, ec);
-  }
-  const std::string &str() const { return path_; }
 
-private:
   std::string path_;
+  removes_on_exit removal_;
 };
 
 } // namespace detail
@@ -143,15 +141,13 @@ void test_save_load_zeroth_order(tcapi_test_fixture<TenT>& fix) {
   auto tensor = tcapi::zeros<TenT>(ctx, {});
   TCAPICT_SET_ZEROTH_ORDER(fix, tensor, -6.5);
 
-  std::string filepath = "/tmp/tcapict_test_zeroth_order_roundtrip";
-  // Remove stale file to ensure save actually writes
-  std::remove(filepath.c_str());
+  const detail::scratch_ten_file file("zeroth_order_roundtrip");
+  std::string filepath = file.str();
   TCAPICT_ASSERT_NOTHROW(tcapi::save(ctx, tensor, filepath));
 
   TenT loaded;
   TCAPICT_ASSERT_NOTHROW(loaded = tcapi::load<TenT>(ctx, filepath));
   TCAPICT_EXPECT_ZEROTH_ORDER(fix, loaded, -6.5);
-  std::remove(filepath.c_str());
 #else
   (void)fix;
 #endif

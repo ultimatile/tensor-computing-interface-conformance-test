@@ -93,7 +93,7 @@ void test_close_different(tcapi_test_fixture<TenT> &fix) {
 // --- close: zeroth-order ---
 
 // TCAPI V1: "The comparison succeeds iff shape(a)=shape(b)" and the largest
-// elementwise |a_i - b_i| is at most epsilon, "where |·| denotes absolute
+// elementwise |a_i - b_i| is at most epsilon, "where |⋅| denotes absolute
 // value, or modulus for complex values". Against an equal tensor it is true;
 // against another value, or for a complex element type a difference in the
 // imaginary part alone, it is false; and against a shape-{1} tensor holding
@@ -134,7 +134,7 @@ void test_close_zeroth_order(tcapi_test_fixture<TenT> &fix) {
 // --- close: the maximum of the differences, not their norm ---
 
 // TCAPI V1: "The comparison succeeds iff shape(a)=shape(b)" and the largest
-// elementwise |a_i - b_i| is at most epsilon, "where |·| denotes absolute
+// elementwise |a_i - b_i| is at most epsilon, "where |⋅| denotes absolute
 // value, or modulus for complex values". Two differences of 0.375 against
 // epsilon 0.5 have maximum 0.375, so close is true, while their Frobenius
 // norm, sqrt(2) * 0.375 ~ 0.53, exceeds 0.5. One difference of 0.625 makes
