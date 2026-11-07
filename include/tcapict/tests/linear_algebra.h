@@ -1996,12 +1996,9 @@ void check_svd(tcapi_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
   const auto [u_shape, v_shape] = factor_shapes<TenT>(in_shape, k);
   const auto order = in_shape.size();
   const auto bond = u_shape.back();
-  // Checked before svd is called, so that a wrong count is reported as the
-  // caller's whatever svd does.
   TCAPICT_ASSERT_MSG(singular_values.empty() ||
                          singular_values.size() == static_cast<std::size_t>(bond),
-                     "check_svd: the caller's singular_values do not number "
-                     "the factor bond (a suite error, not the backend's)");
+                     "check_svd: singular_values do not number the factor bond");
 
   TenT u, v_dag;
   RealTenT sigma;
@@ -2025,9 +2022,7 @@ void check_svd(tcapi_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
     TCAPICT_EXPECT_DIAGONAL(ctx, sigma, diagonal, tol);
   }
 
-  // Both branches above assert sigma at {bond, bond}, so this sweep reads only
-  // coordinates sigma has: u with each element on factor-bond coordinate j
-  // scaled by sigma's {j, j}.
+  // u with each element on factor-bond coordinate j scaled by sigma's {j, j}.
   auto u_scaled = tcapi::copy(ctx, u);
   detail::for_each_coors<TenT>(u_shape, [&](const tcapi::elem_coors_t<TenT> &c) {
     const auto j = c.back();

@@ -175,8 +175,8 @@ void test_eye_to_range(tcapi_test_fixture<TenT>& fix) {
 // generator `gen`." For a non-empty shape it fixes neither how many times gen
 // is invoked nor which invocation fills which coordinate, so neither an exact
 // call count nor a coordinate-to-value expectation is portably assertable. What
-// survives is containment: every logical element must match, within `tol`, one
-// of the values gen actually emitted.
+// survives is containment: every logical element must equal one of the values
+// gen actually emitted.
 template <typename TenT>
 void test_random_inplace(tcapi_test_fixture<TenT>& fix) {
 #ifndef TCAPICT_SKIP_RANDOM
