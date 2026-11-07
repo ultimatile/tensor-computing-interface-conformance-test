@@ -38,9 +38,10 @@ private:
 };
 
 // A file path under the system temporary directory, which the object removes
-// when it goes out of scope, as removes_on_exit does. A per-process counter keeps it distinct from the paths of other objects in
-// this process; std::random_device and the clock make a collision with
-// another process's path unlikely, not impossible. Its `.ten` extension is
+// when it goes out of scope, as removes_on_exit does. A per-process counter
+// keeps it distinct from the paths of other objects in this process;
+// std::random_device and the clock make a collision with another process's
+// path unlikely, not impossible. Its `.ten` extension is
 // the one TCAPI V1's own `save` example uses, so a test using it asserts the
 // call forms it makes, not how a backend treats a path without an extension.
 class scratch_ten_file {

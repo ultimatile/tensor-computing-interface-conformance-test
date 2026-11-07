@@ -122,7 +122,8 @@ Tests call `to_range` and `assign_from_range` on second-order tensors through `t
 
 TCAPI V1, in the introduction to its core functions: "A zeroth-order tensor has empty shape, size 1, and a single empty coordinate sequence."
 `TCAPICT_EXPECT_ZEROTH_ORDER` in `include/tcapict/zeroth_order.h` checks a zeroth-order `TenT` whose element a test knows: order 0, shape `{}` and size 1, then the sole element read at `{}` through `expect_elems_at` in `include/tcapict/elem_sweep.h`.
-The tests of `real`, `imag` and `to_cplx` check their results through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE`, which takes any tensor type, and `get_elem`, for every `TenT`, since for a complex input of `real` and `imag`, and for a real input of `to_cplx`, the result has another tensor type.
+`TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE`, in the same header as `TCAPICT_EXPECT_ZEROTH_ORDER`, checks only order 0, shape `{}` and size 1, and takes any tensor type.
+`test_real_zeroth_order`, `test_imag_zeroth_order` and `test_to_cplx_zeroth_order` check their results through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE` and `get_elem`, for every `TenT`, since for a complex input of `real` and `imag`, and for a real input of `to_cplx`, the result has another tensor type.
 `test_random_zeroth_order` checks its result through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE` before it asserts the generator's call count, and then the sole element through `TCAPICT_EXPECT_ELEMS`, so that a backend ignoring the empty shape is reported as such.
 A callback that receives a coordinate of a zeroth-order tensor expects the empty one and flags any other, under "Callbacks the backend invokes", through `to_range_0d`, `assign_from_range_0d` or `visit_record_0d` in `include/tcapict/zeroth_order.h`.
 

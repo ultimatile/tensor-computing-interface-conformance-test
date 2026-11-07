@@ -2006,7 +2006,9 @@ void check_svd(tcapi_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
   if (!singular_values.empty()) {
     // Both branches leave sigma asserted at {bond, bond}, so the sweep below
     // reads only coordinates sigma has.
-    TCAPICT_ASSERT(singular_values.size() == static_cast<std::size_t>(bond));
+    TCAPICT_ASSERT_MSG(singular_values.size() == static_cast<std::size_t>(bond),
+                       "check_svd: the caller's singular_values do not number "
+                       "the factor bond (a suite error, not the backend's)");
     TCAPICT_EXPECT_DIAGONAL(ctx, sigma, singular_values, tol);
   } else {
     // Values not known in closed form: sigma's diagonal, read back, must be
