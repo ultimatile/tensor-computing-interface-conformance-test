@@ -932,8 +932,8 @@ template <typename TenT> void test_reshape(tcapi_test_fixture<TenT> &fix) {
     }
   }
 
-  // The ramp yields 1, 2, ..., 24, so the sorted observed values must be
-  // exactly that sequence.
+  // The ramp yields 1, 2, ..., 24, so the sorted observed values must match
+  // that sequence within `tol`.
   std::sort(observed.begin(), observed.end());
   for (std::size_t n = 0; n < observed.size(); ++n) {
     TCAPICT_ASSERT_CLOSE(observed[n], static_cast<double>(n + 1), tol);
@@ -1242,8 +1242,8 @@ void test_expand_outofplace(tcapi_test_fixture<TenT> &fix) {
 // Helpers called by the diag tests only, each compiled under a condition that
 // covers the APIs it calls: expect_vector_3, which calls order, size and
 // get_elem, under TCAPICT_HAS_DIAGONAL_CHECK; diag_input_value, which calls
-// none, unconditionally; and diag_input_matrix, which calls zeros and
-// set_elem, under TCAPICT_HAS_ELEM_SWEEP.
+// none, under no further condition; and diag_input_matrix, which calls zeros,
+// shape and set_elem, under TCAPICT_HAS_ELEM_SWEEP.
 
 #ifdef TCAPICT_HAS_DIAGONAL_CHECK
 // Asserts that a first-order tensor of length 3 holds `expected` in order.
@@ -1267,32 +1267,38 @@ void expect_vector_3(tcapi_test_fixture<TenT> &fix, const TenT &tensor,
 }
 #endif
 
-// The element at (i, j) of the 3x3 input of the matrix-to-vector diag tests:
+// The element at (i, j) of the 3x3 input of test_diag_mat_to_vec and
+// test_diag_mat_to_vec_outofplace:
 // `diagonal[i]` on the diagonal, and the distinct non-zero 0.25 + 3i + j off
 // it, exact in single precision, so that an extraction that sums a row or a
-// column does not pass. Callers pass distinct diagonal values that are exact
-// in single precision too, so that neither does a reordered one.
+// column does not pass. Callers pass distinct non-zero diagonal values, exact
+// in single precision too: distinct so that a reordered extraction does not
+// pass either, and non-zero so that diag_input_matrix gives each of them a
+// non-zero imaginary part.
 inline double diag_input_value(const double (&diagonal)[3], std::size_t i,
                                std::size_t j) {
   return i == j ? diagonal[i] : 0.25 + static_cast<double>(3 * i + j);
 }
 
 #ifdef TCAPICT_HAS_ELEM_SWEEP
-// A 3x3 matrix built with zeros and set_elem holding
-// written_elem<TenT>(diag_input_value(...)): for a complex TenT each element
-// also has the non-zero imaginary part -0.5 times its real part, so an
-// extraction that drops or conjugates imaginary parts does not pass.
+// A 3x3 matrix built with zeros and TCAPICT_SET_ELEMS from diag_input_value:
+// for a complex TenT each element also has the non-zero imaginary part -0.5
+// times its real part, so an extraction that drops or conjugates imaginary
+// parts does not pass.
 template <typename TenT>
 TenT diag_input_matrix(tcapi_test_fixture<TenT> &fix,
                        const double (&diagonal)[3]) {
   auto &ctx = fix.context();
   auto matrix = tcapi::zeros<TenT>(ctx, {3, 3});
-  for (std::size_t i = 0; i < 3; ++i) {
-    for (std::size_t j = 0; j < 3; ++j) {
-      tcapi::set_elem(ctx, matrix, coors_of<TenT>(i, j),
-                      written_elem<TenT>(diag_input_value(diagonal, i, j)));
-    }
-  }
+  // TCAPICT_SET_ELEMS sweeps the shape the tensor reports, and
+  // diag_input_value reads `diagonal[i]`, so the shape {3, 3} asked for is
+  // asserted before the sweep.
+  const tcapi::shape_t<TenT> shape_3x3 = {3, 3};
+  TCAPICT_ASSERT(tcapi::shape(ctx, matrix) == shape_3x3);
+  TCAPICT_SET_ELEMS(fix, matrix, [&](const tcapi::elem_coors_t<TenT> &c) {
+    return diag_input_value(diagonal, static_cast<std::size_t>(c[0]),
+                            static_cast<std::size_t>(c[1]));
+  });
   return matrix;
 }
 #endif
@@ -1544,8 +1550,7 @@ void test_stack_last_axis(tcapi_test_fixture<TenT> &fix) {
 // Bulk registration helpers: invoke X(..., "category", test_fn) once per test.
 // See include/tcapict/adapters/doctest.h for usage.
 //
-// ALL_TYPES: safe for both real and complex TenT (imag-part assertions are
-//   dual-guarded via `if constexpr (is_complex_v<TenT>)`).
+// ALL_TYPES: safe for both real and complex TenT.
 #define TCAPICT_FOREACH_TENSOR_MANIPULATION_TEST_ALL_TYPES(X, ...) \
   X(__VA_ARGS__, "tensor_manipulation", test_shrink_inplace) \
   X(__VA_ARGS__, "tensor_manipulation", test_shrink_outofplace) \

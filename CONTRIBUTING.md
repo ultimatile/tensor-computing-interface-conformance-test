@@ -74,7 +74,6 @@ INTEGRATION_CMAKE_ARGS='-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos-homebrew.c
 ### Caveats
 
 - The override copies tcapict **HEAD** (last committed state), so `make integration-check` and `make integration-test` refuse to run while tracked files have uncommitted changes; commit or stash them first. Untracked files are not shipped either.
-- The script never writes to `external/tcapict/.git*`, so `make integration-restore` always recovers the pinned state.
 - The `TCAPICT_SKIP_*` skip-macro matrix (cross-build with various skip-macro combinations) is deferred to a follow-up issue.
 - `make integration-restore` requires `CYTNX_BACKEND_DIR` to point at an actual git checkout whose working-tree `.gitmodules` registers a submodule at the path `external/tcapict`.
 
@@ -122,16 +121,16 @@ Tests call `to_range` and `assign_from_range` on second-order tensors through `t
 ### Zeroth-order tensors
 
 TCAPI V1, in the introduction to its core functions: "A zeroth-order tensor has empty shape, size 1, and a single empty coordinate sequence."
-Where a test knows the element a zeroth-order `TenT` should hold, it checks the tensor through `TCAPICT_EXPECT_ZEROTH_ORDER` in `include/tcapict/zeroth_order.h`: order 0, shape `{}` and size 1, then the sole element read at `{}` through `expect_elems_at` in `include/tcapict/elem_sweep.h`, unless it splits that check as `test_random_zeroth_order` below does.
-The results of `real` and `imag` of a complex tensor, and of `to_cplx` of a real one, have another tensor type; those results are checked through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE`, which takes any tensor type, and `get_elem`.
+`TCAPICT_EXPECT_ZEROTH_ORDER` in `include/tcapict/zeroth_order.h` checks a zeroth-order `TenT` whose element a test knows: order 0, shape `{}` and size 1, then the sole element read at `{}` through `expect_elems_at` in `include/tcapict/elem_sweep.h`.
+The tests of `real`, `imag` and `to_cplx` check their results through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE`, which takes any tensor type, and `get_elem`, for every `TenT`, since for a complex input of `real` and `imag`, and for a real input of `to_cplx`, the result has another tensor type.
 `test_random_zeroth_order` checks its result through `TCAPICT_EXPECT_ZEROTH_ORDER_SHAPE` before it asserts the generator's call count, and then the sole element through `TCAPICT_EXPECT_ELEMS`, so that a backend ignoring the empty shape is reported as such.
-A callback that receives a coordinate of a zeroth-order tensor expects the empty one and flags any other, under "Callbacks the backend invokes", through `to_range_0d`, `assign_from_range_0d` or `visit_record_0d` in the same header.
+A callback that receives a coordinate of a zeroth-order tensor expects the empty one and flags any other, under "Callbacks the backend invokes", through `to_range_0d`, `assign_from_range_0d` or `visit_record_0d` in `include/tcapict/zeroth_order.h`.
 
 TCAPI V1 goes on: "Operations whose definitions require selecting, reordering, inserting, removing, slicing, or partitioning existing bonds are not applicable to zeroth-order tensors unless explicitly specified by the operation."
 It names no such operation. The suite reads `transpose`, `svd`, `qr`, `eig`, `expand`, `shrink`, `extract_sub` and `replace_sub` as such operations, and none of their entries specifies a zeroth-order case.
 TCAPI V1 defines no exception for them, so nothing about calling them on a zeroth-order tensor is assertable, and no test calls them on one.
 No test calls the following on a zeroth-order tensor either, since the suite reads the same sentence as covering them, and their entries specify no zeroth-order case: `concatenate`, which selects a bond, `stack`, which inserts one, and the operations that matricize, which partition bonds into rows and columns (`trunc_svd`, `lq`, `eigh`, `eigvals`, `eigvalsh`, `exp`, `inverse`).
-Nor does any call `diag`, whose input TCAPI V1 requires to be first- or second-order.
+Nor does any call `diag`, whose input TCAPI V1 requires to be first- or second-order, or `trace`, which sums over pairs of existing bonds and whose entry names a zeroth-order tensor only as its result: "If all bonds are paired, the result is a zeroth-order tensor."
 The suite reads the operations its zeroth-order tests do call as requiring no existing bond of a zeroth-order operand; `contract` is among them, since such an operand takes the empty label list `""`.
 
 The zeroth-order tests assert nothing about `TenT{}`, the state `clear` and `move` leave, since TCAPI V1 does not say what queries return on it; the `order == 0` assertions the existing `clear` and `move` tests make on it are left as they are, pending the open question on [#51](https://github.com/ultimatile/tcapi-conformance-test/issues/51).
@@ -142,7 +141,7 @@ Of `size_bytes` they assert only that it returns, as the tests of the other rank
 TCAPI V1, in the introduction to its core functions: "TCAPI treats a diagonal tensor as an ordinary second-order tensor with shape {N,N} whose off-diagonal logical tensor elements are zero." and "Unless stated otherwise, TCAPI operations are defined by logical tensor elements, not by storage representation."
 Its entries name these diagonal tensors: `eye` returns "the N×N identity tensor as a diagonal tensor", `diag` of a first-order input and the `sigma` of `trunc_svd` and `lambda_mat` of `eig` are each "a second-order diagonal tensor", and the `sigma` of `svd` and `lambda_mat` of `eigh` are each "a real second-order diagonal tensor".
 `test_diag_mat_to_vec_from_diagonal` checks every element of the diagonal tensor it builds with `diag`, its off-diagonal zeros included, through `TCAPICT_EXPECT_ELEMS` before extracting from it; `test_diag_mat_to_vec_from_eye` extracts from `eye` without checking that result, which `test_eye` checks.
-`test_eye` and the other tests of `diag`, `svd`, `trunc_svd`, `eig` and `eigh` check each diagonal tensor they produce as a result through `TCAPICT_EXPECT_DIAGONAL` in `include/tcapict/diagonal.h`: order 2, shape `{n, n}` and size `n * n`, checked before any element is read, then every element against the expected diagonal.
+`test_eye` and, apart from those two, the tests of `diag`, `svd`, `trunc_svd`, `eig` and `eigh` check each diagonal tensor they produce as a result through `TCAPICT_EXPECT_DIAGONAL` in `include/tcapict/diagonal.h`: order 2, shape `{n, n}` and size `n * n`, checked before any element is read, then every element against the expected diagonal.
 Off-diagonal elements must be exactly zero, since TCAPI V1 defines a diagonal tensor as one "whose off-diagonal logical tensor elements are zero".
 The check takes any tensor type, with the context its input came with, because `sigma` and `eigh`'s `lambda_mat` are `real_ten_t<TenT>` and `eig`'s `lambda_mat` is `cplx_ten_t<TenT>`.
 TCAPI V1 fixes the order of the diagonal for `svd` ("non-increasing order") and for `eigh` ("ascending order").

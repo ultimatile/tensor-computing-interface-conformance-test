@@ -1928,9 +1928,10 @@ void expect_orthonormal_rows(tcapi_test_fixture<TenT> &fix, const TenT &f,
 }
 
 /// Asserts that every element of the second-order `t` with `zero_at(row, col)`
-/// is exactly zero, as TCAPI V1's "upper triangular" and "lower triangular" say
-/// of r and l, through TCAPICT_EXPECT_ELEMS with an exact tolerance: zero where
-/// `zero_at` holds, and elsewhere the element read back.
+/// is exactly zero, as TCAPI V1's "upper triangular (upper trapezoidal if I<J)"
+/// and "lower triangular (lower trapezoidal if I>J)" say of r and l, through
+/// TCAPICT_EXPECT_ELEMS with an exact tolerance: zero where `zero_at` holds,
+/// and elsewhere the element read back.
 template <typename TenT, typename ZeroAt>
 void expect_zero_where(tcapi_test_fixture<TenT> &fix, const TenT &t,
                        ZeroAt zero_at) {
@@ -2003,6 +2004,9 @@ void check_svd(tcapi_test_fixture<TenT> &fix, const TenT &input, std::size_t k,
   const auto bond = u_shape.back();
   const auto tol = tolerance(fix, tol_category::factorization);
   if (!singular_values.empty()) {
+    // Both branches leave sigma asserted at {bond, bond}, so the sweep below
+    // reads only coordinates sigma has.
+    TCAPICT_ASSERT(singular_values.size() == static_cast<std::size_t>(bond));
     TCAPICT_EXPECT_DIAGONAL(ctx, sigma, singular_values, tol);
   } else {
     // Values not known in closed form: sigma's diagonal, read back, must be
